@@ -1,11 +1,15 @@
 <section aria-labelledby="rincian-title">
     <h6 id="rincian-title">Rincian Pengajuan</h6>
     <p id="grid-help" class="text-muted small">
-        Paste dari Excel mulai sel aktif dengan urutan kolom input: <strong>{{ $pasteColumns }}</strong>.
-        Jangan sertakan header, nomor, atau kolom hasil hitung. Angka menggunakan format Indonesia
+        Paste dari Excel mulai sel aktif dengan urutan kolom input: <strong>No, {{ $pasteColumns }}</strong>.
+        No dapat diedit atau dikosongkan dan ikut disalin ke Excel. Nomor tidak diurutkan ulang otomatis.
+        Jika data Excel tidak menyertakan No, mulai paste dari kolom setelah No.
+        Jangan sertakan header atau kolom hasil hitung. Angka menggunakan format Indonesia
         (contoh: 1.250,50). No Rekening harus berformat teks di Excel agar nol di depan tetap utuh.
         Klik atau drag untuk memilih sel; Shift+klik atau Shift+panah untuk memilih rentang.
-        Ctrl+C/Ctrl+V (Mac: Cmd+C/Cmd+V) menyalin/menempel kolom input tanpa nomor dan hasil hitung.
+        Klik nomor baris di sisi kiri untuk memilih seluruh baris, header untuk memilih kolom,
+        atau sudut kiri atas untuk memilih seluruh tabel. Nomor baris terpisah dari input No.
+        Ctrl+C/Ctrl+V (Mac: Cmd+C/Cmd+V) menyalin/menempel kolom input termasuk No, tanpa hasil hitung.
         Salin Semua ke Excel memakai urutan yang sama sehingga dapat ditempel kembali ke sel input pertama.
         Panah, Tab/Shift+Tab dan Enter/Shift+Enter berpindah sel. Ketik untuk mengganti isi;
         klik dua kali atau F2 untuk mengedit teks, Escape untuk selesai.
@@ -22,14 +26,16 @@
         <table class="table table-bordered align-middle mb-0 spreadsheet-grid" role="grid" aria-label="Rincian pengajuan" aria-multiselectable="true" aria-describedby="grid-help">
             <thead class="table-light">
                 <tr>
+                    <th scope="col" class="spreadsheet-row-header">
+                        <button type="button" class="spreadsheet-selector" data-grid-select-all
+                            aria-label="Pilih seluruh tabel" title="Pilih seluruh tabel">&#9698;</button>
+                    </th>
                     @foreach ($columns as $column)
                         <th scope="col">
-                            @if ($loop->first)
-                                No
-                            @else
-                                <span class="spreadsheet-column">{{ chr(64 + $loop->index) }}</span>
+                            <button type="button" class="spreadsheet-selector" data-grid-select-column="{{ $loop->index }}"
+                                aria-label="Pilih kolom {{ $column }}">
                                 {{ $column }}
-                            @endif
+                            </button>
                         </th>
                     @endforeach
                 </tr>

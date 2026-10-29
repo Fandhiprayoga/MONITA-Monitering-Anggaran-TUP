@@ -6,12 +6,14 @@ const format = (cents) => (cents / 100).toLocaleString('id-ID', {
 
 export const schemas = {
     impresfund: [
+        { key: 'no', label: 'No', optional: true },
         { key: 'uraian', label: 'Uraian' },
         { key: 'volume', label: 'Volume', numeric: true },
         { key: 'tarif', label: 'Tarif', numeric: true },
         { key: 'subtotal', label: 'Subtotal', computed: true },
     ],
     beban: [
+        { key: 'no', label: 'No', optional: true },
         { key: 'nominal', label: 'Nominal', numeric: true },
         { key: 'pajak', label: 'Pot Pajak', numeric: true, defaultValue: '0' },
         { key: 'neto', label: 'Nominal Setelah Pajak', numeric: true },
@@ -20,6 +22,7 @@ export const schemas = {
         { key: 'rekening', label: 'No Rekening' },
     ],
     honor: [
+        { key: 'no', label: 'No', optional: true },
         { key: 'kewarganegaraan', label: 'WNI / WNA', choices: ['WNI', 'WNA'], list: 'honor-kewarganegaraan' },
         { key: 'nominal', label: 'Nominal Honor', numeric: true },
         { key: 'pajak', label: 'Potongan Pajak', numeric: true, defaultValue: '0' },
@@ -49,7 +52,7 @@ export function parseAmount(value) {
 export function calculateRow(kind, values) {
     const columns = schemas[kind];
     if (!columns) throw new Error('Jenis form tidak dikenal.');
-    if (columns.filter((column) => !column.computed).every((column) => {
+    if (columns.filter((column) => !column.computed && column.key !== 'no').every((column) => {
         const value = String(values[column.key] ?? '').trim();
         return !value || value === column.defaultValue;
     })) {
@@ -147,14 +150,24 @@ export function mountGrid(form) {
             cell.classList.remove('is-selected', 'is-active');
             cell.setAttribute('aria-selected', 'false');
         });
+        table.querySelectorAll('th').forEach((cell) => {
+            cell.classList.remove('is-selected');
+            cell.setAttribute('aria-selected', 'false');
+        });
     }
 
     function addRow() {
         const tr = document.createElement('tr');
-        const number = document.createElement('th');
-        number.scope = 'row';
         tr.setAttribute('role', 'row');
-        tr.append(number);
+        const rowHeader = document.createElement('th');
+        rowHeader.scope = 'row';
+        rowHeader.className = 'spreadsheet-row-header';
+        const rowButton = document.createElement('button');
+        rowButton.type = 'button';
+        rowButton.className = 'spreadsheet-selector';
+        rowButton.dataset.gridSelectRow = '';
+        rowHeader.append(rowButton);
+        tr.append(rowHeader);
         for (const column of columns) {
             const td = document.createElement('td');
             td.setAttribute('role', 'gridcell');
@@ -162,9 +175,9 @@ export function mountGrid(form) {
             const input = document.createElement('input');
             input.type = 'text';
             input.className = `spreadsheet-cell${column.numeric || column.computed ? ' spreadsheet-numeric' : ''}${column.computed ? ' spreadsheet-computed' : ''}`;
-            input.style.minWidth = column.numeric || column.computed ? '145px' : '190px';
+            input.style.minWidth = column.key === 'no' ? '64px' : column.numeric || column.computed ? '145px' : '190px';
             input.dataset.key = column.key;
-            input.value = column.defaultValue ?? '';
+            input.value = column.key === 'no' ? String(body.rows.length + 1) : column.defaultValue ?? '';
             input.readOnly = true;
             input.tabIndex = -1;
             if (column.numeric) input.inputMode = 'decimal';
@@ -179,7 +192,9 @@ export function mountGrid(form) {
         let gross = 0;
         const issues = [];
         [...body.rows].forEach((row, index) => {
-            row.firstElementChild.textContent = index + 1;
+            const rowButton = row.querySelector('[data-grid-select-row]');
+            rowButton.textContent = index + 1;
+            rowButton.setAttribute('aria-label', `Pilih baris ${index + 1}`);
             const values = {};
             row.querySelectorAll('input').forEach((input) => {
                 values[input.dataset.key] = input.value;
@@ -230,11 +245,25 @@ export function mountGrid(form) {
             top: Math.min(anchor.row, current.row), bottom: Math.max(anchor.row, current.row),
             left: Math.min(anchor.col, current.col), right: Math.max(anchor.col, current.col),
         };
-        [...body.rows].forEach((row, r) => [...row.cells].slice(1).forEach((cell, c) => {
-            const selected = r >= selection.top && r <= selection.bottom && c >= selection.left && c <= selection.right;
+        const setSelected = (cell, selected) => {
             cell.classList.toggle('is-selected', selected);
             cell.setAttribute('aria-selected', String(selected));
-        }));
+        };
+        const fullWidth = selection.left === 0 && selection.right === columns.length - 1;
+        const fullHeight = selection.top === 0 && selection.bottom === body.rows.length - 1;
+        [...body.rows].forEach((row, r) => {
+            const selectedRow = r >= selection.top && r <= selection.bottom;
+            setSelected(row.firstElementChild, selectedRow && fullWidth);
+            [...row.cells].slice(1).forEach((cell, c) => {
+                setSelected(cell, selectedRow && c >= selection.left && c <= selection.right);
+            });
+        });
+        table.querySelectorAll('[data-grid-select-column]').forEach((button) => {
+            const col = Number(button.dataset.gridSelectColumn);
+            setSelected(button.closest('th'), fullHeight && col >= selection.left && col <= selection.right);
+        });
+        const corner = table.querySelector('[data-grid-select-all]');
+        if (corner) setSelected(corner.closest('th'), fullWidth && fullHeight);
         input.closest('td').classList.add('is-active');
         const address = (row, col) => `${String.fromCharCode(65 + col)}${row + 1}`;
         form.querySelector('[data-grid-address]').textContent =
@@ -244,6 +273,26 @@ export function mountGrid(form) {
             input.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
         }
     }
+
+    function selectRange(top, bottom, left, right) {
+        anchor = { row: bottom, col: right };
+        select(body.rows[top].querySelector(`[data-key="${columns[left].key}"]`), true);
+        anchor = { row: top, col: left };
+    }
+
+    table.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button || !table.contains(button)) return;
+        if (button.hasAttribute('data-grid-select-all')) {
+            selectRange(0, body.rows.length - 1, 0, columns.length - 1);
+        } else if (button.hasAttribute('data-grid-select-column')) {
+            const col = Number(button.dataset.gridSelectColumn);
+            selectRange(0, body.rows.length - 1, col, col);
+        } else if (button.hasAttribute('data-grid-select-row')) {
+            const row = button.closest('tr').sectionRowIndex;
+            selectRange(row, row, 0, columns.length - 1);
+        }
+    });
 
     function startEditing(input, replace = false) {
         const column = columns[position(input).col];
@@ -299,8 +348,7 @@ export function mountGrid(form) {
         if (editing === input && !['Tab', 'Enter'].includes(event.key)) return;
         if (modifier && event.key.toLowerCase() === 'a') {
             event.preventDefault();
-            anchor = { row: 0, col: 0 };
-            select(body.rows[body.rows.length - 1].lastElementChild.firstElementChild, true);
+            selectRange(0, body.rows.length - 1, 0, columns.length - 1);
             return;
         }
         if (modifier || event.altKey) return;
@@ -362,7 +410,7 @@ export function mountGrid(form) {
         const offset = editable.findIndex((column) => column.key === input.dataset.key);
         if (start + rows.length > MAX_ROWS) { notify('Paste dibatalkan: maksimal 500 baris.', true); return; }
         if (rows.some((row) => row.length > editable.length - offset)) {
-            notify('Paste dibatalkan: kolom melebihi kolom input yang tersedia. Jangan sertakan No atau hasil hitung.', true);
+            notify('Paste dibatalkan: kolom melebihi kolom input yang tersedia. Jangan sertakan header atau hasil hitung.', true);
             return;
         }
         if (!rows.length) return;
@@ -395,14 +443,14 @@ export function mountGrid(form) {
         event.preventDefault();
         try {
             event.clipboardData.setData('text/plain', toTsv(clipboardRows(false)));
-            notify('Rentang kolom input disalin tanpa No dan hasil hitung.');
+            notify('Rentang kolom input disalin tanpa hasil hitung.');
         } catch (error) { notify(error.message, true); }
     });
     form.querySelector('[data-grid-copy]').addEventListener('click', async () => {
         try {
             if (!navigator.clipboard?.writeText) throw new Error('Clipboard tidak tersedia. Gunakan Shift+klik untuk memilih rentang lalu Ctrl+C.');
             await navigator.clipboard.writeText(toTsv(clipboardRows(true)));
-            notify('Semua kolom input disalin tanpa No, hasil hitung, atau header. Siap ditempel ke Excel dan kembali ke form.');
+            notify('Semua kolom input termasuk No disalin tanpa hasil hitung atau header. Siap ditempel ke Excel dan kembali ke form.');
         } catch (error) { notify(`Tidak dapat menyalin: ${error.message}`, true); }
     });
     form.querySelector('[data-grid-add]').addEventListener('click', () => {

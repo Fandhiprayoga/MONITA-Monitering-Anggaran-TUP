@@ -22,35 +22,50 @@
     top: 0;
     z-index: 2;
     min-width: 145px;
-    padding: 6px 10px;
     background: #f0f3f7;
     color: #475569;
     text-align: center;
     white-space: nowrap;
 }
 
-.spreadsheet-column {
-    display: block;
-    margin-bottom: 2px;
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 400;
-}
-
-.spreadsheet-grid tr > :first-child {
+.spreadsheet-grid .spreadsheet-row-header {
     position: sticky;
     left: 0;
     z-index: 1;
     min-width: 44px;
-    padding: 0 10px;
+    width: 44px;
     background: #f0f3f7;
     color: #64748b;
     text-align: center;
     font-weight: 400;
 }
 
-.spreadsheet-grid thead tr > :first-child {
+.spreadsheet-grid thead .spreadsheet-row-header {
     z-index: 3;
+}
+
+.spreadsheet-selector {
+    display: block;
+    width: 100%;
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    cursor: pointer;
+    user-select: none;
+}
+
+.spreadsheet-selector:focus-visible {
+    outline: 2px solid #3478f6;
+    outline-offset: -2px;
+}
+
+.spreadsheet-grid th.is-selected {
+    background: #cfdefb;
+    color: #1d4ed8;
 }
 
 .spreadsheet-grid td {

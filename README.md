@@ -62,25 +62,35 @@ tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
   tetap dapat diedit. Baris yang hanya berisi pajak default 0 tetap diabaikan.
 - Honor: Total Diterima diisi manual dalam rupiah, tanpa perhitungan otomatis;
   total pengajuan memakai bruto. Kewarganegaraan diisi WNI atau WNA; NPWP boleh kosong jika belum
-  tersedia. Kolom lain wajib diisi pada baris yang digunakan.
+  tersedia. Selain No yang opsional, kolom lain wajib diisi pada baris yang digunakan.
 - Ringkasan total hanya ditampilkan sebagai Nominal Diajukan di header; tidak ada
   total pengajuan, total pajak, atau total transfer di bawah tabel.
-- Paste Excel dimulai dari sel aktif, hanya kolom input (tanpa header, nomor,
-  atau hasil hitung). Impresfund: Uraian, Volume, Tarif. Beban: Nominal, Pot Pajak, Nominal Setelah Pajak,
+- Kolom No merupakan input teks opsional, dengan nilai awal sesuai posisi baris
+  saat ditambahkan. No dapat diedit, dikosongkan, dipilih, dan disalin/ditempel;
+  nilainya tidak ditimpa saat perhitungan ulang atau penghapusan baris.
+  Baris yang hanya berisi No dan pajak default 0 tetap diabaikan.
+- Paste Excel dimulai dari sel aktif, hanya kolom input (tanpa header
+  atau hasil hitung). Impresfund: No, Uraian, Volume, Tarif. Beban: No, Nominal, Pot Pajak, Nominal Setelah Pajak,
   Nama Bank, Nama Rekening, No Rekening.
-  Honor: WNI / WNA, Nominal Honor, Potongan Pajak, Total Diterima, Nama Penerima, Nama Rekening,
+  Honor: No, WNI / WNA, Nominal Honor, Potongan Pajak, Total Diterima, Nama Penerima, Nama Rekening,
   Nama Bank, Nomor Rekening, No KTP / Paspor, No NPWP.
-- Rincian tampil sebagai sel spreadsheet dengan header kolom A, B, dst., nomor
+- Rincian tampil sebagai sel spreadsheet dengan header nama kolom tanpa kode huruf, nomor
   baris dan header yang tetap terlihat saat scroll, serta penanda rentang aktif.
+  Nomor baris otomatis di sisi kiri terpisah dari kolom input No; klik nomor
+  tersebut untuk memilih seluruh baris. Klik header untuk memilih seluruh kolom
+  atau tombol sudut kiri atas untuk memilih semua sel tabel. Header terpilih
+  ditandai; copy dan Delete tetap hanya memproses kolom input, bukan nomor
+  baris otomatis atau hasil hitung.
   Klik/drag, Shift+klik atau Shift+panah memilih rentang. Panah, Tab/Shift+Tab,
   dan Enter/Shift+Enter berpindah sel. Ketik untuk mengganti isi; klik dua kali
   atau F2 untuk mengedit teks, Escape untuk selesai. Delete/Backspace mengosongkan
   kolom input dalam rentang tanpa menghapus baris atau mengubah hasil hitung.
 - Ctrl+C/Ctrl+V (Mac: Cmd+C/Cmd+V) menyalin/menempel kolom input dalam rentang.
-  Tombol Salin Semua ke Excel juga hanya menyalin kolom input, tanpa nomor,
+  Tombol Salin Semua ke Excel juga hanya menyalin kolom input termasuk No, tanpa
   hasil hitung, atau header, sehingga hasilnya dapat ditempel kembali ke sel
   input pertama tanpa menghapus kolom di Excel. Paste pada rentang dimulai
   dari sudut kiri atas; baris baru ditambahkan otomatis bila diperlukan.
+  Jika data tidak menyertakan No, mulai paste dari kolom setelah No.
   Saat mengedit teks di dalam sel, copy/paste satu teks tetap bekerja secara native.
 - Angka menggunakan format Indonesia, maksimal dua desimal. No Rekening harus
   berupa teks di Excel untuk mempertahankan nol di depan. Maksimal 500 baris.
