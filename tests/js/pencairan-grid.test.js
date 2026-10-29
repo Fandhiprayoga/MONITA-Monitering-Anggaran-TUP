@@ -16,6 +16,26 @@ test('Impresfund calculates fractional volume and rounds to cents', () => {
     assert.ok(calculateRow('impresfund', { uraian: 'ATK', volume: '10000000000', tarif: '10000000000' }).errors.tarif);
 });
 
+test('Impresfund subtotal overrides automatic calculation and blank restores it', () => {
+    const values = { uraian: 'ATK', volume: '2,5', tarif: '1.250,50' };
+    assert.deepEqual(calculateRow('impresfund', { ...values, subtotal: '4.000,25' }),
+        { gross: 400025, tax: 0, net: 400025 });
+    assert.equal(calculateRow('impresfund', { ...values, subtotal: '0' }).gross, 0);
+    for (const subtotal of ['', '  ']) {
+        assert.equal(calculateRow('impresfund', { ...values, subtotal }).gross, 312625);
+    }
+    for (const subtotal of ['-1', 'invalid', '1,234', '10000000001']) {
+        assert.ok(calculateRow('impresfund', { ...values, subtotal }).errors.subtotal);
+    }
+    assert.ok(calculateRow('impresfund', { subtotal: '500' }).errors.uraian);
+    assert.ok(calculateRow('impresfund', { ...values, volume: '0', subtotal: '500' }).errors.volume);
+    assert.equal(calculateRow('impresfund', {
+        ...values, volume: '10000000000', tarif: '10000000000', subtotal: '500',
+    }).gross, 50000);
+    assert.deepEqual(schemas.impresfund.filter((column) => !column.computed).map((column) => column.key),
+        ['no', 'uraian', 'volume', 'tarif', 'subtotal']);
+});
+
 test('Beban uses gross and manual after-tax amount independently', () => {
     const values = { nominal: '100.000', pajak: '2.500', neto: '90.000', bank: 'Bank', nama: 'Nama', rekening: '00123456789012345678' };
     const result = calculateRow('beban', values);

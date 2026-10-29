@@ -97,6 +97,16 @@ class PencairanFormTest extends TestCase
             ->assertSee('Total nominal sebelum pajak (bruto).');
     }
 
+    public function test_impresfund_explains_manual_subtotal_and_clipboard_order(): void
+    {
+        $this->withSession(['user_authenticated' => true])
+            ->get(route('pencairan.form', 'impresfund'))
+            ->assertOk()
+            ->assertSee('No, Uraian, Volume, Tarif, Subtotal')
+            ->assertSee('kosongkan untuk kembali otomatis')
+            ->assertSee('yang disalin lalu ditempel kembali menjadi nilai manual.');
+    }
+
     public function test_forms_require_login_and_reject_unknown_types(): void
     {
         $this->get(route('pencairan.form', 'beban'))->assertRedirect(route('login'));

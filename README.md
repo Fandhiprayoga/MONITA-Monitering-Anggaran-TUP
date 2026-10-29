@@ -55,7 +55,11 @@ pesan error; unit tanpa DRK mendapatkan pemberitahuan, bukan saldo nol buatan.
 Tombol Simpan sebagai Draft dan Submit Pengajuan ditampilkan pada semua form,
 tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
 
-- Impresfund: subtotal = volume x tarif; total pengajuan = jumlah subtotal.
+- Impresfund: subtotal otomatis = volume x tarif, ditampilkan sebagai petunjuk
+  pada sel Subtotal kosong. Input/paste Subtotal mengganti nilai otomatis;
+  kosongkan untuk kembali otomatis. Total pengajuan = jumlah subtotal yang berlaku.
+  Copy rentang/semua menyertakan nilai Subtotal yang berlaku; jika ditempel kembali,
+  nilai otomatis yang disalin menjadi manual. Uraian, Volume dan Tarif tetap wajib valid.
 - Beban: potongan pajak dalam rupiah; total pengajuan memakai bruto, sedangkan
   Nominal Setelah Pajak diisi manual dalam rupiah, tanpa perhitungan otomatis.
 - Potongan pajak pada baris baru Honor dan Beban memiliki nilai awal 0 rupiah,
@@ -70,7 +74,7 @@ tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
   nilainya tidak ditimpa saat perhitungan ulang atau penghapusan baris.
   Baris yang hanya berisi No dan pajak default 0 tetap diabaikan.
 - Paste Excel dimulai dari sel aktif, hanya kolom input (tanpa header
-  atau hasil hitung). Impresfund: No, Uraian, Volume, Tarif. Beban: No, Nominal, Pot Pajak, Nominal Setelah Pajak,
+  tabel). Impresfund: No, Uraian, Volume, Tarif, Subtotal. Beban: No, Nominal, Pot Pajak, Nominal Setelah Pajak,
   Nama Bank, Nama Rekening, No Rekening.
   Honor: No, WNI / WNA, Nominal Honor, Potongan Pajak, Total Diterima, Nama Penerima, Nama Rekening,
   Nama Bank, Nomor Rekening, No KTP / Paspor, No NPWP.
@@ -80,14 +84,14 @@ tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
   tersebut untuk memilih seluruh baris. Klik header untuk memilih seluruh kolom
   atau tombol sudut kiri atas untuk memilih semua sel tabel. Header terpilih
   ditandai; copy dan Delete tetap hanya memproses kolom input, bukan nomor
-  baris otomatis atau hasil hitung.
+  baris otomatis. Copy juga menyertakan Subtotal otomatis yang berlaku.
   Klik/drag, Shift+klik atau Shift+panah memilih rentang. Panah, Tab/Shift+Tab,
   dan Enter/Shift+Enter berpindah sel. Ketik untuk mengganti isi; klik dua kali
   atau F2 untuk mengedit teks, Escape untuk selesai. Delete/Backspace mengosongkan
-  kolom input dalam rentang tanpa menghapus baris atau mengubah hasil hitung.
+  kolom input dalam rentang tanpa menghapus baris; Subtotal yang dikosongkan kembali otomatis.
 - Ctrl+C/Ctrl+V (Mac: Cmd+C/Cmd+V) menyalin/menempel kolom input dalam rentang.
   Tombol Salin Semua ke Excel juga hanya menyalin kolom input termasuk No, tanpa
-  hasil hitung, atau header, sehingga hasilnya dapat ditempel kembali ke sel
+  header, sehingga hasilnya dapat ditempel kembali ke sel
   input pertama tanpa menghapus kolom di Excel. Paste pada rentang dimulai
   dari sudut kiri atas; baris baru ditambahkan otomatis bila diperlukan.
   Jika data tidak menyertakan No, mulai paste dari kolom setelah No.

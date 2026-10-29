@@ -4,12 +4,12 @@
         Paste dari Excel mulai sel aktif dengan urutan kolom input: <strong>No, {{ $pasteColumns }}</strong>.
         No dapat diedit atau dikosongkan dan ikut disalin ke Excel. Nomor tidak diurutkan ulang otomatis.
         Jika data Excel tidak menyertakan No, mulai paste dari kolom setelah No.
-        Jangan sertakan header atau kolom hasil hitung. Angka menggunakan format Indonesia
+        Jangan sertakan header. Subtotal Impresfund boleh disertakan. Angka menggunakan format Indonesia
         (contoh: 1.250,50). No Rekening harus berformat teks di Excel agar nol di depan tetap utuh.
         Klik atau drag untuk memilih sel; Shift+klik atau Shift+panah untuk memilih rentang.
         Klik nomor baris di sisi kiri untuk memilih seluruh baris, header untuk memilih kolom,
         atau sudut kiri atas untuk memilih seluruh tabel. Nomor baris terpisah dari input No.
-        Ctrl+C/Ctrl+V (Mac: Cmd+C/Cmd+V) menyalin/menempel kolom input termasuk No, tanpa hasil hitung.
+        Ctrl+C/Ctrl+V (Mac: Cmd+C/Cmd+V) menyalin/menempel kolom input termasuk No dan Subtotal Impresfund.
         Salin Semua ke Excel memakai urutan yang sama sehingga dapat ditempel kembali ke sel input pertama.
         Panah, Tab/Shift+Tab dan Enter/Shift+Enter berpindah sel. Ketik untuk mengganti isi;
         klik dua kali atau F2 untuk mengedit teks, Escape untuk selesai.

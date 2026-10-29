@@ -94,6 +94,11 @@
     font-variant-numeric: tabular-nums;
 }
 
+.spreadsheet-grid [data-key="subtotal"]::placeholder {
+    color: #64748b;
+    opacity: 1;
+}
+
 .spreadsheet-grid .spreadsheet-computed {
     background: #f8fafc;
     color: #64748b;

@@ -10,7 +10,7 @@ export const schemas = {
         { key: 'uraian', label: 'Uraian' },
         { key: 'volume', label: 'Volume', numeric: true },
         { key: 'tarif', label: 'Tarif', numeric: true },
-        { key: 'subtotal', label: 'Subtotal', computed: true },
+        { key: 'subtotal', label: 'Subtotal', numeric: true, optional: true },
     ],
     beban: [
         { key: 'no', label: 'No', optional: true },
@@ -78,6 +78,7 @@ export function calculateRow(kind, values) {
     if (kind !== 'impresfund' && numbers.pajak > numbers.nominal) errors.pajak = 'Potongan pajak tidak boleh melebihi nominal.';
     if (Object.keys(errors).length) return { errors };
     if (kind !== 'impresfund') return { gross: numbers.nominal, tax: numbers.pajak, net: numbers.neto };
+    if (numbers.subtotal !== undefined) return { gross: numbers.subtotal, tax: 0, net: numbers.subtotal };
     // Both operands are scaled by 100; bound the product before rounding to cents.
     const product = numbers.volume * numbers.tarif;
     if (!Number.isSafeInteger(product)) return { errors: { tarif: 'Hasil perkalian terlalu besar.' } };
@@ -211,8 +212,13 @@ export function mountGrid(form) {
                 input.title = error;
                 issues.push(`Baris ${index + 1}: ${error}`);
             }
-            const computed = row.querySelector('.spreadsheet-computed');
-            if (computed) computed.value = result.errors ? 'Tidak valid' : format(kind === 'impresfund' ? result.gross : result.net);
+            const subtotal = row.querySelector('[data-key="subtotal"]');
+            if (subtotal) {
+                subtotal.placeholder = !result.errors && !result.empty ? format(result.gross) : '';
+                subtotal.setAttribute('aria-description', subtotal.value.trim()
+                    ? 'Subtotal manual. Kosongkan untuk menghitung otomatis dari Volume x Tarif.'
+                    : `Subtotal otomatis: ${subtotal.placeholder || 'belum tersedia'}. Isi untuk mengganti manual.`);
+            }
             if (!result.errors) gross += result.gross;
         });
         if (!Number.isSafeInteger(gross)) issues.push('Total terlalu besar untuk dihitung secara akurat.');
@@ -428,29 +434,33 @@ export function mountGrid(form) {
     });
 
     function clipboardRows(all) {
+        const value = (row, column) => {
+            const input = row.querySelector(`[data-key="${column.key}"]`);
+            return column.key === 'subtotal' && !input.value.trim() ? input.placeholder : input.value;
+        };
         if (all) {
             return [...body.rows].map((row) =>
-                editable.map((column) => row.querySelector(`[data-key="${column.key}"]`).value));
+                editable.map((column) => value(row, column)));
         }
         const bounds = selection;
         const selected = columns.filter((column, c) => !column.computed && c >= bounds.left && c <= bounds.right);
         if (!selected.length) throw new Error('Pilih setidaknya satu kolom input untuk disalin.');
         return [...body.rows].slice(bounds.top, bounds.bottom + 1).map((row) =>
-            selected.map((column) => row.querySelector(`[data-key="${column.key}"]`).value));
+            selected.map((column) => value(row, column)));
     }
     body.addEventListener('copy', (event) => {
         if (editing || !selection || !event.clipboardData) return;
         event.preventDefault();
         try {
             event.clipboardData.setData('text/plain', toTsv(clipboardRows(false)));
-            notify('Rentang kolom input disalin tanpa hasil hitung.');
+            notify('Rentang kolom input disalin, termasuk nilai Subtotal yang berlaku.');
         } catch (error) { notify(error.message, true); }
     });
     form.querySelector('[data-grid-copy]').addEventListener('click', async () => {
         try {
             if (!navigator.clipboard?.writeText) throw new Error('Clipboard tidak tersedia. Gunakan Shift+klik untuk memilih rentang lalu Ctrl+C.');
             await navigator.clipboard.writeText(toTsv(clipboardRows(true)));
-            notify('Semua kolom input termasuk No disalin tanpa hasil hitung atau header. Siap ditempel ke Excel dan kembali ke form.');
+            notify('Semua kolom input disalin tanpa header. Siap ditempel ke Excel dan kembali ke form.');
         } catch (error) { notify(`Tidak dapat menyalin: ${error.message}`, true); }
     });
     form.querySelector('[data-grid-add]').addEventListener('click', () => {
