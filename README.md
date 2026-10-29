@@ -80,6 +80,10 @@ tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
   Nama Bank, Nomor Rekening, No KTP / Paspor, No NPWP.
 - Rincian tampil sebagai sel spreadsheet dengan header nama kolom tanpa kode huruf, nomor
   baris dan header yang tetap terlihat saat scroll, serta penanda rentang aktif.
+  Tombol Bantuan di samping judul Rincian Pengajuan membuka modal berisi ketentuan
+  khusus Impresfund/Beban/Honor, format data, copy-paste Excel, seleksi dan navigasi
+  sel. Petunjuk tidak lagi memenuhi area input; modal dapat ditutup lewat tombol
+  Tutup, ikon silang, atau Escape.
   Nomor baris otomatis di sisi kiri terpisah dari kolom input No; klik nomor
   tersebut untuk memilih seluruh baris. Klik header untuk memilih seluruh kolom
   atau tombol sudut kiri atas untuk memilih semua sel tabel. Header terpilih

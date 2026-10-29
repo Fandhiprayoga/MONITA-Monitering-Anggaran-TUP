@@ -107,6 +107,39 @@ class PencairanFormTest extends TestCase
             ->assertSee('yang disalin lalu ditempel kembali menjadi nilai manual.');
     }
 
+    public function test_all_forms_place_grid_and_specific_instructions_in_help_modal(): void
+    {
+        foreach ([
+            'impresfund' => 'Subtotal otomatis = Volume x Tarif',
+            'beban' => 'Nominal Setelah Pajak diisi manual',
+            'honor' => 'Isi kewarganegaraan dengan WNI atau WNA',
+        ] as $kind => $instruction) {
+            $response = $this->withSession(['user_authenticated' => true])
+                ->get(route('pencairan.form', $kind))
+                ->assertOk()
+                ->assertSee('data-bs-target="#grid-help-modal"', false)
+                ->assertSee('aria-labelledby="grid-help-title"', false)
+                ->assertSee('modal-dialog-scrollable')
+                ->assertSee('aria-describedby="grid-help-summary"', false);
+
+            $document = new \DOMDocument();
+            $previous = libxml_use_internal_errors(true);
+            try {
+                $document->loadHTML($response->getContent());
+            } finally {
+                libxml_clear_errors();
+                libxml_use_internal_errors($previous);
+            }
+            $xpath = new \DOMXPath($document);
+            $this->assertSame(1, $xpath->query('//*[@id="grid-help-modal"]')->length);
+            $this->assertSame(0, $xpath->query('//form//*[@id="grid-help-modal" or @id="grid-help"]')->length);
+            $help = $xpath->query('//*[@id="grid-help"]')->item(0)->textContent;
+            $this->assertStringContainsString($instruction, $help);
+            $this->assertStringContainsString('Shift+panah', $help);
+            $this->assertStringContainsString('Salin Semua ke Excel', $help);
+        }
+    }
+
     public function test_forms_require_login_and_reject_unknown_types(): void
     {
         $this->get(route('pencairan.form', 'beban'))->assertRedirect(route('login'));
