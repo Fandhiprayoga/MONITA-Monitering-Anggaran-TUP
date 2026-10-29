@@ -199,6 +199,11 @@
                 @endif
 
                 @if($userRole === 'admin')
+                    <li class="pc-item pc-caption">
+                        <label>Settings</label>
+                        <i class="ti ti-settings"></i>
+                    </li>
+
                     <!-- management akun -->
                     <li class="pc-item">
                         <a class="pc-link {{ request()->routeIs('management') ? 'active' : '' }}"
