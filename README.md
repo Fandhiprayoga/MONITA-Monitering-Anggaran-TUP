@@ -70,10 +70,18 @@ tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
   Nama Bank, Nama Rekening, No Rekening.
   Honor: WNI / WNA, Nominal Honor, Potongan Pajak, Total Diterima, Nama Penerima, Nama Rekening,
   Nama Bank, Nomor Rekening, No KTP / Paspor, No NPWP.
-- Shift+klik memilih rentang; Ctrl+C menyalin kolom input dalam rentang.
-  Tombol Salin Semua ke Excel menyalin seluruh kolom termasuk nomor dan hasil hitung,
-  tanpa header tabel. Untuk paste kembali ke form, gunakan hanya kolom input
-  sesuai urutan di atas.
+- Rincian tampil sebagai sel spreadsheet dengan header kolom A, B, dst., nomor
+  baris dan header yang tetap terlihat saat scroll, serta penanda rentang aktif.
+  Klik/drag, Shift+klik atau Shift+panah memilih rentang. Panah, Tab/Shift+Tab,
+  dan Enter/Shift+Enter berpindah sel. Ketik untuk mengganti isi; klik dua kali
+  atau F2 untuk mengedit teks, Escape untuk selesai. Delete/Backspace mengosongkan
+  kolom input dalam rentang tanpa menghapus baris atau mengubah hasil hitung.
+- Ctrl+C/Ctrl+V (Mac: Cmd+C/Cmd+V) menyalin/menempel kolom input dalam rentang.
+  Tombol Salin Semua ke Excel juga hanya menyalin kolom input, tanpa nomor,
+  hasil hitung, atau header, sehingga hasilnya dapat ditempel kembali ke sel
+  input pertama tanpa menghapus kolom di Excel. Paste pada rentang dimulai
+  dari sudut kiri atas; baris baru ditambahkan otomatis bila diperlukan.
+  Saat mengedit teks di dalam sel, copy/paste satu teks tetap bekerja secara native.
 - Angka menggunakan format Indonesia, maksimal dua desimal. No Rekening harus
   berupa teks di Excel untuk mempertahankan nol di depan. Maksimal 500 baris.
   No KTP / Paspor dan No NPWP juga diperlakukan sebagai teks.

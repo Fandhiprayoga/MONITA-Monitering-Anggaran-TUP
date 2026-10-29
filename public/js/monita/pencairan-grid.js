@@ -127,10 +127,13 @@ export function mountGrid(form) {
     const columns = schemas[kind];
     const editable = columns.filter((column) => !column.computed);
     const body = form.querySelector('[data-grid-body]');
+    const table = body.closest('table');
     const message = form.querySelector('[data-grid-message]');
     let active = null;
     let anchor = null;
     let selection = null;
+    let editing = null;
+    let dragging = false;
     form.addEventListener('submit', (event) => event.preventDefault());
 
     function notify(text, error = false) {
@@ -140,24 +143,30 @@ export function mountGrid(form) {
 
     function clearSelection() {
         selection = null;
-        body.querySelectorAll('td').forEach((cell) => cell.classList.remove('table-primary'));
+        body.querySelectorAll('td').forEach((cell) => {
+            cell.classList.remove('is-selected', 'is-active');
+            cell.setAttribute('aria-selected', 'false');
+        });
     }
 
     function addRow() {
         const tr = document.createElement('tr');
         const number = document.createElement('th');
         number.scope = 'row';
+        tr.setAttribute('role', 'row');
         tr.append(number);
         for (const column of columns) {
             const td = document.createElement('td');
+            td.setAttribute('role', 'gridcell');
+            td.setAttribute('aria-readonly', String(Boolean(column.computed)));
             const input = document.createElement('input');
             input.type = 'text';
-            input.className = `form-control form-control-sm ${column.computed ? 'bg-light' : ''}`;
-            input.style.minWidth = column.numeric || column.computed ? '130px' : '170px';
+            input.className = `spreadsheet-cell${column.numeric || column.computed ? ' spreadsheet-numeric' : ''}${column.computed ? ' spreadsheet-computed' : ''}`;
+            input.style.minWidth = column.numeric || column.computed ? '145px' : '190px';
             input.dataset.key = column.key;
             input.value = column.defaultValue ?? '';
-            input.readOnly = Boolean(column.computed);
-            if (column.list) input.setAttribute('list', column.list);
+            input.readOnly = true;
+            input.tabIndex = -1;
             if (column.numeric) input.inputMode = 'decimal';
             td.append(input);
             tr.append(td);
@@ -187,7 +196,7 @@ export function mountGrid(form) {
                 input.title = error;
                 issues.push(`Baris ${index + 1}: ${error}`);
             }
-            const computed = row.querySelector('[readonly]');
+            const computed = row.querySelector('.spreadsheet-computed');
             if (computed) computed.value = result.errors ? 'Tidak valid' : format(kind === 'impresfund' ? result.gross : result.net);
             if (!result.errors) gross += result.gross;
         });
@@ -201,35 +210,150 @@ export function mountGrid(form) {
         return { row: input.closest('tr').sectionRowIndex, col: columns.findIndex((column) => column.key === input.dataset.key) };
     }
 
-    body.addEventListener('focusin', (event) => {
-        if (event.target.matches('input')) active = event.target;
-    });
-    body.addEventListener('click', (event) => {
-        if (!event.target.matches('input')) return;
-        const current = position(event.target);
+    function finishEditing() {
+        if (!editing) return;
+        editing.readOnly = true;
+        editing.classList.remove('is-editing');
+        editing.removeAttribute('list');
+        editing = null;
+    }
+
+    function select(input, extend = false, focus = true) {
+        finishEditing();
+        const current = position(input);
+        if (!extend || !anchor) anchor = current;
         clearSelection();
-        if (event.shiftKey && anchor) {
-            selection = {
-                top: Math.min(anchor.row, current.row), bottom: Math.max(anchor.row, current.row),
-                left: Math.min(anchor.col, current.col), right: Math.max(anchor.col, current.col),
-            };
-            [...body.rows].forEach((row, r) => [...row.cells].slice(1).forEach((cell, c) => {
-                cell.classList.toggle('table-primary', r >= selection.top && r <= selection.bottom && c >= selection.left && c <= selection.right);
-            }));
-        } else anchor = current;
+        if (active) active.tabIndex = -1;
+        active = input;
+        active.tabIndex = 0;
+        selection = {
+            top: Math.min(anchor.row, current.row), bottom: Math.max(anchor.row, current.row),
+            left: Math.min(anchor.col, current.col), right: Math.max(anchor.col, current.col),
+        };
+        [...body.rows].forEach((row, r) => [...row.cells].slice(1).forEach((cell, c) => {
+            const selected = r >= selection.top && r <= selection.bottom && c >= selection.left && c <= selection.right;
+            cell.classList.toggle('is-selected', selected);
+            cell.setAttribute('aria-selected', String(selected));
+        }));
+        input.closest('td').classList.add('is-active');
+        const address = (row, col) => `${String.fromCharCode(65 + col)}${row + 1}`;
+        form.querySelector('[data-grid-address]').textContent =
+            `${address(selection.top, selection.left)}:${address(selection.bottom, selection.right)}`;
+        if (focus) {
+            input.focus({ preventScroll: true });
+            input.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+        }
+    }
+
+    function startEditing(input, replace = false) {
+        const column = columns[position(input).col];
+        if (column.computed) {
+            notify('Kolom hasil hitung tidak dapat diedit.', true);
+            return;
+        }
+        select(input);
+        editing = input;
+        input.readOnly = false;
+        input.classList.add('is-editing');
+        if (column.list) input.setAttribute('list', column.list);
+        if (replace) input.value = '';
+        else input.select();
+    }
+
+    body.addEventListener('focusin', (event) => {
+        if (event.target.matches('input') && event.target !== active) select(event.target, false, false);
     });
-    body.addEventListener('input', () => { clearSelection(); recalculate(); });
+    body.addEventListener('focusout', (event) => {
+        if (event.target === editing) finishEditing();
+    });
+    body.addEventListener('pointerdown', (event) => {
+        const input = event.target.closest('input');
+        if (!input || event.button !== 0 || editing === input && !event.shiftKey) return;
+        event.preventDefault();
+        select(input, event.shiftKey);
+        dragging = true;
+        table.classList.add('is-selecting');
+    });
+    body.addEventListener('pointerover', (event) => {
+        if (!dragging || !(event.buttons & 1)) return;
+        const input = event.target.closest('input');
+        if (input && input !== active) select(input, true);
+    });
+    body.ownerDocument.addEventListener('pointerup', () => {
+        dragging = false;
+        table.classList.remove('is-selecting');
+    });
+    body.addEventListener('dblclick', (event) => {
+        if (event.target.matches('input')) startEditing(event.target);
+    });
+    body.addEventListener('input', recalculate);
     body.addEventListener('keydown', (event) => {
-        if (!event.shiftKey && !event.ctrlKey && !event.metaKey) clearSelection();
+        const input = event.target;
+        if (!input.matches('input') || event.isComposing) return;
+        const modifier = event.ctrlKey || event.metaKey;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            select(input);
+            return;
+        }
+        if (editing === input && !['Tab', 'Enter'].includes(event.key)) return;
+        if (modifier && event.key.toLowerCase() === 'a') {
+            event.preventDefault();
+            anchor = { row: 0, col: 0 };
+            select(body.rows[body.rows.length - 1].lastElementChild.firstElementChild, true);
+            return;
+        }
+        if (modifier || event.altKey) return;
+        const current = position(input);
+        let { row, col } = current;
+        if (event.key === 'Tab') {
+            col += event.shiftKey ? -1 : 1;
+            if (col >= columns.length) { col = 0; row++; }
+            if (col < 0) { col = columns.length - 1; row--; }
+            // Let Tab leave the grid at its boundaries.
+            if (row < 0 || row >= body.rows.length) { finishEditing(); return; }
+        } else if (event.key === 'Enter') row += event.shiftKey ? -1 : 1;
+        else if (event.key === 'ArrowDown') row++;
+        else if (event.key === 'ArrowUp') row--;
+        else if (event.key === 'ArrowLeft') col--;
+        else if (event.key === 'ArrowRight') col++;
+        else if (['Delete', 'Backspace'].includes(event.key)) {
+            event.preventDefault();
+            const bounds = selection ?? { top: row, bottom: row, left: col, right: col };
+            [...body.rows].slice(bounds.top, bounds.bottom + 1).forEach((tr) => {
+                columns.forEach((column, c) => {
+                    if (!column.computed && c >= bounds.left && c <= bounds.right) {
+                        tr.querySelector(`[data-key="${column.key}"]`).value = '';
+                    }
+                });
+            });
+            recalculate();
+            return;
+        } else if (event.key === 'F2') {
+            event.preventDefault();
+            startEditing(input);
+            return;
+        } else if (event.key.length === 1) {
+            startEditing(input, true);
+            return;
+        } else return;
+        event.preventDefault();
+        row = Math.max(0, Math.min(body.rows.length - 1, row));
+        col = Math.max(0, Math.min(columns.length - 1, col));
+        select(body.rows[row].querySelector(`[data-key="${columns[col].key}"]`),
+            event.shiftKey && event.key.startsWith('Arrow'));
     });
 
     body.addEventListener('paste', (event) => {
-        const input = event.target;
+        let input = event.target;
         if (!input.matches('input') || !event.clipboardData) return;
+        if (!editing && selection) {
+            input = body.rows[selection.top].querySelector(`[data-key="${columns[selection.left].key}"]`);
+        }
         const text = event.clipboardData.getData('text/plain');
-        if (input.readOnly) { event.preventDefault(); notify('Kolom hasil hitung tidak dapat ditempel.', true); return; }
-        // A single text cell keeps native editing; rectangular clipboard data fills input columns only.
-        if (!/[\t\r\n]/.test(text)) return;
+        if (columns[position(input).col].computed) { event.preventDefault(); notify('Kolom hasil hitung tidak dapat ditempel.', true); return; }
+        // Keep native text editing only while the cell editor is open.
+        if (editing === input && !/[\t\r\n]/.test(text)) return;
         event.preventDefault();
         let rows;
         try { rows = parseTsv(text); }
@@ -241,21 +365,24 @@ export function mountGrid(form) {
             notify('Paste dibatalkan: kolom melebihi kolom input yang tersedia. Jangan sertakan No atau hasil hitung.', true);
             return;
         }
-        clearSelection();
+        if (!rows.length) return;
+        const startCol = position(input).col;
+        finishEditing();
         while (body.rows.length < start + rows.length) addRow();
         rows.forEach((row, r) => row.forEach((value, c) => {
             body.rows[start + r].querySelector(`[data-key="${editable[offset + c].key}"]`).value = value;
         }));
         recalculate();
+        anchor = { row: start, col: startCol };
+        const width = Math.max(...rows.map((row) => row.length));
+        select(body.rows[start + rows.length - 1].querySelector(`[data-key="${editable[offset + width - 1].key}"]`), true);
         notify(`${rows.length} baris ditempel. Periksa penanda merah bila ada data tidak valid.`);
     });
 
     function clipboardRows(all) {
         if (all) {
-            return [...body.rows].map((row) => [
-                row.firstElementChild.textContent,
-                ...columns.map((column) => row.querySelector(`[data-key="${column.key}"]`).value),
-            ]);
+            return [...body.rows].map((row) =>
+                editable.map((column) => row.querySelector(`[data-key="${column.key}"]`).value));
         }
         const bounds = selection;
         const selected = columns.filter((column, c) => !column.computed && c >= bounds.left && c <= bounds.right);
@@ -264,7 +391,7 @@ export function mountGrid(form) {
             selected.map((column) => row.querySelector(`[data-key="${column.key}"]`).value));
     }
     body.addEventListener('copy', (event) => {
-        if (!selection || !event.clipboardData) return;
+        if (editing || !selection || !event.clipboardData) return;
         event.preventDefault();
         try {
             event.clipboardData.setData('text/plain', toTsv(clipboardRows(false)));
@@ -275,28 +402,31 @@ export function mountGrid(form) {
         try {
             if (!navigator.clipboard?.writeText) throw new Error('Clipboard tidak tersedia. Gunakan Shift+klik untuk memilih rentang lalu Ctrl+C.');
             await navigator.clipboard.writeText(toTsv(clipboardRows(true)));
-            notify('Semua data kolom disalin, termasuk No dan hasil hitung, tanpa header tabel. Siap ditempel ke Excel.');
+            notify('Semua kolom input disalin tanpa No, hasil hitung, atau header. Siap ditempel ke Excel dan kembali ke form.');
         } catch (error) { notify(`Tidak dapat menyalin: ${error.message}`, true); }
     });
     form.querySelector('[data-grid-add]').addEventListener('click', () => {
         if (body.rows.length >= MAX_ROWS) { notify('Maksimal 500 baris.', true); return; }
-        clearSelection();
+        finishEditing();
         const row = addRow();
         recalculate();
-        row.querySelector('input').focus();
+        select(row.querySelector('input'));
     });
     form.querySelector('[data-grid-delete]').addEventListener('click', () => {
         if (!active || !body.contains(active)) { notify('Pilih sel pada baris yang ingin dihapus.', true); return; }
         const top = selection ? selection.top : position(active).row;
         const bottom = selection ? selection.bottom : top;
+        finishEditing();
         for (let i = bottom; i >= top; i--) body.rows[i].remove();
         active = null;
         anchor = null;
         clearSelection();
         if (!body.rows.length) addRow();
         recalculate();
+        select(body.rows[Math.min(top, body.rows.length - 1)].querySelector('input'));
         notify(`${bottom - top + 1} baris dihapus.`);
     });
     for (let i = 0; i < 5; i++) addRow();
     recalculate();
+    select(body.rows[0].querySelector('input'), false, false);
 }

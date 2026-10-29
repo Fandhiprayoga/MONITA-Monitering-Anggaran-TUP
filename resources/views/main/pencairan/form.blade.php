@@ -3,6 +3,7 @@
 @section('title', 'Form ' . $jenisNama . ' | MONITA')
 
 @section('content')
+    <link rel="stylesheet" href="{{ asset('css/monita/pencairan-grid.css') }}">
     <div class="card">
         <div class="card-header">
             <h5 class="mb-0">Form Pencairan Anggaran - {{ $jenisNama }}</h5>
