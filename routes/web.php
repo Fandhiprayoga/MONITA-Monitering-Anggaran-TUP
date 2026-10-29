@@ -10,6 +10,7 @@ use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\PengajuanController;
+use App\Http\Controllers\PencairanController;
 
 // Redirect root ke login
 Route::get('/', function () {
@@ -42,6 +43,20 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
     })->name('pengajuan.riwayat');
 
 });
+
+    Route::prefix('pencairan')->name('pencairan.')->group(function () {
+        Route::get('/pengajuan', [PencairanController::class, 'pengajuan'])->name('pengajuan');
+
+        Route::get('/form/{jenis}', [PencairanController::class, 'form'])
+            ->whereIn('jenis', ['impresfund', 'beban', 'honor'])
+            ->name('form');
+
+        Route::get('/verifikasi', [PencairanController::class, 'verifikasi'])->name('verifikasi');
+
+        Route::get('/transaksi/{jenis}', [PencairanController::class, 'transaksi'])
+            ->whereIn('jenis', ['impresfund', 'beban', 'honor'])
+            ->name('transaksi');
+    });
 
     Route::get('/unit/{kode}', [UnitController::class, 'show'])->name('unit.show');
     Route::get('/summary/triwulan/{tw}', [SummaryController::class, 'index'])

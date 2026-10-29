@@ -6,9 +6,12 @@ use Google\Client;
 use Google\Service\Sheets;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use App\Traits\FormatDataTrait;
 
 class GoogleSheetService
 {
+    use FormatDataTrait;
+
     private $service;
     private $spreadsheetId;
 
@@ -27,6 +30,49 @@ class GoogleSheetService
             Log::error('Google Sheets Service initialization failed: ' . $e->getMessage());
             throw $e;
         }
+    }
+
+    public function getUnitDrkOptions(string $kodePp, int $triwulan): array
+    {
+        if (trim($kodePp) === '' || $triwulan < 1 || $triwulan > 4) {
+            throw new \InvalidArgumentException('Unit atau triwulan tidak valid.');
+        }
+        if (empty($this->spreadsheetId)) {
+            throw new \RuntimeException('Sumber spreadsheet anggaran belum dikonfigurasi.');
+        }
+
+        $range = 'RAW Data TW '.$this->toRoman($triwulan).'!B2:N3000';
+        $response = $this->service->spreadsheets_values->get(
+            $this->spreadsheetId,
+            $range,
+            ['valueRenderOption' => 'UNFORMATTED_VALUE']
+        );
+        $options = [];
+        foreach ($response->getValues() ?? [] as $index => $row) {
+            if (strtoupper(trim((string) ($row[0] ?? ''))) !== strtoupper(trim($kodePp))) {
+                continue;
+            }
+            $kodeDrk = trim((string) ($row[2] ?? ''));
+            if ($kodeDrk === '') {
+                continue;
+            }
+            $options[] = [
+                'id' => (string) ($index + 2),
+                'tipe' => trim((string) ($row[1] ?? '')),
+                'drk_tup' => $kodeDrk,
+                'kode_drk' => trim((string) ($row[12] ?? '')),
+                'kode_pp' => trim((string) ($row[9] ?? '')),
+                'nama_pp' => trim((string) ($row[10] ?? '')),
+                'kode_akun' => trim((string) ($row[3] ?? '')),
+                'nama_akun' => trim((string) ($row[4] ?? '')),
+                'uraian_drk' => trim((string) ($row[5] ?? '')),
+                'saldo_awal' => number_format($this->parseNumber($row[6] ?? 0), 2, ',', '.'),
+                'anggaran_terpakai' => number_format($this->parseNumber($row[7] ?? 0), 2, ',', '.'),
+                'saldo_terkini' => number_format($this->parseNumber($row[8] ?? 0), 2, ',', '.'),
+            ];
+        }
+
+        return $options;
     }
 
     /**

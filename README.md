@@ -31,6 +31,58 @@ Tujuan utama sistem MONITA adalah mencapai efisiensi, akurasi, dan transparansi 
 - **Keamanan Login**: Implementasi CAPTCHA untuk mencegah akses tidak sah
 - **Pengaturan Tahun Anggaran**: Mengelola koneksi ke Google Sheets ID untuk tahun anggaran yang berbeda-beda
 
+### Pratinjau form pencairan
+
+Form Impresfund, Beban, dan Honor menggunakan header bersama dan rincian sesuai jenis.
+Halaman ini belum menyimpan data ke backend; perubahan hilang saat halaman dimuat
+ulang. Pilih DRK menampilkan hanya data unit (Kode PP) akun yang login untuk
+triwulan kalender berjalan, dari `RAW Data TW I/II/III/IV!B2:N3000`.
+DRK TUP yang sama dengan akun berbeda tetap menjadi opsi terpisah.
+Kolom Cari DRK memfilter pilihan berdasarkan kode DRK, kode/nama akun, uraian,
+atau tipe anggaran tanpa membedakan huruf besar/kecil. Pilihan aktif tetap
+ditampilkan dan header tidak berubah saat pencarian; kosongkan pencarian untuk
+menampilkan semua opsi kembali.
+Kode Akun (di samping Nama Akun), Nama Akun, Kode PP, Nama PP, kode/uraian DRK
+dan saldo terisi otomatis dan read-only. Kode Akun diambil dari kolom E, Nama Akun
+dari F, Kode PP dari K, Nama PP dari L, dan Kode DRK SIMKUG dari N pada baris terpilih.
+Filter akses unit tetap menggunakan kolom B sesuai unit akun login, bukan kolom K.
+Nama PP tidak ditimpa dari session login. Dropdown memuat DRK TUP (D) dan SIMKUG (N)
+agar keduanya bisa dicari; jika K/L/N kosong, field terkait tetap kosong tanpa fallback.
+Saldo Awal memakai Anggaran, Anggaran Terpakai memakai Realisasi, dan Saldo Terkini
+memakai Saldo dari sheet. Uraian DRK tetap memakai kolom G.
+Kegagalan memuat data ditampilkan sebagai
+pesan error; unit tanpa DRK mendapatkan pemberitahuan, bukan saldo nol buatan.
+Tombol Simpan sebagai Draft dan Submit Pengajuan ditampilkan pada semua form,
+tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
+
+- Impresfund: subtotal = volume x tarif; total pengajuan = jumlah subtotal.
+- Beban: potongan pajak dalam rupiah; total pengajuan memakai bruto, sedangkan
+  Nominal Setelah Pajak diisi manual dalam rupiah, tanpa perhitungan otomatis.
+- Potongan pajak pada baris baru Honor dan Beban memiliki nilai awal 0 rupiah,
+  tetap dapat diedit. Baris yang hanya berisi pajak default 0 tetap diabaikan.
+- Honor: Total Diterima diisi manual dalam rupiah, tanpa perhitungan otomatis;
+  total pengajuan memakai bruto. Kewarganegaraan diisi WNI atau WNA; NPWP boleh kosong jika belum
+  tersedia. Kolom lain wajib diisi pada baris yang digunakan.
+- Ringkasan total hanya ditampilkan sebagai Nominal Diajukan di header; tidak ada
+  total pengajuan, total pajak, atau total transfer di bawah tabel.
+- Paste Excel dimulai dari sel aktif, hanya kolom input (tanpa header, nomor,
+  atau hasil hitung). Impresfund: Uraian, Volume, Tarif. Beban: Nominal, Pot Pajak, Nominal Setelah Pajak,
+  Nama Bank, Nama Rekening, No Rekening.
+  Honor: WNI / WNA, Nominal Honor, Potongan Pajak, Total Diterima, Nama Penerima, Nama Rekening,
+  Nama Bank, Nomor Rekening, No KTP / Paspor, No NPWP.
+- Shift+klik memilih rentang; Ctrl+C menyalin kolom input dalam rentang.
+  Tombol Salin Semua ke Excel menyalin seluruh kolom termasuk nomor dan hasil hitung,
+  tanpa header tabel. Untuk paste kembali ke form, gunakan hanya kolom input
+  sesuai urutan di atas.
+- Angka menggunakan format Indonesia, maksimal dua desimal. No Rekening harus
+  berupa teks di Excel untuk mempertahankan nol di depan. Maksimal 500 baris.
+  No KTP / Paspor dan No NPWP juga diperlakukan sebagai teks.
+- Baris kosong diabaikan; rincian tidak lengkap atau tidak valid ditandai dan
+  total ditampilkan sebagai "Belum valid", bukan total parsial.
+
+Validasi fitur: `php artisan test --filter="PencairanFormTest|UnitDrkOptionsTest"` dan
+`node --test tests\js\pencairan-grid.test.js`.
+
 ## 🛠️ Teknologi yang Digunakan
 
 ### Backend

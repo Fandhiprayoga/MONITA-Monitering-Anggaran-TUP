@@ -143,6 +143,61 @@
                     </ul>
                 </li>
 
+                <!-- Pencairan Anggaran -->
+                <li class="pc-item pc-caption">
+                    <label>Pencairan Anggaran</label>
+                    <i class="ti ti-wallet"></i>
+                </li>
+
+                <!-- Pengajuan -->
+                <li class="pc-item">
+                    <a class="pc-link {{ request()->routeIs('pencairan.pengajuan', 'pencairan.form') ? 'active' : '' }}"
+                        href="{{ route('pencairan.pengajuan') }}">
+                        <span class="pc-micon"><i class="ti ti-file-plus"></i></span>
+                        <span class="pc-mtext">Pengajuan</span>
+                    </a>
+                </li>
+
+                @if($userRole === 'admin')
+                    <!-- Verifikasi Pengajuan -->
+                    <li class="pc-item">
+                        <a class="pc-link {{ request()->routeIs('pencairan.verifikasi') ? 'active' : '' }}"
+                            href="{{ route('pencairan.verifikasi') }}">
+                            <span class="pc-micon"><i class="ti ti-list-check"></i></span>
+                            <span class="pc-mtext">Verifikasi Pengajuan</span>
+                        </a>
+                    </li>
+
+                    <!-- Transaksi -->
+                    <li class="pc-item pc-hasmenu">
+                        <a href="#!" class="pc-link">
+                            <span class="pc-micon"><i class="ti ti-exchange"></i></span>
+                            <span class="pc-mtext">Transaksi</span>
+                            <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
+                        </a>
+                        <ul class="pc-submenu">
+                            <li class="pc-item">
+                                <a class="pc-link {{ request()->routeIs('pencairan.transaksi') && request()->route('jenis') === 'impresfund' ? 'active' : '' }}"
+                                    href="{{ route('pencairan.transaksi', 'impresfund') }}">
+                                    Pengajuan Impresfund
+                                </a>
+                            </li>
+                            <li class="pc-item">
+                                <a class="pc-link {{ request()->routeIs('pencairan.transaksi') && request()->route('jenis') === 'beban' ? 'active' : '' }}"
+                                    href="{{ route('pencairan.transaksi', 'beban') }}">
+                                    Pengajuan Beban
+                                </a>
+                            </li>
+                            <li class="pc-item">
+                                <a class="pc-link {{ request()->routeIs('pencairan.transaksi') && request()->route('jenis') === 'honor' ? 'active' : '' }}"
+                                    href="{{ route('pencairan.transaksi', 'honor') }}">
+                                    Pengajuan Honor
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                @endif
+
                 @if($userRole === 'admin')
                     <!-- management akun -->
                     <li class="pc-item">
