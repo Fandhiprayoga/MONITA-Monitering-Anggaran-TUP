@@ -22,6 +22,7 @@ class GoogleSheetService
         try {
             $client = new Client();
             $client->setApplicationName('Monita System');
+            $client->setHttpClient(new \GuzzleHttp\Client(['timeout' => 15, 'connect_timeout' => 5]));
             $client->setScopes([Sheets::SPREADSHEETS_READONLY]);
             $client->setAuthConfig(storage_path('app/credentials/service-account.json'));
             
@@ -69,10 +70,60 @@ class GoogleSheetService
                 'saldo_awal' => number_format($this->parseNumber($row[6] ?? 0), 2, ',', '.'),
                 'anggaran_terpakai' => number_format($this->parseNumber($row[7] ?? 0), 2, ',', '.'),
                 'saldo_terkini' => number_format($this->parseNumber($row[8] ?? 0), 2, ',', '.'),
+                '_strict_balances' => array_map(fn ($i) => $this->strictSheetDecimal($row[$i] ?? null), [6, 7, 8]),
             ];
         }
 
         return $options;
+    }
+
+    /** Fresh, explicitly year-bound lookup. Never reads cache or falls back to another year. */
+    public function getPencairanDrkOptions(string $kodePp, int $triwulan, int $year): array
+    {
+        $id = $year === (int) config('pencairan.source_year')
+            ? config('pencairan.source_spreadsheet_id')
+            : (config('pencairan.archive_spreadsheet_ids', [])[$year] ?? null);
+        if (!$id) { throw new \RuntimeException('Sumber anggaran tahun tersebut belum tersedia.'); }
+        $previous = $this->spreadsheetId;
+        try {
+            $this->spreadsheetId = $id;
+            $options = $this->getUnitDrkOptions($kodePp, $triwulan);
+        } finally {
+            $this->spreadsheetId = $previous;
+        }
+        foreach ($options as &$option) {
+            $option['id'] = self::pencairanDrkId($kodePp, $option);
+            $option['kode_pp'] = strtoupper(trim($kodePp));
+            foreach (['saldo_awal', 'anggaran_terpakai', 'saldo_terkini'] as $index => $field) {
+                $decimal = $option['_strict_balances'][$index];
+                $option[$field] = $decimal === null ? null : PencairanDecimal::format($decimal);
+            }
+            unset($option['_strict_balances']);
+        }
+        unset($option);
+        return $options;
+    }
+
+    public static function pencairanDrkId(string $kodePp, array $option): string
+    {
+        $parts = array_map(fn ($v) => strtoupper(trim((string) $v)), [
+            $kodePp, $option['drk_tup'] ?? '', $option['kode_akun'] ?? '', $option['tipe'] ?? '',
+        ]);
+        return hash('sha256', json_encode($parts, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+    }
+
+    private function strictSheetDecimal(mixed $value): ?string
+    {
+        if ($value === null || $value === '' || is_bool($value)) { return null; }
+        try {
+            if (is_int($value) || is_float($value)) {
+                if (!is_finite((float) $value)) { return null; }
+                return (string) \Brick\Math\BigDecimal::of((string) $value)->toScale(2, \Brick\Math\RoundingMode::HALF_UP);
+            }
+            return PencairanDecimal::raw($value, 'saldo', true, false);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**

@@ -487,4 +487,19 @@ export function mountGrid(form) {
     for (let i = 0; i < 5; i++) addRow();
     recalculate();
     select(body.rows[0].querySelector('input'), false, false);
+    return {
+        rows() {
+            finishEditing();
+            return [...body.rows].map((row) => Object.fromEntries([...row.querySelectorAll('input')].map((input) => [input.dataset.key, input.value])));
+        },
+        load(rows) {
+            finishEditing(); active = null; anchor = null; clearSelection(); body.replaceChildren();
+            for (const values of rows.slice(0, MAX_ROWS)) {
+                const row = addRow();
+                row.querySelectorAll('input').forEach((input) => { input.value = String(values[input.dataset.key] ?? (input.dataset.key === 'no' ? body.rows.length : '')); });
+            }
+            if (!body.rows.length) addRow();
+            recalculate(); select(body.rows[0].querySelector('input'), false, false);
+        },
+    };
 }

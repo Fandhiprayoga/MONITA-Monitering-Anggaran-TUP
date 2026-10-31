@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use App\Services\GoogleSheetService;
 
@@ -23,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Berry uses Bootstrap 5, not Laravel's default Tailwind pagination styles.
+        Paginator::useBootstrapFive();
         date_default_timezone_set('Asia/Jakarta');
         // Share data ke semua view
         View::composer('*', function ($view) {
@@ -34,7 +38,7 @@ class AppServiceProvider extends ServiceProvider
                 $allUnits = !empty($unitsFromSheet) ? $unitsFromSheet : config('units', []);
                 
             } catch (\Exception $e) {
-                \Log::error('Error loading units from Google Sheets: ' . $e->getMessage());
+                Log::error('Error loading units from Google Sheets: ' . $e->getMessage());
                 $allUnits = config('units', []);
             }
 

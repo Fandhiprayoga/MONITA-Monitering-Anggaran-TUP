@@ -1,6 +1,6 @@
 # PRD — Backend Pengajuan Pencairan MONITA
 
-Versi: 1.4 — 31 Oktober 2026  
+Versi: 1.5 — 31 Oktober 2026
 Status: Siap menjadi acuan implementasi; asumsi pada bagian 14 perlu dikonfirmasi sebelum rilis produksi.
 
 ## 1. Tujuan
@@ -19,6 +19,7 @@ Kondisi awal: halaman form dan grid sudah tersedia, tetapi belum ada endpoint pe
 | Draft | Memiliki ID internal, belum memiliki nomor resmi |
 | Akses pengguna | Satu akun per PP saat ini; pengguna dapat melihat dan mengedit pengajuan PP-nya dalam status yang diizinkan |
 | Peran admin | Admin yang sama boleh melakukan verifikasi dan penyelesaian |
+| Admin sebagai pengaju | Admin dengan PP dapat membuat, edit, dan submit pengajuan untuk PP sendiri; tidak boleh edit/submit atas nama PP lain |
 | Tahapan | Tidak menggunakan status Sedang Diproses |
 | Saldo | Google Sheets tetap sumber saldo; MONITA tidak memperbarui, mereservasi, atau mengurangi saldo |
 | Sumber saldo gagal | Google Sheets adalah sumber kebenaran posisi anggaran terkini; jika gagal mendapatkan data, submit diblokir |
@@ -61,10 +62,10 @@ Kondisi awal: halaman form dan grid sudah tersedia, tetapi belum ada endpoint pe
 | Tindakan | Pengguna PP | Admin |
 |---|---|---|
 | Lihat daftar/detail | Hanya PP sendiri | Semua PP |
-| Buat draft | PP sendiri | Tidak termasuk MVP |
-| Edit isi | PP sendiri, `draft`/`returned` | Tidak mengedit isi pengajuan |
-| Submit/submit ulang | PP sendiri, `draft`/`returned` | Tidak termasuk MVP |
-| Batalkan | PP sendiri, `draft`/`returned` | Verifikator, `submitted`/`returned`; remark wajib |
+| Buat draft | PP sendiri | PP sendiri, wajib memiliki kode PP |
+| Edit isi | PP sendiri, `draft`/`returned` | Hanya PP sendiri, `draft`/`returned`; tidak mengedit PP lain |
+| Submit/submit ulang | PP sendiri, `draft`/`returned` | Hanya PP sendiri, `draft`/`returned` |
+| Batalkan | PP sendiri, `draft`/`returned` | Verifikator, `submitted`/`returned`, serta `draft` PP sendiri; remark wajib |
 | Verifikasi | Tidak | Hanya `submitted` |
 | Kembalikan | Tidak | `submitted` atau `verified` |
 | Tandai selesai | Tidak | Hanya `verified` |
@@ -72,6 +73,7 @@ Kondisi awal: halaman form dan grid sudah tersedia, tetapi belum ada endpoint pe
 
 - Otorisasi diterapkan di server pada setiap endpoint, termasuk lampiran dan snapshot, bukan hanya menyembunyikan tombol.
 - `kode_pp`, role, dan identitas aktor harus berasal dari session yang tervalidasi, bukan payload browser.
+- Tombol Tambah Pengajuan tersedia bagi user maupun admin yang memiliki PP. Admin tetap melihat seluruh PP untuk pengawasan; hak edit/submit tidak mengikuti hak lihat global. Admin tanpa PP tetap dapat memverifikasi/transaksi tetapi tidak membuat pengajuan.
 - Simpan identitas pembuat dan setiap aktor meskipun akses didasarkan pada PP. Perubahan kepemilikan akun tidak boleh mengubah atribusi riwayat lama.
 - Jika aturan satu akun per PP diterapkan sistem, penambahan/perubahan akun harus menolak duplikasi PP yang tidak diizinkan. Jangan mengubah validasi akun admin tanpa meninjau kebutuhan mereka.
 
@@ -97,6 +99,7 @@ Transisi yang diperbolehkan:
 6. `draft/returned → cancelled`: pengguna, konfirmasi eksplisit.
 7. `verified → returned`: admin dari antrean transaksi, remark wajib; keluarkan dari antrean transaksi dan wajib verifikasi ulang setelah pengguna submit revisi.
 8. `submitted/returned → cancelled`: admin verifikator, remark wajib dan konfirmasi; termasuk pengembalian yang sudah melewati periode asal. Pengguna tidak perlu mengedit atau submit ulang untuk pembatalan ini. Pengajuan verified harus dikembalikan dahulu sebelum dibatalkan; completed tidak dapat dibatalkan.
+9. `draft → cancelled`: admin sebagai pengaju, hanya draft PP sendiri, remark wajib. Transisi create/edit/submit pengguna juga berlaku untuk admin PP sendiri dengan seluruh validasi periode, saldo, dan konflik tetap sama.
 
 Transisi lain ditolak server. `completed` dan `cancelled` terminal pada MVP. Pengembalian dari antrean transaksi membatalkan kelayakan verifikasi versi sebelumnya, tetapi tidak menghapus audit atau snapshot. Metadata verifikasi aktif direset; riwayat verifikasi sebelumnya tetap tersimpan. Pengajuan selesai belum dapat dibuka kembali.
 
@@ -164,7 +167,7 @@ Transisi lain ditolak server. `completed` dan `cancelled` terminal pada MVP. Pen
 - Admin melihat rincian, total, snapshot anggaran, dan seluruh remark/revisi.
 - Tombol verifikasi dan kembalikan meminta konfirmasi.
 - Pengembalian wajib remark bermakna (bukan whitespace), ditampilkan ke pengguna.
-- Admin tidak mengubah rincian; koreksi melalui pengembalian dan submit ulang.
+- Admin sebagai verifikator tidak mengubah rincian PP lain; koreksi melalui pengembalian dan submit ulang. Sebagai pengaju PP sendiri, admin boleh edit draft/returned lalu submit, tetapi isi tetap terkunci pada submitted/verified/completed/cancelled.
 - Verifikator memiliki aksi “Batalkan Pengajuan” untuk submitted/returned dengan konfirmasi dan remark wajib. Tersedia di antrean menunggu verifikasi dan daftar/detail returned, termasuk lintas periode. Pembatalan langsung tidak mensyaratkan pengguna mengedit form; nomor, snapshot, dan riwayat dipertahankan. Pengajuan keluar dari antrean aktif dan alasan pembatalan ditampilkan kepada PP.
 
 ### FR-06 — Transaksi dan penyelesaian
@@ -293,6 +296,8 @@ Kode respons: 422 untuk input/saldo, 403 atau 404 konsisten untuk akses terlaran
 25. Kegagalan Google Sheets memblokir persetujuan verifikasi tetapi tidak memblokir return/cancel yang diizinkan.
 26. Tanggal penyelesaian default hari ini; backdate sejak tanggal verifikasi aktif diperbolehkan, tanggal sebelum verifikasi atau setelah hari ini ditolak. completed_at dan waktu audit tetap merekam waktu tindakan sebenarnya.
 27. Cancel admin tanpa remark/konfirmasi ditolak; cancel submitted valid mengeluarkan pengajuan dari antrean tanpa memerlukan tindakan edit pengguna dan menampilkan alasan kepada PP.
+28. Tombol tambah muncul bagi admin yang memiliki PP; ketiga jenis dapat dibuat/edit/submit untuk PP sendiri. Admin tidak dapat edit/submit draft atau returned PP lain meskipun dapat melihat detailnya.
+29. Admin dapat membatalkan draft PP sendiri dengan remark, tidak draft PP lain. Admin tanpa PP tidak dapat membuat pengajuan; verifikasi/transaksi tetap tersedia.
 
 ## 12. Tahapan implementasi
 

@@ -16,7 +16,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Tanggal Pengajuan</label>
-                    <input type="text" class="form-control" value="{{ now()->format('d M Y') }}" readonly>
+                    <input type="text" class="form-control" value="{{ isset($pengajuan) ? $pengajuan->created_at->format('d M Y') : now()->format('d M Y') }}" readonly>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Unit</label>
@@ -26,24 +26,24 @@
             </div>
 
             @if (in_array($jenis, ['impresfund', 'beban', 'honor'], true))
-                <div class="alert alert-warning">
-                    Pratinjau form: data belum disimpan dan akan hilang saat halaman ditutup atau dimuat ulang.
-                    Pilih DRK untuk mengisi informasi anggaran unit secara otomatis.
+                <div class="alert alert-info">
+                    Simpan draft untuk menyimpan isian belum lengkap. Nomor resmi diberikan saat submit pertama.
+                    Submit memerlukan saldo terkini dari Google Sheets dan periode yang masih aktif.
                 </div>
-                <form id="form-pencairan" data-jenis="{{ $jenis }}">
+                <div id="save-message" class="alert d-none" role="alert"></div>
+                <form id="form-pencairan" data-jenis="{{ $jenis }}" novalidate>
+                    @csrf
                     @include('main.pencairan.partials.header')
                     @include('main.pencairan.partials.detail-' . $jenis)
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4">
                         <a href="{{ route('pencairan.pengajuan') }}" class="btn btn-outline-secondary">Kembali</a>
                         <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="btn btn-outline-primary" disabled
-                                aria-describedby="pengajuan-actions-info">Simpan sebagai Draft</button>
-                            <button type="submit" class="btn btn-primary" disabled
-                                aria-describedby="pengajuan-actions-info">Submit Pengajuan</button>
+                            <button type="button" data-save-draft class="btn btn-outline-primary">Simpan {{ isset($pengajuan) && $pengajuan->status === 'returned' ? 'Perbaikan' : 'sebagai Draft' }}</button>
+                            <button type="submit" class="btn btn-primary">Submit Pengajuan</button>
                         </div>
                     </div>
                     <p id="pengajuan-actions-info" class="text-muted small text-end mt-2 mb-0">
-                        Simpan draft dan submit belum tersedia karena penyimpanan backend belum terhubung.
+                        Perubahan belum tersimpan sampai tombol simpan berhasil. Isi terkunci setelah submit.
                     </p>
                 </form>
                 <noscript><div class="alert alert-danger mt-3">Aktifkan JavaScript untuk mengisi rincian dan menghitung total.</div></noscript>
@@ -62,8 +62,17 @@
         <script type="module">
             import { mountGrid } from "{{ asset('js/monita/pencairan-grid.js') }}";
             import { mountBudgetHeader } from "{{ asset('js/monita/pencairan-header.js') }}";
-            mountBudgetHeader(document.getElementById('form-pencairan'));
-            mountGrid(document.getElementById('form-pencairan'));
+            import { mountSubmission } from "{{ asset('js/monita/pencairan-submit.js') }}";
+            const form = document.getElementById('form-pencairan');
+            const initial = {{ Illuminate\Support\Js::from(isset($pengajuan) ? ['id' => $pengajuan->id, 'lock_version' => $pengajuan->lock_version, 'drk_id' => $pengajuan->drk_source_id, 'uraian_pengajuan' => $pengajuan->uraian_pengajuan, 'details' => $pengajuan->detailRows()] : null) }};
+            if (initial) {
+                form.querySelector('#pilih-drk').value = initial.drk_id ?? '';
+                form.querySelector('#uraian-pengajuan').value = initial.uraian_pengajuan ?? '';
+            }
+            mountBudgetHeader(form);
+            const grid = mountGrid(form);
+            if (initial) grid.load(initial.details);
+            mountSubmission(form, grid, initial, {{ Illuminate\Support\Js::from(route('pencairan.store')) }});
         </script>
     @endif
 @endpush

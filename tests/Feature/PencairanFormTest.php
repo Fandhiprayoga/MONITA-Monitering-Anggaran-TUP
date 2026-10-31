@@ -18,7 +18,7 @@ class PencairanFormTest extends TestCase
         $this->travelTo(now()->setDate(2026, 10, 29));
         $this->mock(GoogleSheetService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getUnitsFromSheet')->andReturn(['TEST' => 'Unit Test']);
-            $mock->shouldReceive('getUnitDrkOptions')->with('TEST', 4)->andReturn([
+            $mock->shouldReceive('getPencairanDrkOptions')->with('TEST', 4, 2026)->andReturn([
                 [
                     'id' => '2', 'tipe' => 'Operasional', 'drk_tup' => 'DRK-TEST', 'kode_drk' => 'SIMKUG-TEST',
                     'kode_pp' => '00123', 'nama_pp' => 'Nama PP dari Sheet',
@@ -68,12 +68,13 @@ class PencairanFormTest extends TestCase
                 ->assertSee('Simpan sebagai Draft')
                 ->assertSee('Submit Pengajuan')
                 ->assertDontSee('Simpan Pengajuan (belum tersedia)')
-                ->assertSee('class="btn btn-outline-primary" disabled', false)
-                ->assertSee('type="submit" class="btn btn-primary" disabled', false)
+                ->assertSee('data-save-draft', false)
+                ->assertSee('type="submit" class="btn btn-primary">', false)
+                ->assertSee('pencairan-submit.js')
                 ->assertSee('data-jenis="'.$kind.'"', false)
                 ->assertSee('Kode Akun')
                 ->assertSee('id="kode-akun" name="kode_akun" class="form-control bg-light" type="text" readonly', false)
-                ->assertSee('belum disimpan');
+                ->assertSee('Nomor resmi diberikan saat submit pertama.');
         }
     }
 
@@ -165,14 +166,14 @@ class PencairanFormTest extends TestCase
     public function test_empty_drk_and_source_errors_are_explicit(): void
     {
         $service = app(GoogleSheetService::class);
-        $service->shouldReceive('getUnitDrkOptions')->with('TEST', 4)->once()->andReturn([]);
+        $service->shouldReceive('getPencairanDrkOptions')->with('TEST', 4, 2026)->once()->andReturn([]);
         $this->withSession(['user_authenticated' => true])
             ->get(route('pencairan.form', 'honor'))
             ->assertOk()
             ->assertSee('Tidak ada DRK untuk unit Anda')
             ->assertViewHas('drkError', null);
 
-        $service->shouldReceive('getUnitDrkOptions')->with('TEST', 4)->once()
+        $service->shouldReceive('getPencairanDrkOptions')->with('TEST', 4, 2026)->once()
             ->andThrow(new \RuntimeException('Source unavailable'));
         $this->get(route('pencairan.form', 'impresfund'))
             ->assertOk()
