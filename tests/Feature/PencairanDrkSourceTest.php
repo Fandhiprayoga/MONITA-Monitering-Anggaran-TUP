@@ -41,6 +41,7 @@ class PencairanDrkSourceTest extends TestCase
         $this->assertSame($before[0]['id'], $after[1]['id']);
         $this->assertNotSame($before[0]['id'], $before[1]['id']);
         $this->assertSame('PP01', $before[0]['kode_pp']);
+        $this->assertSame('OTHER', $before[0]['kode_pp_sheet']);
         $this->assertSame('900,25', $before[0]['saldo_terkini']);
         $this->assertSame(GoogleSheetService::pencairanDrkId('PP01', $before[0]), $before[0]['id']);
     }

@@ -40,7 +40,7 @@ class PencairanWorkflowTest extends TestCase
             }
             Route::get('/_attachments/{attachment}', [PencairanWorkflowController::class, 'attachment']);
         });
-        $this->options = [['id' => str_repeat('a', 64), 'kode_pp' => 'PP01', 'nama_pp' => 'PP Satu',
+        $this->options = [['id' => str_repeat('a', 64), 'kode_pp' => 'PP01', 'kode_pp_sheet' => '8910', 'nama_pp' => 'PP Satu',
             'drk_tup' => 'DRK1', 'kode_akun' => '001', 'nama_akun' => 'Akun', 'kode_drk' => 'SIM1',
             'tipe' => 'Operasional', 'uraian_drk' => 'Kegiatan',
             'saldo_awal' => '10.000,00', 'anggaran_terpakai' => '0,00', 'saldo_terkini' => '10.000,00']];
@@ -103,7 +103,23 @@ class PencairanWorkflowTest extends TestCase
             ['no'=>'3', 'uraian'=>'Manual nol', 'volume'=>'1', 'tarif'=>'100', 'subtotal'=>'0'],
             ['no'=>'4', 'uraian'=>'Belum lengkap', 'volume'=>'', 'tarif'=>'100', 'subtotal'=>''],
         ]);
-        $response = $this->get(route('pencairan.show', $p))->assertOk();
+        $legacySnapshot = $p->header_snapshot;
+        unset($legacySnapshot['kode_pp_sheet']);
+        $p->header_snapshot = $legacySnapshot;
+        $p->save();
+        $response = $this->get(route('pencairan.show', $p))->assertOk()
+            ->assertSee('>Detail</button>', false)->assertSee('>Riwayat</button>', false)
+            ->assertSee('role="tablist"', false)->assertSee('role="tabpanel"', false)
+            ->assertSee('pengajuan-riwayat-'.$p->id, false)
+            ->assertSee('Kode pp')->assertSee('8910')->assertDontSee('<div>PP01</div>', false)
+            ->assertSee('spreadsheet-grid', false)->assertSee('spreadsheet-viewport', false)
+            ->assertSee('aria-label="Rincian pengajuan"', false)
+            ->assertSee('data-grid-select-all', false)->assertSee('data-grid-select-column="0"', false)
+            ->assertSee('data-grid-select-row', false)->assertSee('data-grid-cell', false)
+            ->assertSee('pencairan-detail-grid.js');
+        $response->assertSee('workflow-timeline', false)
+            ->assertSee('Pengajuan dibuat')->assertSee('Draft')->assertSee('Terbaru');
+        $response->assertSee('Bruto: Rp')->assertDontSee('Pajak: Rp')->assertDontSee('Neto: Rp');
         $document = new \DOMDocument();
         $previous = libxml_use_internal_errors(true);
         try { $document->loadHTML($response->getContent()); }
@@ -178,7 +194,9 @@ class PencairanWorkflowTest extends TestCase
             $this->get(route('pencairan.edit',$p))->assertOk()->assertSee($kind === 'impresfund' ? 'Belanja' : '000123', false);
             $this->postJson(route('pencairan.submit',$p), ['lock_version'=>$p->lock_version, 'idempotency_key'=>'ui-'.$kind])->assertOk();
             $this->get(route('pencairan.pengajuan'))->assertOk()->assertSee($p->fresh()->nomor_pengajuan);
-            $this->get(route('pencairan.show',$p))->assertOk()->assertSee('Revisi 1');
+            $this->get(route('pencairan.show',$p))->assertOk()
+                ->assertSee('Revisi 1')->assertSee('Diajukan untuk verifikasi')
+                ->assertSee('Menunggu Verifikasi')->assertSee('Pengajuan dibuat');
             $this->login('admin','','admin');
             $this->get(route('pencairan.verifikasi'))->assertOk()->assertSee($p->fresh()->nomor_pengajuan);
             $this->get(route('pencairan.show',$p))->assertOk()->assertSee('Batalkan')->assertSee('Verifikasi');

@@ -93,6 +93,7 @@ class GoogleSheetService
         }
         foreach ($options as &$option) {
             $option['id'] = self::pencairanDrkId($kodePp, $option);
+            $option['kode_pp_sheet'] = $option['kode_pp'];
             $option['kode_pp'] = strtoupper(trim($kodePp));
             foreach (['saldo_awal', 'anggaran_terpakai', 'saldo_terkini'] as $index => $field) {
                 $decimal = $option['_strict_balances'][$index];

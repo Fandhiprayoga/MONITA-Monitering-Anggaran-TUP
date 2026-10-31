@@ -17,7 +17,7 @@ export function mountBudgetHeader(form) {
     const fields = {
         kode_akun: '#kode-akun',
         nama_akun: '#nama-akun',
-        kode_pp: '#kode-pp',
+        kode_pp_sheet: '#kode-pp',
         nama_pp: '#nama-pp',
         kode_drk: '#kode-drk',
         uraian_drk: '#uraian-drk',

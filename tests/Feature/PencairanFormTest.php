@@ -21,7 +21,7 @@ class PencairanFormTest extends TestCase
             $mock->shouldReceive('getPencairanDrkOptions')->with('TEST', 4, 2026)->andReturn([
                 [
                     'id' => '2', 'tipe' => 'Operasional', 'drk_tup' => 'DRK-TEST', 'kode_drk' => 'SIMKUG-TEST',
-                    'kode_pp' => '00123', 'nama_pp' => 'Nama PP dari Sheet',
+                    'kode_pp' => 'TEST', 'kode_pp_sheet' => '00123', 'nama_pp' => 'Nama PP dari Sheet',
                     'kode_akun' => '001', 'nama_akun' => 'Akun Test', 'uraian_drk' => 'Kegiatan Test',
                     'saldo_awal' => '1.000.000,00', 'anggaran_terpakai' => '100.000,00',
                     'saldo_terkini' => '900.000,00',
@@ -156,7 +156,8 @@ class PencairanFormTest extends TestCase
             ->assertOk()
             ->assertViewHas('activeTw', 4)
             ->assertViewHas('drkOptions', function (array $options) {
-                return $options[0]['kode_pp'] === '00123'
+                return $options[0]['kode_pp'] === 'TEST'
+                    && $options[0]['kode_pp_sheet'] === '00123'
                     && $options[0]['nama_pp'] === 'Nama PP dari Sheet'
                     && $options[0]['kode_drk'] === 'SIMKUG-TEST'
                     && $options[0]['saldo_terkini'] === '900.000,00';

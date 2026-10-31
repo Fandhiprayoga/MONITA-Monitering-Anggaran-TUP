@@ -95,7 +95,29 @@ class PencairanController extends Controller
                 return $row;
             })->all();
         }
-        return view('main.pencairan.show', compact('pengajuan', 'actor', 'pending', 'displayRows'));
+        $headerSnapshot = $pengajuan->header_snapshot ?? [];
+        $kodePpSheet = trim((string) ($headerSnapshot['kode_pp_sheet'] ?? ''));
+        if ($kodePpSheet === '' && $pengajuan->drk_source_id) {
+            try {
+                $options = app(GoogleSheetService::class)->getPencairanDrkOptions(
+                    $pengajuan->kode_pp, $pengajuan->triwulan, $pengajuan->tahun_anggaran
+                );
+                foreach ($options as $option) {
+                    if (($option['id'] ?? null) === $pengajuan->drk_source_id
+                        && ($option['kode_pp'] ?? null) === $pengajuan->kode_pp) {
+                        $kodePpSheet = trim((string) ($option['kode_pp_sheet'] ?? ''));
+                        break;
+                    }
+                }
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+        unset($headerSnapshot['kode_pp'], $headerSnapshot['kode_pp_sheet']);
+        if ($kodePpSheet !== '') {
+            $headerSnapshot = ['kode_pp' => $kodePpSheet] + $headerSnapshot;
+        }
+        return view('main.pencairan.show', compact('pengajuan', 'actor', 'pending', 'displayRows', 'headerSnapshot'));
     }
 
     public function edit(Request $request, PencairanPengajuan $pengajuan)

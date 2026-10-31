@@ -18,8 +18,8 @@
             @endforeach
         </select>
         <small id="drk-info" class="text-muted">
-            DRK unit {{ session('user_data.kode_pp') }}, TW {{ $activeTw }}.
-            Sumber: data anggaran unit. Kode PP dari kolom K, Nama PP dari kolom L, Kode DRK SIMKUG dari kolom N.
+            DRK unit akun {{ session('user_data.kode_pp') }}, TW {{ $activeTw }}.
+            Kode PP yang ditampilkan dari kolom K, Nama PP dari kolom L, dan Kode DRK SIMKUG dari kolom N.
             Jika data kolom tersebut kosong, input terkait tetap kosong.
         </small>
         @if ($drkError)
