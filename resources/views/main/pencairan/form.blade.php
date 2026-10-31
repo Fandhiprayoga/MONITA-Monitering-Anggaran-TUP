@@ -26,10 +26,6 @@
             </div>
 
             @if (in_array($jenis, ['impresfund', 'beban', 'honor'], true))
-                <div class="alert alert-info">
-                    Simpan draft untuk menyimpan isian belum lengkap. Nomor resmi diberikan saat submit pertama.
-                    Submit memerlukan saldo terkini dari Google Sheets dan periode yang masih aktif.
-                </div>
                 <div id="save-message" class="alert d-none" role="alert"></div>
                 <form id="form-pencairan" data-jenis="{{ $jenis }}" novalidate>
                     @csrf

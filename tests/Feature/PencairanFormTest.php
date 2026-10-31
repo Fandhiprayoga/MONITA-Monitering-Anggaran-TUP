@@ -74,7 +74,8 @@ class PencairanFormTest extends TestCase
                 ->assertSee('data-jenis="'.$kind.'"', false)
                 ->assertSee('Kode Akun')
                 ->assertSee('id="kode-akun" name="kode_akun" class="form-control bg-light" type="text" readonly', false)
-                ->assertSee('Nomor resmi diberikan saat submit pertama.');
+                ->assertDontSee('Simpan draft untuk menyimpan isian belum lengkap.')
+                ->assertDontSee('Nomor resmi diberikan saat submit pertama.');
         }
     }
 
