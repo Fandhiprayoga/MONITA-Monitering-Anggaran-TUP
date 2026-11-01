@@ -75,22 +75,6 @@
             $actions['cancel'] = 'Batalkan';
         }
     @endphp
-    @if($ownPp && in_array($pengajuan->status,['draft','returned']))
-        <a href="{{ route('pencairan.edit',$pengajuan) }}" class="btn btn-primary mb-3">Edit / Submit</a>
-    @endif
-    <div class="row g-3 mb-4">@foreach($actions as $action=>$label)
-    <div class="col-md-6"><form method="POST" action="{{ route('pencairan.'.$action,$pengajuan) }}" enctype="multipart/form-data" data-workflow-form class="border rounded p-3">
-        @csrf <input type="hidden" name="lock_version" value="{{ $pengajuan->lock_version }}">
-        @if(in_array($action,['verify','return','cancel','complete']))<input type="hidden" name="confirmed" value="1">@endif
-        @if($action === 'return' || ($action === 'cancel' && $actor['role'] === 'admin'))<label class="form-label">Alasan {{ strtolower($label) }} (wajib)</label><textarea class="form-control mb-2" name="remark" maxlength="5000" required></textarea>@endif
-        @if($action === 'complete')
-            <input type="hidden" name="idempotency_key" value="{{ Illuminate\Support\Str::uuid() }}">
-            <label class="form-label">Tanggal Penyelesaian</label><input class="form-control mb-2" type="date" name="completion_date" value="{{ now()->toDateString() }}" min="{{ $pengajuan->verified_at?->toDateString() }}" max="{{ now()->toDateString() }}" required>
-            <label class="form-label">Catatan (opsional)</label><textarea class="form-control mb-2" name="notes" maxlength="5000"></textarea>
-            <label class="form-label">Lampiran opsional (maks. 5, 10 MB/file, PDF/JPEG/PNG)</label><input class="form-control mb-2" type="file" name="attachments[]" accept="application/pdf,image/jpeg,image/png" multiple>
-        @endif
-        <button class="btn {{ in_array($action,['cancel','return']) ? 'btn-outline-danger' : 'btn-primary' }}">{{ $label }}</button>
-    </form></div>@endforeach</div>
     </section>
     <section class="tab-pane fade" id="pengajuan-riwayat-{{ $pengajuan->id }}" role="tabpanel" aria-labelledby="pengajuan-riwayat-tab-{{ $pengajuan->id }}" tabindex="0">
     @if($pengajuan->completion)<div class="alert alert-success">{{ $pengajuan->statusLabel() }} pada {{ $pengajuan->completion->completion_date->format('d/m/Y') }}. {{ $pengajuan->completion->notes }}</div>@foreach($pengajuan->completion->attachments as $file)<p><a href="{{ route('pencairan.attachment',$file->id) }}">{{ $file->original_filename }}</a></p>@endforeach @endif
@@ -144,8 +128,54 @@
     <h6>Versi yang Disubmit</h6>@foreach($pengajuan->revisions as $revision)<details class="border rounded p-3 mb-2"><summary>Revisi {{ $revision->revision_no }} · {{ $revision->submitted_at->format('d/m/Y H:i') }}</summary><pre class="mt-2" style="white-space:pre-wrap">{{ json_encode($revision->snapshot, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE) }}</pre></details>@endforeach
     </section>
     </div>
-    <a href="{{ route('pencairan.pengajuan') }}" class="btn btn-outline-secondary mt-3">Kembali ke Daftar</a>
+    <div class="d-flex flex-wrap align-items-center gap-2 mt-3" data-workflow-actions>
+        <a href="{{ route('pencairan.pengajuan') }}" class="btn btn-outline-secondary">Kembali ke Daftar</a>
+        @if($ownPp && in_array($pengajuan->status,['draft','returned']))
+            <a href="{{ route('pencairan.edit',$pengajuan) }}" class="btn btn-primary">Edit / Submit</a>
+        @endif
+        @foreach($actions as $action => $label)
+            <button type="button" class="btn {{ in_array($action,['cancel','return']) ? 'btn-outline-danger' : 'btn-primary' }}{{ $loop->first ? ' ms-auto' : '' }}" data-bs-toggle="modal" data-bs-target="#workflow-{{ $action }}-{{ $pengajuan->id }}">{{ $label }}</button>
+        @endforeach
+    </div>
 </div></div>
+@foreach($actions as $action => $label)
+    @php $modalId = 'workflow-'.$action.'-'.$pengajuan->id; @endphp
+    <div class="modal fade" id="{{ $modalId }}" tabindex="-1" aria-labelledby="{{ $modalId }}-title" aria-hidden="true" data-workflow-modal>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form method="POST" action="{{ route('pencairan.'.$action,$pengajuan) }}" enctype="multipart/form-data" data-workflow-form>
+                    @csrf
+                    <input type="hidden" name="lock_version" value="{{ $pengajuan->lock_version }}">
+                    <input type="hidden" name="confirmed" value="1">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="{{ $modalId }}-title">Konfirmasi {{ $label }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Anda yakin ingin {{ $action === 'complete' ? 'menyelesaikan' : strtolower($label) }} pengajuan ini? Tindakan ini akan dicatat dalam riwayat.</p>
+                        @if(in_array($action, ['return', 'cancel']))
+                            <label class="form-label" for="{{ $modalId }}-remark">Alasan {{ strtolower($label) }} (wajib)</label>
+                            <textarea class="form-control" id="{{ $modalId }}-remark" name="remark" rows="4" maxlength="5000" required></textarea>
+                        @endif
+                        @if($action === 'complete')
+                            <input type="hidden" name="idempotency_key" value="{{ Illuminate\Support\Str::uuid() }}">
+                            <label class="form-label" for="{{ $modalId }}-date">Tanggal Penyelesaian</label>
+                            <input class="form-control mb-2" id="{{ $modalId }}-date" type="date" name="completion_date" value="{{ now()->toDateString() }}" min="{{ $pengajuan->verified_at?->toDateString() }}" max="{{ now()->toDateString() }}" required>
+                            <label class="form-label" for="{{ $modalId }}-notes">Catatan (opsional)</label>
+                            <textarea class="form-control mb-2" id="{{ $modalId }}-notes" name="notes" maxlength="5000"></textarea>
+                            <label class="form-label" for="{{ $modalId }}-attachments">Lampiran opsional (maks. 5, 10 MB/file, PDF/JPEG/PNG)</label>
+                            <input class="form-control" id="{{ $modalId }}-attachments" type="file" name="attachments[]" accept="application/pdf,image/jpeg,image/png" multiple>
+                        @endif
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
+                        <button type="submit" class="btn {{ in_array($action,['cancel','return']) ? 'btn-danger' : 'btn-primary' }}">Ya, {{ $label }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@endforeach
 @endsection
 @push('scripts')
 <script type="module">
@@ -156,8 +186,21 @@
 @push('scripts')
 <script>
 document.querySelectorAll('[data-workflow-form]').forEach(form => form.addEventListener('submit', event => {
-    if (!confirm('Lanjutkan tindakan ini? Perubahan akan dicatat dalam riwayat.')) { event.preventDefault(); return; }
-    form.querySelector('button').disabled = true;
+    if (form.dataset.submitting === 'true') { event.preventDefault(); return; }
+    const remark = form.querySelector('[name="remark"]');
+    if (remark) {
+        remark.value = remark.value.trim();
+        if (!form.reportValidity()) { event.preventDefault(); return; }
+    }
+    form.dataset.submitting = 'true';
+    form.querySelectorAll('button').forEach(button => { button.disabled = true; });
+    form.querySelector('[type="submit"]').textContent = 'Memproses…';
 }));
+document.querySelectorAll('[data-workflow-modal]').forEach(modal => {
+    modal.addEventListener('shown.bs.modal', () => modal.querySelector('textarea, input:not([type="hidden"]), [type="submit"]')?.focus());
+    modal.addEventListener('hide.bs.modal', event => {
+        if (modal.querySelector('form').dataset.submitting === 'true') event.preventDefault();
+    });
+});
 </script>
 @endpush

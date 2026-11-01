@@ -134,6 +134,48 @@ class PencairanWorkflowTest extends TestCase
         $this->assertSame('175,00', $p->detailRows()[1]['subtotal']);
     }
 
+    public function test_detail_workflow_actions_share_toolbar_and_use_confirmation_modals(): void
+    {
+        $p = $this->submitted();
+        $this->login('admin', '', 'admin');
+        $response = $this->get(route('pencairan.show', $p))->assertOk()
+            ->assertDontSee("confirm('Lanjutkan", false);
+        $document = new \DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        try { $document->loadHTML($response->getContent()); }
+        finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
+        $xpath = new \DOMXPath($document);
+        $this->assertSame(1, $xpath->query('//div[@data-workflow-actions]/a')->length);
+        $this->assertSame(3, $xpath->query('//div[@data-workflow-actions]/button[@data-bs-toggle="modal"]')->length);
+        $this->assertSame(0, $xpath->query('//section//form[@data-workflow-form]')->length);
+        foreach (['verify', 'return', 'cancel'] as $action) {
+            $modalId = 'workflow-'.$action.'-'.$p->id;
+            $this->assertSame(1, $xpath->query('//div[@data-workflow-actions]/button[@data-bs-target="#'.$modalId.'"]')->length);
+            $formPath = '//div[@id="'.$modalId.'"]//form';
+            $this->assertSame(route('pencairan.'.$action, $p), $xpath->evaluate('string('.$formPath.'/@action)'));
+            $this->assertSame(1, $xpath->query($formPath.'/input[@name="confirmed" and @value="1"]')->length);
+            $this->assertSame(1, $xpath->query($formPath.'/input[@name="lock_version" and @value="'.$p->lock_version.'"]')->length);
+            $this->assertSame(1, $xpath->query($formPath.'//button[@type="submit"]')->length);
+            $this->assertSame($action === 'verify' ? 0 : 1, $xpath->query($formPath.'//textarea[@name="remark" and @required and @maxlength="5000"]')->length);
+        }
+        $this->post(route('pencairan.return', $p), ['lock_version' => $p->lock_version, 'confirmed' => '1', 'remark' => 'Mohon perbaiki rekening'])->assertRedirect();
+        $this->assertSame('returned', $p->fresh()->status);
+        $this->assertSame('Mohon perbaiki rekening', $p->histories()->where('action', 'return')->first()->remark);
+    }
+
+    public function test_user_draft_cancel_modal_requires_and_sends_reason(): void
+    {
+        $p = $this->draft();
+        $this->get(route('pencairan.show', $p))->assertOk()
+            ->assertSee('data-bs-target="#workflow-cancel-'.$p->id.'"', false)
+            ->assertSee('Alasan batalkan (wajib)')
+            ->assertSee('name="remark" rows="4" maxlength="5000" required', false)
+            ->assertDontSee('data-bs-target="#workflow-verify-', false);
+        $this->post(route('pencairan.cancel', $p), ['lock_version' => $p->lock_version, 'confirmed' => '1', 'remark' => 'Pengajuan tidak diperlukan'])->assertRedirect();
+        $this->assertSame('cancelled', $p->fresh()->status);
+        $this->assertSame('Pengajuan tidak diperlukan', $p->histories()->where('action', 'cancel')->first()->remark);
+    }
+
     #[DataProvider('kinds')]
     public function test_admin_can_create_edit_submit_and_revise_only_own_pp(string $jenis): void
     {
