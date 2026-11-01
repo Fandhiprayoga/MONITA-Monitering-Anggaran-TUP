@@ -235,7 +235,7 @@ class PencairanService
 
     private function response(PencairanPengajuan $p): array
     {
-        return ['id' => $p->id, 'lock_version' => $p->lock_version, 'redirect_url' => '/pencairan/pengajuan/'.$p->id];
+        return ['uuid' => $p->uuid, 'lock_version' => $p->lock_version, 'redirect_url' => '/pencairan/pengajuan/'.$p->uuid];
     }
 
     public function store(Request $request): array
@@ -357,7 +357,8 @@ class PencairanService
                             DB::table('pengajuan_number_sequences')->where('year', $year)->increment('last_number');
                             $number = DB::table('pengajuan_number_sequences')->where('year', $year)->value('last_number');
                             $current->tahun_nomor = $year; $current->nomor_urut = $number;
-                            $current->nomor_pengajuan = str_pad((string) $number, 6, '0', STR_PAD_LEFT).'/'.$year.'/'.now()->format('dm').'/'.$current->kode_pp;
+                            $kodePpNomor = trim((string) ($drk['kode_pp_sheet'] ?? '')) ?: $current->kode_pp;
+                            $current->nomor_pengajuan = str_pad((string) $number, 6, '0', STR_PAD_LEFT).'/'.$year.'/'.now()->format('dm').'/'.$kodePpNomor;
                             $current->first_submitted_at = now();
                         }
                         $current->revision_no++; $current->last_submitted_at = now(); $current->status = 'submitted';

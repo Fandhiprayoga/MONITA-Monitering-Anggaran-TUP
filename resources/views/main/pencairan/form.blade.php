@@ -60,7 +60,7 @@
             import { mountBudgetHeader } from "{{ asset('js/monita/pencairan-header.js') }}";
             import { mountSubmission } from "{{ asset('js/monita/pencairan-submit.js') }}";
             const form = document.getElementById('form-pencairan');
-            const initial = {{ Illuminate\Support\Js::from(isset($pengajuan) ? ['id' => $pengajuan->id, 'lock_version' => $pengajuan->lock_version, 'drk_id' => $pengajuan->drk_source_id, 'uraian_pengajuan' => $pengajuan->uraian_pengajuan, 'details' => $pengajuan->detailRows()] : null) }};
+            const initial = {{ Illuminate\Support\Js::from(isset($pengajuan) ? ['uuid' => $pengajuan->uuid, 'lock_version' => $pengajuan->lock_version, 'drk_id' => $pengajuan->drk_source_id, 'uraian_pengajuan' => $pengajuan->uraian_pengajuan, 'details' => $pengajuan->detailRows()] : null) }};
             if (initial) {
                 form.querySelector('#pilih-drk').value = initial.drk_id ?? '';
                 form.querySelector('#uraian-pengajuan').value = initial.uraian_pengajuan ?? '';

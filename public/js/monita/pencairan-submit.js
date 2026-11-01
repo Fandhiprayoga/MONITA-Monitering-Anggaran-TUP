@@ -1,5 +1,5 @@
 export function mountSubmission(form, grid, initial, baseUrl) {
-    let id = initial?.id;
+    let uuid = initial?.uuid;
     let version = initial?.lock_version;
     let busy = false;
     let dirty = false;
@@ -33,13 +33,13 @@ export function mountSubmission(form, grid, initial, baseUrl) {
             const payload = { jenis: form.dataset.jenis, drk_id: chosenDrk(), uraian_pengajuan: form.querySelector('#uraian-pengajuan').value, details: grid.rows() };
             // A failed submit retry retains its idempotency key and version, without rewriting the draft.
             if (!submitKey || !submit) {
-                const result = await request(id ? `${baseUrl}/${id}` : baseUrl, id ? 'PATCH' : 'POST', { ...payload, ...(id ? { lock_version: version } : {}) });
-                id = result.id; version = result.lock_version; dirty = false;
-                history.replaceState(null, '', `${baseUrl}/${id}/edit`);
+                const result = await request(uuid ? `${baseUrl}/${uuid}` : baseUrl, uuid ? 'PATCH' : 'POST', { ...payload, ...(uuid ? { lock_version: version } : {}) });
+                uuid = result.uuid; version = result.lock_version; dirty = false;
+                history.replaceState(null, '', `${baseUrl}/${uuid}/edit`);
             }
             if (submit) {
                 submitKey ??= crypto.randomUUID();
-                const result = await request(`${baseUrl}/${id}/submit`, 'POST', { lock_version: version, confirmed: true, idempotency_key: submitKey });
+                const result = await request(`${baseUrl}/${uuid}/submit`, 'POST', { lock_version: version, confirmed: true, idempotency_key: submitKey });
                 dirty = false; window.location.assign(result.redirect_url);
             } else {
                 message.className = 'alert alert-success'; message.textContent = 'Isian berhasil disimpan.';

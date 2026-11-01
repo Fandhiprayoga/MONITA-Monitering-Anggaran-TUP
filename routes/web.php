@@ -47,14 +47,14 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
 
     Route::prefix('pencairan')->name('pencairan.')->group(function () {
         Route::get('/pengajuan', [PencairanController::class, 'pengajuan'])->name('pengajuan');
-        Route::get('/pengajuan/{pengajuan}', [PencairanController::class, 'show'])->whereNumber('pengajuan')->name('show');
-        Route::get('/pengajuan/{pengajuan}/edit', [PencairanController::class, 'edit'])->whereNumber('pengajuan')->name('edit');
+        Route::get('/pengajuan/{pengajuan}', [PencairanController::class, 'show'])->whereUuid('pengajuan')->name('show');
+        Route::get('/pengajuan/{pengajuan}/edit', [PencairanController::class, 'edit'])->whereUuid('pengajuan')->name('edit');
         Route::get('/lampiran/{attachment}', [PencairanWorkflowController::class, 'attachment'])->whereNumber('attachment')->name('attachment');
         Route::middleware('throttle:60,1')->group(function () {
             Route::post('/pengajuan', [PencairanWorkflowController::class, 'store'])->name('store');
-            Route::patch('/pengajuan/{pengajuan}', [PencairanWorkflowController::class, 'update'])->whereNumber('pengajuan')->name('update');
+            Route::patch('/pengajuan/{pengajuan}', [PencairanWorkflowController::class, 'update'])->whereUuid('pengajuan')->name('update');
             foreach (['submit' => 'submit', 'return' => 'returnToUser', 'verify' => 'verify', 'cancel' => 'cancel', 'complete' => 'complete'] as $action => $method) {
-                Route::post('/pengajuan/{pengajuan}/'.$action, [PencairanWorkflowController::class, $method])->whereNumber('pengajuan')->name($action);
+                Route::post('/pengajuan/{pengajuan}/'.$action, [PencairanWorkflowController::class, $method])->whereUuid('pengajuan')->name($action);
             }
         });
 

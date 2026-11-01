@@ -18,9 +18,12 @@
     <section class="tab-pane fade show active" id="pengajuan-detail-{{ $pengajuan->id }}" role="tabpanel" aria-labelledby="pengajuan-detail-tab-{{ $pengajuan->id }}" tabindex="0">
     <p><strong>{{ $pengajuan->nama_pp }} ({{ $pengajuan->kode_pp }})</strong> · {{ $pengajuan->tahun_anggaran }} / TW {{ $pengajuan->triwulan }}</p>
     <p class="text-muted">{{ $pengajuan->uraian_pengajuan }}</p>
-    <div class="row g-2 mb-3">@foreach($headerSnapshot as $key => $value)@if(is_scalar($value) && !in_array($key, ['id','checked_at']) && !str_ends_with($key, '_decimal'))<div class="col-md-4"><small class="text-muted">{{ ucfirst(str_replace('_',' ',$key)) }}</small><div>{{ $value }}</div></div>@endif @endforeach</div>
-    <div class="d-flex gap-4 flex-wrap mb-3"><strong>Bruto: Rp {{ number_format((float)$pengajuan->total_bruto,2,',','.') }}</strong></div>
-    @if($actor['role'] === 'admin')<div class="alert alert-warning">Total antrean submitted/verified DRK ini: Rp {{ number_format((float)$pending,2,',','.') }}. Saldo tidak direservasi oleh MONITA.</div>@endif
+    @php
+        $headerFieldOrder = ['kode_akun', 'nama_akun', 'kode_pp', 'nama_pp', 'kode_drk', 'uraian_drk', 'saldo_awal', 'anggaran_terpakai', 'saldo_terkini', 'tipe', 'drk_tup'];
+        $orderedHeaderSnapshot = array_replace(array_fill_keys($headerFieldOrder, null), $headerSnapshot);
+    @endphp
+    <div class="row g-2 mb-3">@foreach($orderedHeaderSnapshot as $key => $value)@if(is_scalar($value) && !in_array($key, ['id','checked_at']) && !str_ends_with($key, '_decimal'))<div class="col-md-4"><small class="text-muted">{{ ucfirst(str_replace('_',' ',$key)) }}</small><div>{{ $value }}</div></div>@endif @endforeach</div>
+    <div class="d-flex gap-4 flex-wrap mb-3"><strong>Nominal: Rp {{ number_format((float)$pengajuan->total_bruto,2,',','.') }}</strong></div>
     @php
         $rows = $displayRows;
         $columnLabels = [

@@ -73,13 +73,13 @@ class PencairanWorkflowTest extends TestCase
     private function draft(string $jenis = 'beban', ?array $rows = null): PencairanPengajuan
     {
         $response = $this->postJson('/_workflow', ['jenis' => $jenis, 'drk_id' => str_repeat('a', 64), 'uraian_pengajuan' => 'Narasi', 'details' => $rows ?? [$this->row($jenis)]]);
-        $response->assertCreated()->assertJsonStructure(['id', 'lock_version', 'redirect_url']);
-        return PencairanPengajuan::findOrFail($response->json('id'));
+        $response->assertCreated()->assertJsonStructure(['uuid', 'lock_version', 'redirect_url']);
+        return PencairanPengajuan::where('uuid', $response->json('uuid'))->firstOrFail();
     }
 
     private function action(PencairanPengajuan $p, string $action, array $extra = [])
     {
-        return $this->postJson('/_workflow/'.$p->id.'/'.$action, $extra + ['confirmed' => true, 'lock_version' => $p->fresh()->lock_version, 'idempotency_key' => 'key-'.$action.'-'.$p->fresh()->lock_version]);
+        return $this->postJson('/_workflow/'.$p->uuid.'/'.$action, $extra + ['confirmed' => true, 'lock_version' => $p->fresh()->lock_version, 'idempotency_key' => 'key-'.$action.'-'.$p->fresh()->lock_version]);
     }
 
     private function submitted(string $jenis = 'beban'): PencairanPengajuan
@@ -107,7 +107,10 @@ class PencairanWorkflowTest extends TestCase
         unset($legacySnapshot['kode_pp_sheet']);
         $p->header_snapshot = $legacySnapshot;
         $p->save();
-        $response = $this->get(route('pencairan.show', $p))->assertOk()
+        $detailUrl = route('pencairan.show', $p);
+        $this->assertStringEndsWith('/'.$p->uuid, $detailUrl);
+        $this->get('/pencairan/pengajuan/'.$p->id)->assertNotFound();
+        $response = $this->get($detailUrl)->assertOk()
             ->assertSee('>Detail</button>', false)->assertSee('>Riwayat</button>', false)
             ->assertSee('role="tablist"', false)->assertSee('role="tabpanel"', false)
             ->assertSee('pengajuan-riwayat-'.$p->id, false)
@@ -119,7 +122,7 @@ class PencairanWorkflowTest extends TestCase
             ->assertSee('pencairan-detail-grid.js');
         $response->assertSee('workflow-timeline', false)
             ->assertSee('Pengajuan dibuat')->assertSee('Draft')->assertSee('Terbaru');
-        $response->assertSee('Bruto: Rp')->assertDontSee('Pajak: Rp')->assertDontSee('Neto: Rp');
+        $response->assertSee('Nominal: Rp')->assertDontSee('Pajak: Rp')->assertDontSee('Neto: Rp');
         $document = new \DOMDocument();
         $previous = libxml_use_internal_errors(true);
         try { $document->loadHTML($response->getContent()); }
@@ -189,7 +192,7 @@ class PencairanWorkflowTest extends TestCase
             $this->get(route('pencairan.form', $kind))->assertOk()->assertSee('pencairan-submit.js');
             $result = $this->postJson(route('pencairan.store'), ['jenis' => $kind, 'drk_id' => str_repeat('a',64), 'uraian_pengajuan' => 'Narasi pengajuan', 'details' => [$this->row($kind)]]);
             $result->assertCreated();
-            $p = PencairanPengajuan::findOrFail($result->json('id'));
+            $p = PencairanPengajuan::where('uuid', $result->json('uuid'))->firstOrFail();
             $this->get(route('pencairan.show',$p))->assertOk()->assertSee('Edit / Submit');
             $this->get(route('pencairan.edit',$p))->assertOk()->assertSee($kind === 'impresfund' ? 'Belanja' : '000123', false);
             $this->postJson(route('pencairan.submit',$p), ['lock_version'=>$p->lock_version, 'idempotency_key'=>'ui-'.$kind])->assertOk();
@@ -242,7 +245,7 @@ class PencairanWorkflowTest extends TestCase
         $this->assertSame('completed', $p->status);
         $this->assertSame($jenis === 'impresfund' ? 'Dicairkan' : 'Diajukan ke TUB', $p->statusLabel());
         $this->assertSame('2026-10-31', $p->completion->completion_date->toDateString());
-        $this->assertSame('000001/2026/3110/PP01', $p->nomor_pengajuan);
+        $this->assertSame('000001/2026/3110/8910', $p->nomor_pengajuan);
         $this->assertCount(1, $p->revisions);
         $this->assertCount(4, $p->histories);
         $this->assertStringNotContainsString('never-snapshot', json_encode($p->revisions->toArray()));
@@ -268,7 +271,7 @@ class PencairanWorkflowTest extends TestCase
     public function test_draft_without_header_or_rows_is_saved_but_not_submittable(): void
     {
         $response = $this->postJson('/_workflow', ['jenis' => 'honor', 'details' => []])->assertCreated();
-        $p = PencairanPengajuan::find($response->json('id'));
+        $p = PencairanPengajuan::where('uuid', $response->json('uuid'))->firstOrFail();
         $this->assertNull($p->drk_source_id);
         $this->action($p, 'submit')->assertUnprocessable();
     }
@@ -312,7 +315,7 @@ class PencairanWorkflowTest extends TestCase
     {
         DB::table('pengajuan_number_sequences')->insert(['year' => 2026, 'last_number' => 999999]);
         $p = $this->submitted('impresfund');
-        $this->assertSame('1000000/2026/3110/PP01', $p->nomor_pengajuan);
+        $this->assertSame('1000000/2026/3110/8910', $p->nomor_pengajuan);
         $loaded = PencairanPengajuan::with('impresfundDetails')->find($p->id);
         $this->assertSame($p->detailRows(), $loaded->detailRows());
         $this->assertSame('100.00', $p->revisions->first()->snapshot['detail_values'][0]['subtotal_efektif']);
@@ -343,7 +346,7 @@ class PencairanWorkflowTest extends TestCase
         $this->postJson('/_workflow', ['jenis' => 'beban', 'details' => [], 'kode_pp' => 'OTHER'])->assertUnprocessable();
         $response = $this->postJson('/_workflow', ['jenis' => 'beban', 'details' => [$this->row('beban')], 'drk_id' => str_repeat('a', 64),
             'kode_pp' => 'PP01', 'nama_pp' => 'FORGED', 'total_bruto' => '0', 'saldo_terkini' => '999999999', 'tahun_anggaran' => 2025, 'triwulan' => 1, 'created_by_actor_id' => 999, 'status' => 'verified'])->assertCreated();
-        $p = PencairanPengajuan::find($response->json('id'));
+        $p = PencairanPengajuan::where('uuid', $response->json('uuid'))->firstOrFail();
         $this->assertSame('100.00', $p->total_bruto);
         $this->assertSame(2026, $p->tahun_anggaran); $this->assertSame(4, $p->triwulan);
         $this->assertSame('PP Satu', $p->nama_pp); $this->assertSame('draft', $p->status);
@@ -355,11 +358,11 @@ class PencairanWorkflowTest extends TestCase
         $p = $this->draft();
         $this->login('user', 'PP02', 'user2');
         foreach (['submit', 'cancel', 'verify', 'returnToUser', 'complete'] as $action) { $this->action($p, $action)->assertForbidden(); }
-        $this->patchJson('/_workflow/'.$p->id, ['lock_version' => 0, 'details' => []])->assertForbidden();
+        $this->patchJson('/_workflow/'.$p->uuid, ['lock_version' => 0, 'details' => []])->assertForbidden();
         $this->login('admin', '', 'admin');
         $this->postJson('/_workflow', ['jenis' => 'beban', 'details' => []])->assertForbidden();
         $this->action($p, 'submit')->assertForbidden();
-        $this->patchJson('/_workflow/'.$p->id, ['lock_version' => 0, 'details' => []])->assertForbidden();
+        $this->patchJson('/_workflow/'.$p->uuid, ['lock_version' => 0, 'details' => []])->assertForbidden();
         $this->withSession(['user_authenticated' => false]);
         $this->action($p, 'cancel')->assertForbidden();
     }
@@ -427,7 +430,7 @@ class PencairanWorkflowTest extends TestCase
         $p->refresh(); $this->assertNull($p->verified_at); $this->assertNull($p->verified_by);
         $this->action($p, 'complete', ['completion_date' => '2026-10-31'])->assertConflict();
         $this->login(); $row = $this->row('beban'); $row['neto'] = '81';
-        $this->patchJson('/_workflow/'.$p->id, ['lock_version' => $p->lock_version, 'drk_id' => $p->drk_source_id, 'uraian_pengajuan' => 'Revisi', 'details' => [$row]])->assertOk();
+        $this->patchJson('/_workflow/'.$p->uuid, ['lock_version' => $p->lock_version, 'drk_id' => $p->drk_source_id, 'uraian_pengajuan' => 'Revisi', 'details' => [$row]])->assertOk();
         $this->action($p, 'submit')->assertOk();
         $p->refresh(); $this->assertSame($number, $p->nomor_pengajuan); $this->assertSame(2, $p->revision_no);
         $this->assertSame($snapshot, $p->revisions->first()->snapshot);
@@ -458,26 +461,26 @@ class PencairanWorkflowTest extends TestCase
     public function test_user_cannot_edit_locked_states_or_change_kind_and_versions_conflict(): void
     {
         $p = $this->draft();
-        $this->patchJson('/_workflow/'.$p->id, ['jenis' => 'honor', 'details' => [], 'lock_version' => 0])->assertUnprocessable();
+        $this->patchJson('/_workflow/'.$p->uuid, ['jenis' => 'honor', 'details' => [], 'lock_version' => 0])->assertUnprocessable();
         $payload = ['details' => [$this->row('beban')], 'drk_id' => $p->drk_source_id, 'uraian_pengajuan' => 'Updated', 'lock_version' => 0];
-        $this->patchJson('/_workflow/'.$p->id, $payload)->assertOk();
-        $this->patchJson('/_workflow/'.$p->id, $payload)->assertConflict();
+        $this->patchJson('/_workflow/'.$p->uuid, $payload)->assertOk();
+        $this->patchJson('/_workflow/'.$p->uuid, $payload)->assertConflict();
         $this->action($p, 'submit', ['lock_version' => 0])->assertConflict();
         $this->action($p, 'submit')->assertOk();
-        $this->patchJson('/_workflow/'.$p->id, array_replace($payload, ['lock_version' => 2]))->assertConflict();
+        $this->patchJson('/_workflow/'.$p->uuid, array_replace($payload, ['lock_version' => 2]))->assertConflict();
         $this->login('admin', '', 'admin');
         $this->action($p, 'verify', ['lock_version' => 0])->assertConflict();
         $this->action($p, 'verify')->assertOk(); $this->login();
-        $this->patchJson('/_workflow/'.$p->id, array_replace($payload, ['lock_version' => 3]))->assertConflict();
+        $this->patchJson('/_workflow/'.$p->uuid, array_replace($payload, ['lock_version' => 3]))->assertConflict();
     }
 
     public function test_submit_idempotency_retries_identical_payload_before_stale_version_checks(): void
     {
         $p = $this->draft(); $payload = ['lock_version' => 0, 'idempotency_key' => 'same'];
-        $first = $this->postJson('/_workflow/'.$p->id.'/submit', $payload)->assertOk()->json();
+        $first = $this->postJson('/_workflow/'.$p->uuid.'/submit', $payload)->assertOk()->json();
         $this->offline = true;
-        $this->postJson('/_workflow/'.$p->id.'/submit', $payload)->assertOk()->assertExactJson($first);
-        $this->postJson('/_workflow/'.$p->id.'/submit', $payload + ['confirmed' => true])->assertConflict();
+        $this->postJson('/_workflow/'.$p->uuid.'/submit', $payload)->assertOk()->assertExactJson($first);
+        $this->postJson('/_workflow/'.$p->uuid.'/submit', $payload + ['confirmed' => true])->assertConflict();
         $this->assertDatabaseCount('pengajuan_revisions', 1); $this->assertDatabaseCount('pengajuan_histories', 2);
         $this->assertDatabaseCount('pengajuan_idempotencies', 1);
     }
@@ -487,9 +490,9 @@ class PencairanWorkflowTest extends TestCase
         $p = $this->verified();
         $make = fn ($content) => UploadedFile::fake()->createWithContent('proof.pdf', "%PDF-1.4\n".$content);
         $payload = ['lock_version' => $p->lock_version, 'confirmed' => true, 'idempotency_key' => 'same', 'completion_date' => '2026-10-31'];
-        $first = $this->postJson('/_workflow/'.$p->id.'/complete', $payload + ['attachments' => [$make('a')]])->assertOk()->json();
-        $this->postJson('/_workflow/'.$p->id.'/complete', $payload + ['attachments' => [$make('a')]])->assertOk()->assertExactJson($first);
-        $this->postJson('/_workflow/'.$p->id.'/complete', $payload + ['attachments' => [$make('b')]])->assertConflict();
+        $first = $this->postJson('/_workflow/'.$p->uuid.'/complete', $payload + ['attachments' => [$make('a')]])->assertOk()->json();
+        $this->postJson('/_workflow/'.$p->uuid.'/complete', $payload + ['attachments' => [$make('a')]])->assertOk()->assertExactJson($first);
+        $this->postJson('/_workflow/'.$p->uuid.'/complete', $payload + ['attachments' => [$make('b')]])->assertConflict();
         $this->assertDatabaseCount('pengajuan_completions', 1); $this->assertDatabaseCount('pengajuan_attachments', 1);
         $this->assertCount(1, Storage::disk('local')->allFiles());
     }
@@ -583,10 +586,11 @@ class PencairanWorkflowTest extends TestCase
 
     public function test_native_form_redirect_flash_and_local_actor_stability(): void
     {
-        $this->post('/_workflow', ['jenis' => 'beban', 'details' => []])->assertRedirect('/pencairan/pengajuan/1')->assertSessionHas('success');
+        $response = $this->post('/_workflow', ['jenis' => 'beban', 'details' => []])->assertRedirect()->assertSessionHas('success');
+        $this->assertMatchesRegularExpression('#^https?://[^/]+/pencairan/pengajuan/[0-9a-f-]{36}$#', $response->headers->get('Location'));
         $this->login('user', 'PP01', 'user1', '99'); $p = $this->draft();
         $this->assertDatabaseCount('pengajuan_actors', 1);
-        $this->post('/_workflow/'.$p->id.'/cancel', ['confirmed' => '1', 'lock_version' => 0])->assertRedirect()->assertSessionHas('success');
+        $this->post('/_workflow/'.$p->uuid.'/cancel', ['confirmed' => '1', 'lock_version' => 0])->assertRedirect()->assertSessionHas('success');
         $this->assertSame('user1', $p->histories()->first()->actor_name);
     }
 

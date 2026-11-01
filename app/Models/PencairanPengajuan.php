@@ -5,11 +5,24 @@ namespace App\Models;
 use App\Enums\PencairanStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class PencairanPengajuan extends Model
 {
     protected $table = 'pengajuans';
     protected $guarded = ['id'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $pengajuan): void {
+            $pengajuan->uuid ??= (string) Str::uuid();
+        });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
 
     protected function casts(): array
     {
