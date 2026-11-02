@@ -86,8 +86,6 @@
                     <thead class="bg-secondary text-center">
                         <tr>
                             <th class="text-white">No</th>
-                            <th class="text-white">Tanggal</th>
-                            <th class="text-white">Triwulan</th>
                             <th class="text-white">Jenis</th>
                             <th class="text-white">Uraian</th>
                             <th class="text-white">Nominal</th>
@@ -99,9 +97,7 @@
                         @forelse($items as $item)
                         <tr>
                             <td class="text-nowrap">{{ $item->nomor_pengajuan ?? 'Draft #'.$item->id }}<small class="d-block text-muted">{{ $item->kode_pp }}</small></td>
-                            <td class="text-center text-nowrap">{{ $item->created_at->format('d/m/Y') }}</td>
-                            <td class="text-center text-nowrap">{{ $item->tahun_anggaran }} / TW {{ $item->triwulan }}</td>
-                            <td class="text-nowrap">{{ ucfirst($item->jenis) }}</td>
+                            <td class="text-nowrap"><span class="badge {{ $item->jenisBadgeClass() }}">{{ $item->jenisLabel() }}</span></td>
                             <td style="min-width: 200px; max-width: 350px; white-space: normal; overflow-wrap: anywhere;">{{ Illuminate\Support\Str::limit($item->uraian_pengajuan, 80) }}</td>
                             <td class="text-end text-nowrap">Rp {{ number_format((float)$item->total_bruto, 2, ',', '.') }}</td>
                             <td><span class="badge {{ $item->statusBadgeClass() }}">{{ $item->statusLabel() }}</span><small class="d-block text-muted">{{ $item->updated_at->format('d/m/Y H:i') }}</small></td>
@@ -109,7 +105,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="6" class="text-center text-muted py-4">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-2 d-block mx-auto opacity-50" aria-hidden="true">
                                     <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
                                     <path d="M14 3v5h5"/>

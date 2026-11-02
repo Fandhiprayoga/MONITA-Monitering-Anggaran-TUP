@@ -64,6 +64,14 @@ class PencairanPengajuan extends Model
     public function statusLabel(): string { return PencairanStatus::from($this->status)->label($this->jenis); }
     public function statusBadgeClass(): string { return PencairanStatus::from($this->status)->badgeClass(); }
 
+    public function jenisLabel(): string { return match ($this->jenis) {
+        'impresfund' => 'Impresfund', 'beban' => 'Beban', 'honor' => 'Honor', default => ucfirst($this->jenis),
+    }; }
+
+    public function jenisBadgeClass(): string { return match ($this->jenis) {
+        'impresfund' => 'bg-light-primary', 'beban' => 'bg-light-info', 'honor' => 'bg-light-warning', default => 'bg-light-secondary',
+    }; }
+
     public function scopeForActor(Builder $query, array $actor): Builder
     {
         return $actor['role'] === 'admin' ? $query : $query->where('kode_pp', $actor['kode_pp']);
