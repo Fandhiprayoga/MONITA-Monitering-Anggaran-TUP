@@ -26,6 +26,9 @@
         .pencairan-filter-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-top: 16px; }
         .pencairan-filters .form-label { font-weight: 500; margin-bottom: 6px; }
         .pencairan-filters .form-control, .pencairan-filters .form-select { width: 100%; min-width: 0; }
+        .pencairan-tabs .nav-link { color: var(--bs-secondary-color); font-weight: 500; }
+        .pencairan-tabs .nav-link:hover { color: var(--bs-body-color); }
+        .pencairan-tabs .nav-link.active { color: var(--bs-primary); background-color: #fff; border-bottom-color: #fff; }
         .pencairan-filter-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; border: 1px solid var(--bs-border-color, #dee2e6); border-radius: 20px; padding: 5px 10px; color: var(--bs-body-color); background: var(--bs-body-bg); text-decoration: none; font-size: 12px; }
         .pencairan-filter-chip span:first-child { overflow-wrap: anywhere; }
         .pencairan-filter-chip:hover { border-color: var(--bs-primary); color: var(--bs-primary); }
@@ -33,18 +36,20 @@
         @media (max-width: 767.98px) { .pencairan-filter-primary, .pencairan-filter-fields { grid-template-columns: minmax(0, 1fr); } }
     </style>
     <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2 pb-0">
             @if ($mode === 'pengajuan')
-            <h5 class="mb-0 d-flex align-items-center">
-                <nav class="nav nav-pills d-inline-flex" aria-label="Pengajuan aktif/nonaktif">
-                    <a class="nav-link py-1 px-3 @if(($tab ?? 'aktif') === 'aktif') active @endif" href="{{ request()->fullUrlWithQuery(['tab' => 'aktif', 'page' => null, 'status' => null]) }}"><i class="ti ti-activity me-1" aria-hidden="true"></i>Aktif</a>
-                    <a class="nav-link py-1 px-3 @if(($tab ?? 'aktif') === 'nonaktif') active @endif" href="{{ request()->fullUrlWithQuery(['tab' => 'nonaktif', 'page' => null, 'status' => null]) }}"><i class="ti ti-circle-off me-1" aria-hidden="true"></i>Nonaktif</a>
-                </nav>
-            </h5>
+            <ul class="nav nav-tabs pencairan-tabs" role="tablist" aria-label="Pengajuan aktif/nonaktif">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link @if(($tab ?? 'aktif') === 'aktif') active @endif" href="{{ request()->fullUrlWithQuery(['tab' => 'aktif', 'page' => null, 'status' => null]) }}"><i class="ti ti-activity me-1" aria-hidden="true"></i>Aktif</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link @if(($tab ?? 'aktif') === 'nonaktif') active @endif" href="{{ request()->fullUrlWithQuery(['tab' => 'nonaktif', 'page' => null, 'status' => null]) }}"><i class="ti ti-circle-off me-1" aria-hidden="true"></i>Nonaktif</a>
+                </li>
+            </ul>
             @else
-            <h5 class="mb-0">{{ $title }}</h5>
+            <h5 class="mb-3">{{ $title }}</h5>
             @endif
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 mb-3">
                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalFilter">
                     <i class="ti ti-filter me-1" aria-hidden="true"></i>Filter
                     @if($advancedCount)<span class="badge bg-primary ms-1">{{ $advancedCount }}</span>@endif
