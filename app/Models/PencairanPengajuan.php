@@ -67,4 +67,8 @@ class PencairanPengajuan extends Model
     {
         return $actor['role'] === 'admin' ? $query : $query->where('kode_pp', $actor['kode_pp']);
     }
+
+    /** Status akhir: pengajuan tidak lagi berjalan. */
+    public const STATUS_AKTIF = ['draft', 'submitted', 'returned', 'verified'];
+    public const STATUS_NONAKTIF = ['completed', 'cancelled'];
 }

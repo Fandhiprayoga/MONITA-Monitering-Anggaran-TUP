@@ -16,111 +16,55 @@
         if (in_array((string) request('tw'), ['1', '2', '3', '4'], true)) $activeFilters['tw'] = 'Triwulan '.request('tw');
         if (session('user_role') === 'admin' && request()->filled('pp')) $activeFilters['pp'] = 'Unit: '.request('pp');
         $advancedCount = count(array_intersect(array_keys($activeFilters), ['jenis', 'tahun', 'tw', 'pp']));
-        $resetUrl = request()->url().'?status=';
+        $resetUrl = request()->url().'?'.($mode === 'pengajuan' ? 'tab='.($tab ?? 'aktif').'&' : '').'status=';
         $filterUnits = $allUnits;
         $selectedPp = strtoupper(trim((string) request('pp', '')));
         if ($selectedPp !== '' && !isset($filterUnits[$selectedPp])) $filterUnits[$selectedPp] = 'Unit '.$selectedPp;
     @endphp
     <style>
-        .pencairan-filters { background: var(--bs-tertiary-bg, #f8f9fa); border: 1px solid var(--bs-border-color, #dee2e6); border-radius: 12px; padding: 16px; }
         .pencairan-filter-primary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 280px); gap: 16px; }
         .pencairan-filter-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-top: 16px; }
         .pencairan-filters .form-label { font-weight: 500; margin-bottom: 6px; }
         .pencairan-filters .form-control, .pencairan-filters .form-select { width: 100%; min-width: 0; }
-        .pencairan-filters summary { cursor: pointer; color: var(--bs-primary); font-weight: 500; width: fit-content; padding: 4px 0; }
-        .pencairan-filter-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
         .pencairan-filter-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; border: 1px solid var(--bs-border-color, #dee2e6); border-radius: 20px; padding: 5px 10px; color: var(--bs-body-color); background: var(--bs-body-bg); text-decoration: none; font-size: 12px; }
         .pencairan-filter-chip span:first-child { overflow-wrap: anywhere; }
         .pencairan-filter-chip:hover { border-color: var(--bs-primary); color: var(--bs-primary); }
         @media (min-width: 1400px) { .pencairan-filter-fields { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-        @media (max-width: 767.98px) {
-            .pencairan-filter-primary, .pencairan-filter-fields { grid-template-columns: minmax(0, 1fr); }
-            .pencairan-filter-actions > div { display: flex; gap: 8px; width: 100%; }
-            .pencairan-filter-actions > div > * { flex: 1; }
-        }
+        @media (max-width: 767.98px) { .pencairan-filter-primary, .pencairan-filter-fields { grid-template-columns: minmax(0, 1fr); } }
     </style>
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
+            @if ($mode === 'pengajuan')
+            <h5 class="mb-0 d-flex align-items-center">
+                <nav class="nav nav-pills d-inline-flex" aria-label="Pengajuan aktif/nonaktif">
+                    <a class="nav-link py-1 px-3 @if(($tab ?? 'aktif') === 'aktif') active @endif" href="{{ request()->fullUrlWithQuery(['tab' => 'aktif', 'page' => null, 'status' => null]) }}"><i class="ti ti-activity me-1" aria-hidden="true"></i>Aktif</a>
+                    <a class="nav-link py-1 px-3 @if(($tab ?? 'aktif') === 'nonaktif') active @endif" href="{{ request()->fullUrlWithQuery(['tab' => 'nonaktif', 'page' => null, 'status' => null]) }}"><i class="ti ti-circle-off me-1" aria-hidden="true"></i>Nonaktif</a>
+                </nav>
+            </h5>
+            @else
             <h5 class="mb-0">{{ $title }}</h5>
-            @if ($mode === 'pengajuan' && trim((string) session('user_data.kode_pp', '')) !== '')
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPilihForm">
-                <i class="ti ti-plus me-1"></i> Tambah Pengajuan
-            </button>
             @endif
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalFilter">
+                    <i class="ti ti-filter me-1" aria-hidden="true"></i>Filter
+                    @if($advancedCount)<span class="badge bg-primary ms-1">{{ $advancedCount }}</span>@endif
+                </button>
+                @if ($mode === 'pengajuan' && trim((string) session('user_data.kode_pp', '')) !== '')
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPilihForm">
+                    <i class="ti ti-plus me-1"></i> Tambah Pengajuan
+                </button>
+                @endif
+            </div>
         </div>
         <div class="card-body">
             @include('main.pencairan.partials.feedback')
-            <form method="GET" action="{{ request()->url() }}" class="pencairan-filters mb-3" aria-label="Filter pengajuan">
-                <div class="pencairan-filter-primary">
-                    <div>
-                        <label for="filter-q" class="form-label">Cari pengajuan</label>
-                        <input id="filter-q" name="q" class="form-control" value="{{ request('q') }}" placeholder="Cari nomor atau uraian pengajuan…" maxlength="100">
-                    </div>
-                    <div>
-                        <label for="filter-status" class="form-label">Status pengajuan</label>
-                        <select id="filter-status" name="status" class="form-select">
-                            <option value="">Semua status</option>
-                            @foreach ($allowedStatuses as $code)
-                                <option value="{{ $code }}" @selected($statusFilter === $code)>{{ $statusLabels[$code] }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <details class="mt-3" @if($advancedCount) open @endif>
-                    <summary>Filter lainnya @if($advancedCount)<span class="badge bg-primary ms-1">{{ $advancedCount }}</span>@endif</summary>
-                    <div class="pencairan-filter-fields">
-                        @if ($mode !== 'transaksi')
-                        <div>
-                            <label for="filter-jenis" class="form-label">Jenis pengajuan</label>
-                            <select id="filter-jenis" name="jenis" class="form-select">
-                                <option value="">Semua jenis</option>
-                                @foreach (['impresfund', 'beban', 'honor'] as $kind)
-                                    <option value="{{ $kind }}" @selected(request('jenis') === $kind)>{{ ucfirst($kind) }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        @endif
-                        <div>
-                            <label for="filter-tahun" class="form-label">Tahun anggaran</label>
-                            <input id="filter-tahun" name="tahun" type="number" class="form-control" value="{{ request('tahun') }}" placeholder="Semua tahun" min="1000" max="9999" step="1">
-                        </div>
-                        <div>
-                            <label for="filter-tw" class="form-label">Triwulan</label>
-                            <select id="filter-tw" name="tw" class="form-select">
-                                <option value="">Semua triwulan</option>
-                                @foreach(range(1,4) as $tw)
-                                    <option value="{{ $tw }}" @selected((string)request('tw') === (string)$tw)>Triwulan {{ $tw }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        @if(session('user_role') === 'admin')
-                        <div>
-                            <label for="filter-pp" class="form-label">Unit / PP</label>
-                            <input id="filter-pp" name="pp" class="form-control" list="filter-unit-options" value="{{ $selectedPp }}" placeholder="Cari kode atau nama unit" maxlength="100">
-                            <datalist id="filter-unit-options">
-                                @foreach($filterUnits as $code => $name)
-                                    <option value="{{ $code }}">{{ $code }} — {{ $name }}</option>
-                                @endforeach
-                            </datalist>
-                            <small class="text-muted">Pilih saran unit atau masukkan kode PP.</small>
-                        </div>
-                        @endif
-                    </div>
-                </details>
-                <div class="pencairan-filter-actions">
-                    <small class="text-muted">{{ number_format($items->total(), 0, ',', '.') }} pengajuan ditemukan</small>
-                    <div>
-                        <a href="{{ $resetUrl }}" class="btn btn-outline-secondary">Reset</a>
-                        <button type="submit" class="btn btn-primary"><i class="ti ti-filter me-1" aria-hidden="true"></i>Terapkan filter</button>
-                    </div>
-                </div>
-            </form>
             @if($activeFilters)
             <div class="d-flex flex-wrap align-items-center gap-2 mb-3" aria-label="Filter aktif">
                 <small class="text-muted">Filter aktif:</small>
                 @foreach($activeFilters as $key => $label)
                     @php
                         $remainingFilters = request()->only(['q', 'status', 'jenis', 'tahun', 'tw', 'pp']);
+                        if ($mode === 'pengajuan') { $remainingFilters['tab'] = $tab ?? 'aktif'; }
                         unset($remainingFilters[$key]);
                         if ($key === 'status') $remainingFilters['status'] = '';
                         $removeUrl = request()->url().($remainingFilters ? '?'.http_build_query($remainingFilters) : '');
@@ -177,6 +121,80 @@
                 </table>
             </div>
             <div class="mt-3">{{ $items->links() }}</div>
+        </div>
+    </div>
+
+    <!-- Modal Filter -->
+    <div class="modal fade" id="modalFilter" tabindex="-1" aria-labelledby="modalFilterLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <form method="GET" action="{{ request()->url() }}" class="modal-content pencairan-filters" aria-label="Filter pengajuan">
+                @if ($mode === 'pengajuan')
+                <input type="hidden" name="tab" value="{{ $tab ?? 'aktif' }}">
+                @endif
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalFilterLabel">Filter pengajuan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="pencairan-filter-primary">
+                        <div>
+                            <label for="filter-q" class="form-label">Cari pengajuan</label>
+                            <input id="filter-q" name="q" class="form-control" value="{{ request('q') }}" placeholder="Cari nomor atau uraian pengajuan…" maxlength="100">
+                        </div>
+                        <div>
+                            <label for="filter-status" class="form-label">Status pengajuan</label>
+                            <select id="filter-status" name="status" class="form-select">
+                                <option value="">Semua status</option>
+                                @foreach ($allowedStatuses as $code)
+                                    <option value="{{ $code }}" @selected($statusFilter === $code)>{{ $statusLabels[$code] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="pencairan-filter-fields">
+                        @if ($mode !== 'transaksi')
+                        <div>
+                            <label for="filter-jenis" class="form-label">Jenis pengajuan</label>
+                            <select id="filter-jenis" name="jenis" class="form-select">
+                                <option value="">Semua jenis</option>
+                                @foreach (['impresfund', 'beban', 'honor'] as $kind)
+                                    <option value="{{ $kind }}" @selected(request('jenis') === $kind)>{{ ucfirst($kind) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @endif
+                        <div>
+                            <label for="filter-tahun" class="form-label">Tahun anggaran</label>
+                            <input id="filter-tahun" name="tahun" type="number" class="form-control" value="{{ request('tahun') }}" placeholder="Semua tahun" min="1000" max="9999" step="1">
+                        </div>
+                        <div>
+                            <label for="filter-tw" class="form-label">Triwulan</label>
+                            <select id="filter-tw" name="tw" class="form-select">
+                                <option value="">Semua triwulan</option>
+                                @foreach(range(1,4) as $tw)
+                                    <option value="{{ $tw }}" @selected((string)request('tw') === (string)$tw)>Triwulan {{ $tw }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @if(session('user_role') === 'admin')
+                        <div>
+                            <label for="filter-pp" class="form-label">Unit / PP</label>
+                            <input id="filter-pp" name="pp" class="form-control" list="filter-unit-options" value="{{ $selectedPp }}" placeholder="Cari kode atau nama unit" maxlength="100">
+                            <datalist id="filter-unit-options">
+                                @foreach($filterUnits as $code => $name)
+                                    <option value="{{ $code }}">{{ $code }} — {{ $name }}</option>
+                                @endforeach
+                            </datalist>
+                            <small class="text-muted">Pilih saran unit atau masukkan kode PP.</small>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="{{ $resetUrl }}" class="btn btn-outline-secondary">Reset</a>
+                    <button type="submit" class="btn btn-primary"><i class="ti ti-filter me-1" aria-hidden="true"></i>Terapkan filter</button>
+                </div>
+            </form>
         </div>
     </div>
 

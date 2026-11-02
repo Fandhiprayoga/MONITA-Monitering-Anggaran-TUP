@@ -61,6 +61,13 @@ class PencairanController extends Controller
             'transaksi' => ['verified', 'completed'],
             default => ['draft', 'submitted', 'returned', 'verified', 'completed', 'cancelled'],
         };
+        $tab = $mode === 'pengajuan' ? ($request->query('tab') === 'nonaktif' ? 'nonaktif' : 'aktif') : null;
+        if ($tab) {
+            $allowedStatuses = array_values(array_intersect(
+                $allowedStatuses,
+                $tab === 'nonaktif' ? PencairanPengajuan::STATUS_NONAKTIF : PencairanPengajuan::STATUS_AKTIF
+            ));
+        }
         $query->whereIn('status', $allowedStatuses);
         if ($jenis) { $query->where('jenis', $jenis); }
         if (in_array($request->jenis, ['impresfund', 'beban', 'honor'], true)) { $query->where('jenis', $request->jenis); }
@@ -76,7 +83,8 @@ class PencairanController extends Controller
         if ($actor['role'] === 'admin' && $request->filled('pp')) { $query->where('kode_pp', strtoupper(trim((string) $request->pp))); }
         $mode === 'verifikasi' ? $query->orderBy('last_submitted_at') : $query->latest('updated_at');
         return view('main.pencairan.pengajuan', ['items' => $query->paginate(20)->withQueryString(),
-            'title' => $title, 'mode' => $mode, 'statusFilter' => $status, 'allowedStatuses' => $allowedStatuses]);
+            'title' => $title, 'mode' => $mode, 'tab' => $tab,
+            'statusFilter' => $status, 'allowedStatuses' => $allowedStatuses]);
     }
 
     public function show(Request $request, PencairanPengajuan $pengajuan)

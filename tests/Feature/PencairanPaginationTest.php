@@ -20,9 +20,9 @@ class PencairanPaginationTest extends TestCase
             'user_data' => ['username' => 'admin', 'role' => 'admin', 'kode_pp' => 'SIF'],
         ]);
         $response = $this->get(route('pencairan.pengajuan', [
-            'q' => 'DUMMY', 'status' => 'completed', 'jenis' => 'honor',
+            'tab' => 'nonaktif', 'q' => 'DUMMY', 'status' => 'completed', 'jenis' => 'honor',
             'tahun' => now()->year, 'tw' => (int) ceil(now()->month / 3), 'pp' => 'SIF',
-        ]))->assertOk()->assertSee('1 pengajuan ditemukan')->assertSee('Filter aktif:')
+        ]))->assertOk()->assertSee('Filter aktif:')
             ->assertSee('Status: Selesai')->assertSee('Terapkan filter')->assertSee('Hapus semua')
             ->assertSee('SIF — Bagian Sistem Dan Teknologi Informasi')
             ->assertSee('id="filter-q"', false)->assertSee('id="filter-tahun"', false);
@@ -31,7 +31,8 @@ class PencairanPaginationTest extends TestCase
         try { $document->loadHTML($response->getContent()); }
         finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
         $xpath = new \DOMXPath($document);
-        $this->assertSame(1, $xpath->query('//form[@aria-label="Filter pengajuan"]//details[@open]')->length);
+        $this->assertSame(1, $xpath->query('//div[@id="modalFilter"]//form[@aria-label="Filter pengajuan"]')->length);
+        $this->assertSame(4, $xpath->query('//form[@aria-label="Filter pengajuan"]//div[contains(@class,"pencairan-filter-fields")]/*')->length);
         $chips = $xpath->query('//a[@class="pencairan-filter-chip"]');
         $this->assertSame(6, $chips->length);
         foreach ($chips as $chip) {
@@ -44,11 +45,13 @@ class PencairanPaginationTest extends TestCase
             }
         }
 
-        $this->get(route('pencairan.pengajuan', ['status' => '']))->assertOk()
-            ->assertSee('54 pengajuan ditemukan')->assertDontSee('aria-label="Filter aktif"', false);
+        $response = $this->get(route('pencairan.pengajuan', ['status' => '']))->assertOk()
+            ->assertDontSee('aria-label="Filter aktif"', false);
+        $this->assertSame(36, $response->viewData('items')->total());
+        $this->assertSame(18, $this->get(route('pencairan.pengajuan', ['tab' => 'nonaktif']))->assertOk()->viewData('items')->total());
         $this->withSession(['user_role' => 'user', 'user_data' => ['username' => 'user', 'role' => 'user', 'kode_pp' => 'SIF']]);
-        $this->get(route('pencairan.pengajuan'))->assertOk()->assertSee('18 pengajuan ditemukan')
-            ->assertDontSee('id="filter-pp"', false);
+        $response = $this->get(route('pencairan.pengajuan'))->assertOk()->assertDontSee('id="filter-pp"', false);
+        $this->assertSame(12, $response->viewData('items')->total());
     }
 
     public function test_list_uses_bootstrap_pagination_and_preserves_filters_on_next_page(): void
