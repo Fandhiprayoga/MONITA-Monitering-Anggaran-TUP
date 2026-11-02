@@ -159,7 +159,19 @@
                             <td class="text-center text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{{ route('pencairan.show', $item) }}">Detail</a></td>
                         </tr>
                         @empty
-                        <tr><td colspan="8" class="text-center text-muted py-4">Belum ada pengajuan untuk filter ini.</td></tr>
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-2 d-block mx-auto opacity-50" aria-hidden="true">
+                                    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+                                    <path d="M14 3v5h5"/>
+                                    <path d="M9 13h6"/>
+                                    <path d="M9 17h4"/>
+                                    <circle cx="16.5" cy="16.5" r="3.5"/>
+                                    <path d="M19 19l2.5 2.5"/>
+                                </svg>
+                                Belum ada pengajuan untuk filter ini.
+                            </td>
+                        </tr>
                         @endforelse
                     </tbody>
                 </table>
