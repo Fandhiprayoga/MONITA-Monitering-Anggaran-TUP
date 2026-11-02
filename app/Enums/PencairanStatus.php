@@ -22,4 +22,16 @@ enum PencairanStatus: string
             self::Cancelled => 'Dibatalkan',
         };
     }
+
+    public function badgeClass(): string
+    {
+        return match ($this) {
+            self::Draft => 'bg-light-secondary',
+            self::Submitted => 'bg-light-warning',
+            self::Returned => 'bg-light-danger',
+            self::Verified => 'bg-light-info',
+            self::Completed => 'bg-light-success',
+            self::Cancelled => 'bg-light-dark',
+        };
+    }
 }

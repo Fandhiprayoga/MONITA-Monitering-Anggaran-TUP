@@ -99,7 +99,7 @@
                             <td class="text-nowrap">{{ ucfirst($item->jenis) }}</td>
                             <td style="min-width: 200px; max-width: 350px; white-space: normal; overflow-wrap: anywhere;">{{ Illuminate\Support\Str::limit($item->uraian_pengajuan, 80) }}</td>
                             <td class="text-end text-nowrap">Rp {{ number_format((float)$item->total_bruto, 2, ',', '.') }}</td>
-                            <td><span class="badge bg-light-primary">{{ $item->statusLabel() }}</span><small class="d-block text-muted">{{ $item->updated_at->format('d/m/Y H:i') }}</small></td>
+                            <td><span class="badge {{ $item->statusBadgeClass() }}">{{ $item->statusLabel() }}</span><small class="d-block text-muted">{{ $item->updated_at->format('d/m/Y H:i') }}</small></td>
                             <td class="text-center text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{{ route('pencairan.show', $item) }}">Detail</a></td>
                         </tr>
                         @empty

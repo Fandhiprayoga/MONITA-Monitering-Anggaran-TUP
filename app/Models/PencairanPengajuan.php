@@ -62,6 +62,7 @@ class PencairanPengajuan extends Model
     public function revisions() { return $this->hasMany(PencairanRevision::class, 'pengajuan_id')->orderBy('revision_no'); }
     public function completion() { return $this->hasOne(PencairanCompletion::class, 'pengajuan_id'); }
     public function statusLabel(): string { return PencairanStatus::from($this->status)->label($this->jenis); }
+    public function statusBadgeClass(): string { return PencairanStatus::from($this->status)->badgeClass(); }
 
     public function scopeForActor(Builder $query, array $actor): Builder
     {
