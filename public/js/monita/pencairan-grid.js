@@ -484,7 +484,7 @@ export function mountGrid(form) {
         select(body.rows[Math.min(top, body.rows.length - 1)].querySelector('input'));
         notify(`${bottom - top + 1} baris dihapus.`);
     });
-    for (let i = 0; i < 5; i++) addRow();
+    addRow();
     recalculate();
     select(body.rows[0].querySelector('input'), false, false);
     return {
