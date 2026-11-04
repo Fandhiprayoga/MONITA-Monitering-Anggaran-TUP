@@ -134,6 +134,68 @@ class PencairanWorkflowTest extends TestCase
         $this->assertSame('175,00', $p->detailRows()[1]['subtotal']);
     }
 
+    #[DataProvider('kinds')]
+    public function test_simkug_shows_same_details_and_copyable_readonly_headers_when_verified(string $jenis): void
+    {
+        $p = $this->verified($jenis);
+        $p->uraian_pengajuan = "Narasi \"SIMKUG\" & <uji>\nBaris kedua";
+        $p->save();
+        $response = $this->get(route('pencairan.show', $p))->assertOk()
+            ->assertSee('>SIMKUG</button>', false)
+            ->assertSee('pencairan-simkug.js');
+        $document = new \DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        try { $document->loadHTML($response->getContent()); }
+        finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
+        $xpath = new \DOMXPath($document);
+        $panel = '//section[@data-simkug-panel]';
+        $this->assertSame(1, $xpath->query($panel)->length);
+        $fields = $xpath->query($panel.'//input | '.$panel.'//textarea');
+        $this->assertSame($fields->length, $xpath->query($panel.'//button[@data-simkug-copy]')->length);
+        $values = [];
+        foreach ($fields as $field) {
+            $this->assertTrue($field->hasAttribute('readonly'));
+            $id = $field->getAttribute('id');
+            $label = $xpath->query($panel.'//label[@for="'.$id.'"]')->item(0)->textContent;
+            $values[$label] = $field->tagName === 'textarea' ? $field->textContent : $field->getAttribute('value');
+        }
+        $this->assertSame('001', $values['Kode akun']);
+        $this->assertSame('8910', $values['Kode pp']);
+        $this->assertSame('SIM1', $values['Kode drk']);
+        $this->assertSame($p->uraian_pengajuan, $values['Uraian pengajuan']);
+        $this->assertSame('2026', $values['Tahun anggaran']);
+        $this->assertSame('4', $values['Triwulan']);
+        $this->assertSame(number_format((float) $p->total_bruto, 2, ',', '.'), $values['Nominal']);
+        foreach (['Id', 'Checked at', 'Saldo terkini decimal', 'Kode pp sheet'] as $hidden) {
+            $this->assertArrayNotHasKey($hidden, $values);
+        }
+        $detailCells = $xpath->query('//section[@id="pengajuan-detail-'.$p->id.'"]//td[@data-grid-cell]');
+        $simkugCells = $xpath->query($panel.'//td[@data-grid-cell]');
+        $cellValues = fn ($cells) => array_map(fn ($cell) => trim($cell->textContent), iterator_to_array($cells));
+        $this->assertNotEmpty($cellValues($detailCells));
+        $this->assertSame($cellValues($detailCells), $cellValues($simkugCells));
+        $this->assertSame(1, $xpath->query($panel.'//*[@data-simkug-copy-status][@role="status"]')->length);
+        $this->assertSame(0, $xpath->query($panel.'//form')->length);
+    }
+
+    public static function nonTransactionStatuses(): array
+    {
+        return [['draft'], ['submitted'], ['returned'], ['completed'], ['cancelled']];
+    }
+
+    #[DataProvider('nonTransactionStatuses')]
+    public function test_simkug_is_hidden_for_other_statuses(string $status): void
+    {
+        $p = $this->draft();
+        $p->status = $status;
+        $p->save();
+        $this->get(route('pencairan.show', $p))->assertOk()
+            ->assertSee('>Detail</button>', false)
+            ->assertSee('>Riwayat</button>', false)
+            ->assertDontSee('>SIMKUG</button>', false)
+            ->assertDontSee('id="pengajuan-simkug-'.$p->id.'"', false);
+    }
+
     public function test_detail_workflow_actions_share_toolbar_and_use_confirmation_modals(): void
     {
         $p = $this->submitted();
