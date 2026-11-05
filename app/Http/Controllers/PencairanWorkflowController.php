@@ -26,6 +26,16 @@ class PencairanWorkflowController extends Controller
     public function cancel(Request $request, PencairanPengajuan $pengajuan) { return $this->respond($request, $this->service->cancel($request, $pengajuan)); }
     public function complete(Request $request, PencairanPengajuan $pengajuan) { return $this->respond($request, $this->service->complete($request, $pengajuan)); }
 
+    public function saveSimkug(Request $request, PencairanPengajuan $pengajuan)
+    {
+        $result = $this->service->saveSimkug($request, $pengajuan);
+        if ($request->expectsJson()) {
+            return response()->json($result);
+        }
+
+        return back()->with('success', 'Data SIMKUG berhasil disimpan.');
+    }
+
     public function attachment(Request $request, $attachment)
     {
         $attachment = $attachment instanceof PencairanAttachment ? $attachment : PencairanAttachment::findOrFail($attachment);

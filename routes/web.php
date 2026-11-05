@@ -53,6 +53,7 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
         Route::middleware('throttle:60,1')->group(function () {
             Route::post('/pengajuan', [PencairanWorkflowController::class, 'store'])->name('store');
             Route::patch('/pengajuan/{pengajuan}', [PencairanWorkflowController::class, 'update'])->whereUuid('pengajuan')->name('update');
+            Route::patch('/pengajuan/{pengajuan}/simkug', [PencairanWorkflowController::class, 'saveSimkug'])->whereUuid('pengajuan')->name('simkug.save');
             foreach (['submit' => 'submit', 'return' => 'returnToUser', 'verify' => 'verify', 'cancel' => 'cancel', 'complete' => 'complete'] as $action => $method) {
                 Route::post('/pengajuan/{pengajuan}/'.$action, [PencairanWorkflowController::class, $method])->whereUuid('pengajuan')->name($action);
             }

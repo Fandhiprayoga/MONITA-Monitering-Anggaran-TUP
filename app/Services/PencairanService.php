@@ -84,6 +84,18 @@ class PencairanService
                         }
                     }]],
             'submit' => ['confirmed' => 'sometimes|accepted'],
+            'simkug' => [
+                'simkug' => 'required|array:kode_akun,nama_akun,dc,keterangan,nilai,kode_pp,nama_pp,kode_drk,nama_drk',
+                'simkug.kode_akun' => 'required|string|max:100',
+                'simkug.nama_akun' => 'required|string|max:255',
+                'simkug.dc' => 'required|in:D,C',
+                'simkug.keterangan' => 'required|string|max:5000',
+                'simkug.nilai' => 'required|string|max:64',
+                'simkug.kode_pp' => 'required|string|max:100',
+                'simkug.nama_pp' => 'required|string|max:255',
+                'simkug.kode_drk' => 'required|string|max:100',
+                'simkug.nama_drk' => 'required|string|max:5000',
+            ],
         };
         if ($operation !== 'store') { $rules['lock_version'] = 'required|integer|min:0'; }
         if (in_array($operation, ['submit', 'complete'], true)) { $rules['idempotency_key'] = 'required|string|max:100'; }
@@ -213,14 +225,15 @@ class PencairanService
     private function checkState(PencairanPengajuan $p, string $operation, array $actor): void
     {
         abort_unless($actor['role'] === 'admin' || $p->kode_pp === $actor['kode_pp'], 403, 'Akses PP ditolak.');
-        $admin = in_array($operation, ['return', 'verify', 'complete'], true);
+        $admin = in_array($operation, ['return', 'verify', 'complete', 'simkug'], true);
         if ($admin) { abort_unless($actor['role'] === 'admin', 403, 'Tindakan tidak diizinkan untuk peran ini.'); }
+        if ($operation === 'simkug') { abort_unless($p->jenis === 'impresfund', 403, 'Penyimpanan SIMKUG hanya tersedia untuk Impresfund.'); }
         if (in_array($operation, ['update', 'submit'], true)) {
             abort_unless($actor['kode_pp'] !== '' && $p->kode_pp === $actor['kode_pp'], 403, 'Pengajuan hanya dapat diubah atau disubmit untuk PP sendiri.');
         }
         $allowed = match ($operation) {
             'update', 'submit' => ['draft', 'returned'], 'return' => ['submitted', 'verified'],
-            'verify' => ['submitted'], 'complete' => ['verified'],
+            'verify' => ['submitted'], 'complete', 'simkug' => ['verified'],
             'cancel' => $actor['role'] === 'admin' ? ($p->kode_pp === $actor['kode_pp'] ? ['draft', 'submitted', 'returned'] : ['submitted', 'returned']) : ['draft', 'returned'],
         };
         abort_unless(in_array($p->status, $allowed, true), 409, 'Status telah berubah atau transisi tidak diizinkan. Muat ulang pengajuan.');
@@ -292,6 +305,7 @@ class PencairanService
     public function verify(Request $r, PencairanPengajuan $p): array { return $this->act($r, $p, 'verify'); }
     public function cancel(Request $r, PencairanPengajuan $p): array { return $this->act($r, $p, 'cancel'); }
     public function complete(Request $r, PencairanPengajuan $p): array { return $this->act($r, $p, 'complete'); }
+    public function saveSimkug(Request $r, PencairanPengajuan $p): array { return $this->act($r, $p, 'simkug'); }
 
     private function act(Request $request, PencairanPengajuan $p, string $operation): array
     {
@@ -302,6 +316,17 @@ class PencairanService
         $this->checkState($p, $operation, $actor);
         abort_unless($p->lock_version === (int) $data['lock_version'], 409, 'Pengajuan telah berubah. Muat ulang sebelum mencoba lagi.');
         $records = null; $totals = null; $drk = null;
+        if ($operation === 'simkug') {
+            $nilai = PencairanDecimal::raw($data['simkug']['nilai'], 'simkug.nilai', false, false);
+            if ($nilai === null || BigDecimal::of($nilai)->isGreaterThan(config('pencairan.max_total'))) {
+                PencairanDecimal::invalid('simkug.nilai', 'Nilai wajib diisi dan maksimal 5 triliun.');
+            }
+            $data['simkug'] = array_map(fn ($value) => trim($value), $data['simkug']);
+            foreach ($data['simkug'] as $field => $value) {
+                if ($value === '') { PencairanDecimal::invalid('simkug.'.$field, 'Kolom SIMKUG wajib diisi.'); }
+            }
+            $data['simkug']['nilai'] = PencairanDecimal::format($nilai);
+        }
         if ($operation === 'update') {
             if (isset($data['jenis']) && $data['jenis'] !== $p->jenis) { PencairanDecimal::invalid('jenis', 'Jenis draft tidak dapat diganti.'); }
             [$records, $totals] = $this->calculate($p->jenis, $data['details']);
@@ -350,7 +375,11 @@ class PencairanService
                     $current->saldo_checked_at = $drk['checked_at'];
                 }
                 switch ($operation) {
+                    case 'simkug':
+                        $current->simkug_data = $data['simkug'];
+                        break;
                     case 'submit':
+                        $current->simkug_data = null;
                         if (!$current->nomor_pengajuan) {
                             $year = now()->year;
                             DB::table('pengajuan_number_sequences')->insertOrIgnore(['year' => $year, 'last_number' => 0]);
@@ -389,7 +418,10 @@ class PencairanService
                             'detail_values' => $current->details->map(fn ($row) => $row->only(['urutan', 'volume', 'tarif', 'subtotal_manual', 'subtotal_efektif', 'nominal', 'pajak', 'neto']))->all(),
                             'totals' => $totals, 'budget' => $drk]]);
                 }
-                $this->history($current, $actor, $local, $operation === 'update' ? 'save' : $operation, $from, $data['remark'] ?? null);
+                $remark = $operation === 'simkug' ? json_encode([
+                    'sebelum' => $p->simkug_data, 'sesudah' => $data['simkug'],
+                ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) : ($data['remark'] ?? null);
+                $this->history($current, $actor, $local, $operation === 'update' ? 'save' : $operation, $from, $remark);
                 $response = $this->response($current);
                 if ($hash !== null) { DB::table('pengajuan_idempotencies')->insert(['actor_id' => $local->id, 'pengajuan_id' => $current->id, 'operation' => $operation, 'key' => $data['idempotency_key'], 'payload_hash' => $hash, 'response' => json_encode($response), 'created_at' => now(), 'updated_at' => now()]); }
                 return $response;

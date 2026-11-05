@@ -126,7 +126,18 @@ class PencairanController extends Controller
         if ($kodePpSheet !== '') {
             $headerSnapshot = ['kode_pp' => $kodePpSheet] + $headerSnapshot;
         }
-        return view('main.pencairan.show', compact('pengajuan', 'actor', 'pending', 'displayRows', 'headerSnapshot')
+        $simkugData = $pengajuan->simkug_data ?? [
+            'kode_akun' => $headerSnapshot['kode_akun'] ?? '',
+            'nama_akun' => $headerSnapshot['nama_akun'] ?? '',
+            'dc' => '',
+            'keterangan' => $pengajuan->uraian_pengajuan ?? '',
+            'nilai' => \App\Services\PencairanDecimal::format($pengajuan->total_bruto),
+            'kode_pp' => $headerSnapshot['kode_pp'] ?? '',
+            'nama_pp' => $headerSnapshot['nama_pp'] ?? $pengajuan->nama_pp,
+            'kode_drk' => $headerSnapshot['kode_drk'] ?? '',
+            'nama_drk' => $headerSnapshot['uraian_drk'] ?? '',
+        ];
+        return view('main.pencairan.show', compact('pengajuan', 'actor', 'pending', 'displayRows', 'headerSnapshot', 'simkugData')
             + $this->detailNavigation($request, $pengajuan));
     }
 

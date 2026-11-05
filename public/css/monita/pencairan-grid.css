@@ -120,6 +120,16 @@
     cursor: text;
 }
 
+.spreadsheet-grid textarea.spreadsheet-cell {
+    resize: none;
+    overflow: hidden;
+}
+
+.spreadsheet-grid textarea.spreadsheet-cell.is-editing {
+    height: 64px;
+    overflow: auto;
+}
+
 .spreadsheet-grid .spreadsheet-cell.is-invalid {
     box-shadow: inset 0 -2px #dc3545;
     background-color: #fff3f3;

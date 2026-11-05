@@ -27,7 +27,7 @@ class PencairanPengajuan extends Model
     protected function casts(): array
     {
         return [
-            'header_snapshot' => 'array', 'total_bruto' => 'decimal:2',
+            'header_snapshot' => 'array', 'simkug_data' => 'array', 'total_bruto' => 'decimal:2',
             'total_pajak' => 'decimal:2', 'total_neto' => 'decimal:2',
             'saldo_awal_snapshot' => 'decimal:2', 'anggaran_terpakai_snapshot' => 'decimal:2',
             'saldo_terkini_snapshot' => 'decimal:2', 'saldo_checked_at' => 'datetime',

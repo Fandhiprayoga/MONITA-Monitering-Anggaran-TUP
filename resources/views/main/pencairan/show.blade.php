@@ -1,6 +1,11 @@
 @extends('layouts.app')
 @section('title', 'Detail Pengajuan | MONITA')
 @section('content')
+@php
+    $showSimkug = $pengajuan->status === 'verified'
+        || ($pengajuan->jenis === 'impresfund' && $pengajuan->status === 'completed');
+    $simkugActive = $showSimkug && (request('tab') === 'simkug' || session()->hasOldInput('simkug'));
+@endphp
 <link rel="stylesheet" href="{{ asset('css/monita/pencairan-grid.css') }}">
 <link rel="stylesheet" href="{{ asset('css/monita/pencairan-timeline.css') }}">
 <div class="card"><div class="card-header d-flex justify-content-between"><h5>{{ $pengajuan->nomor_pengajuan ?? 'Draft #'.$pengajuan->id }} — {{ ucfirst($pengajuan->jenis) }}</h5><span class="badge {{ $pengajuan->statusBadgeClass() }}">{{ $pengajuan->statusLabel() }}</span></div>
@@ -8,11 +13,11 @@
     @include('main.pencairan.partials.feedback')
     <ul class="nav nav-tabs mb-3" id="pengajuan-tabs-{{ $pengajuan->id }}" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="pengajuan-detail-tab-{{ $pengajuan->id }}" data-bs-toggle="tab" data-bs-target="#pengajuan-detail-{{ $pengajuan->id }}" type="button" role="tab" aria-controls="pengajuan-detail-{{ $pengajuan->id }}" aria-selected="true">Detail</button>
+            <button class="nav-link {{ $simkugActive ? '' : 'active' }}" id="pengajuan-detail-tab-{{ $pengajuan->id }}" data-bs-toggle="tab" data-bs-target="#pengajuan-detail-{{ $pengajuan->id }}" type="button" role="tab" aria-controls="pengajuan-detail-{{ $pengajuan->id }}" aria-selected="{{ $simkugActive ? 'false' : 'true' }}">Detail</button>
         </li>
-        @if($pengajuan->status === 'verified')
+        @if($showSimkug)
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="pengajuan-simkug-tab-{{ $pengajuan->id }}" data-bs-toggle="tab" data-bs-target="#pengajuan-simkug-{{ $pengajuan->id }}" type="button" role="tab" aria-controls="pengajuan-simkug-{{ $pengajuan->id }}" aria-selected="false">SIMKUG</button>
+                <button class="nav-link {{ $simkugActive ? 'active' : '' }}" id="pengajuan-simkug-tab-{{ $pengajuan->id }}" data-bs-toggle="tab" data-bs-target="#pengajuan-simkug-{{ $pengajuan->id }}" type="button" role="tab" aria-controls="pengajuan-simkug-{{ $pengajuan->id }}" aria-selected="{{ $simkugActive ? 'true' : 'false' }}">SIMKUG</button>
             </li>
         @endif
         <li class="nav-item" role="presentation">
@@ -20,7 +25,7 @@
         </li>
     </ul>
     <div class="tab-content" id="pengajuan-tab-content-{{ $pengajuan->id }}">
-    <section class="tab-pane fade show active" id="pengajuan-detail-{{ $pengajuan->id }}" role="tabpanel" aria-labelledby="pengajuan-detail-tab-{{ $pengajuan->id }}" tabindex="0">
+    <section class="tab-pane fade {{ $simkugActive ? '' : 'show active' }}" id="pengajuan-detail-{{ $pengajuan->id }}" role="tabpanel" aria-labelledby="pengajuan-detail-tab-{{ $pengajuan->id }}" tabindex="0">
     @include('main.pencairan.partials.detail-data', ['simkug' => false])
     @if($pengajuan->histories->where('action','return')->last())<div class="alert alert-info">Remark pengembalian terakhir: {{ $pengajuan->histories->where('action','return')->last()->remark }}</div>@endif
     @php
@@ -38,9 +43,13 @@
         }
     @endphp
     </section>
-    @if($pengajuan->status === 'verified')
-        <section class="tab-pane fade" id="pengajuan-simkug-{{ $pengajuan->id }}" role="tabpanel" aria-labelledby="pengajuan-simkug-tab-{{ $pengajuan->id }}" tabindex="0" data-simkug-panel>
-            @include('main.pencairan.partials.detail-data', ['simkug' => true])
+    @if($showSimkug)
+        <section class="tab-pane fade {{ $simkugActive ? 'show active' : '' }}" id="pengajuan-simkug-{{ $pengajuan->id }}" role="tabpanel" aria-labelledby="pengajuan-simkug-tab-{{ $pengajuan->id }}" tabindex="0" data-simkug-panel>
+            @if($pengajuan->jenis === 'impresfund')
+                @include('main.pencairan.partials.simkug-impresfund')
+            @else
+                @include('main.pencairan.partials.detail-data', ['simkug' => true])
+            @endif
         </section>
     @endif
     <section class="tab-pane fade" id="pengajuan-riwayat-{{ $pengajuan->id }}" role="tabpanel" aria-labelledby="pengajuan-riwayat-tab-{{ $pengajuan->id }}" tabindex="0">
@@ -51,6 +60,7 @@
             'create' => 'Pengajuan dibuat', 'save' => 'Draft diperbarui', 'submit' => 'Diajukan untuk verifikasi',
             'return' => 'Dikembalikan untuk perbaikan', 'verify' => 'Pengajuan diverifikasi',
             'cancel' => 'Pengajuan dibatalkan', 'complete' => 'Proses diselesaikan',
+            'simkug' => 'Data SIMKUG disimpan',
         ];
         $actionIcons = [
             'create' => '＋', 'save' => '✎', 'submit' => '➤', 'return' => '↩',
@@ -58,7 +68,7 @@
         ];
         $actionStyles = [
             'create' => 'created', 'save' => 'saved', 'submit' => 'submitted', 'return' => 'returned',
-            'verify' => 'verified', 'cancel' => 'cancelled', 'complete' => 'completed',
+            'verify' => 'verified', 'cancel' => 'cancelled', 'complete' => 'completed', 'simkug' => 'saved',
         ];
     @endphp
     @if($pengajuan->histories->isNotEmpty())
@@ -130,8 +140,6 @@
                             <input class="form-control mb-2" id="{{ $modalId }}-date" type="date" name="completion_date" value="{{ now()->toDateString() }}" min="{{ $pengajuan->verified_at?->toDateString() }}" max="{{ now()->toDateString() }}" required>
                             <label class="form-label" for="{{ $modalId }}-notes">Catatan (opsional)</label>
                             <textarea class="form-control mb-2" id="{{ $modalId }}-notes" name="notes" maxlength="5000"></textarea>
-                            <label class="form-label" for="{{ $modalId }}-attachments">Lampiran opsional (maks. 5, 10 MB/file, PDF/JPEG/PNG)</label>
-                            <input class="form-control" id="{{ $modalId }}-attachments" type="file" name="attachments[]" accept="application/pdf,image/jpeg,image/png" multiple>
                         @endif
                     </div>
                     <div class="modal-footer">
@@ -148,8 +156,10 @@
 <script type="module">
     import { mountReadOnlySpreadsheetGrid } from "{{ asset('js/monita/pencairan-detail-grid.js') }}";
     import { mountSimkugCopy } from "{{ asset('js/monita/pencairan-simkug.js') }}";
+    import { mountSimkugImpresfund } from "{{ asset('js/monita/pencairan-simkug-impresfund.js') }}";
     document.querySelectorAll('[data-detail-grid]').forEach(mountReadOnlySpreadsheetGrid);
     document.querySelectorAll('[data-simkug-panel]').forEach(mountSimkugCopy);
+    document.querySelectorAll('[data-simkug-impresfund]').forEach(mountSimkugImpresfund);
 </script>
 @endpush
 @push('scripts')
