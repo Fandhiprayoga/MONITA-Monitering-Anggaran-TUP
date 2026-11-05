@@ -27,12 +27,12 @@
 
             @if (in_array($jenis, ['impresfund', 'beban', 'honor'], true))
                 <div id="save-message" class="alert d-none" role="alert"></div>
-                <form id="form-pencairan" data-jenis="{{ $jenis }}" novalidate>
+                <form id="form-pencairan" data-jenis="{{ $jenis }}" data-menu="{{ $activeMenu ?? 'pengajuan' }}" novalidate>
                     @csrf
                     @include('main.pencairan.partials.header')
                     @include('main.pencairan.partials.detail-' . $jenis)
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4">
-                        <a href="{{ route('pencairan.pengajuan') }}" class="btn btn-outline-secondary">Kembali</a>
+                        <a href="{{ $backUrl ?? route('pencairan.pengajuan', ['jenis' => $jenis]) }}" class="btn btn-outline-secondary">Kembali</a>
                         <div class="d-flex flex-wrap gap-2">
                             <button type="button" data-save-draft class="btn btn-outline-primary">Simpan {{ isset($pengajuan) && $pengajuan->status === 'returned' ? 'Perbaikan' : 'sebagai Draft' }}</button>
                             <button type="submit" class="btn btn-primary">Submit Pengajuan</button>

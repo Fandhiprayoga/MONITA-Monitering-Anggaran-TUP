@@ -70,7 +70,7 @@ class PencairanController extends Controller
         }
         $query->whereIn('status', $allowedStatuses);
         if ($jenis) { $query->where('jenis', $jenis); }
-        if (in_array($request->jenis, ['impresfund', 'beban', 'honor'], true)) { $query->where('jenis', $request->jenis); }
+        if (!$jenis && in_array($request->jenis, ['impresfund', 'beban', 'honor'], true)) { $query->where('jenis', $request->jenis); }
         $defaultStatus = $mode === 'verifikasi' ? 'submitted' : ($mode === 'transaksi' ? 'verified' : '');
         $status = $request->query('status', $defaultStatus);
         if (in_array($status, $allowedStatuses, true)) { $query->where('status', $status); }
@@ -82,7 +82,8 @@ class PencairanController extends Controller
         }
         if ($actor['role'] === 'admin' && $request->filled('pp')) { $query->where('kode_pp', strtoupper(trim((string) $request->pp))); }
         $mode === 'verifikasi' ? $query->orderBy('last_submitted_at') : $query->latest('updated_at');
-        return view('main.pencairan.pengajuan', ['items' => $query->paginate(20)->withQueryString(),
+        $view = $mode === 'transaksi' ? 'main.pencairan.transaksi.'.$jenis : 'main.pencairan.pengajuan';
+        return view($view, ['items' => $query->paginate(20)->withQueryString(),
             'title' => $title, 'mode' => $mode, 'tab' => $tab,
             'statusFilter' => $status, 'allowedStatuses' => $allowedStatuses]);
     }
@@ -125,7 +126,8 @@ class PencairanController extends Controller
         if ($kodePpSheet !== '') {
             $headerSnapshot = ['kode_pp' => $kodePpSheet] + $headerSnapshot;
         }
-        return view('main.pencairan.show', compact('pengajuan', 'actor', 'pending', 'displayRows', 'headerSnapshot'));
+        return view('main.pencairan.show', compact('pengajuan', 'actor', 'pending', 'displayRows', 'headerSnapshot')
+            + $this->detailNavigation($request, $pengajuan));
     }
 
     public function edit(Request $request, PencairanPengajuan $pengajuan)
@@ -136,7 +138,27 @@ class PencairanController extends Controller
         try { $options = app(GoogleSheetService::class)->getPencairanDrkOptions($pengajuan->kode_pp, $pengajuan->triwulan, $pengajuan->tahun_anggaran); }
         catch (\Throwable $e) { report($e); $error = 'Gagal memuat DRK dan saldo. Draft tetap dapat disimpan; submit memerlukan data sumber terkini.'; }
         return view('main.pencairan.form', ['jenis' => $pengajuan->jenis, 'jenisNama' => ucfirst($pengajuan->jenis),
-            'activeTw' => $pengajuan->triwulan, 'drkOptions' => $options, 'drkError' => $error, 'pengajuan' => $pengajuan]);
+            'activeTw' => $pengajuan->triwulan, 'drkOptions' => $options, 'drkError' => $error, 'pengajuan' => $pengajuan]
+            + $this->detailNavigation($request, $pengajuan));
+    }
+
+    private function detailNavigation(Request $request, PencairanPengajuan $pengajuan): array
+    {
+        $activeMenu = 'pengajuan';
+        if (Session::get('user_role') === 'admin' && in_array($request->query('menu'), ['transaksi', 'verifikasi'], true)) {
+            $activeMenu = $request->query('menu');
+        }
+        $activeJenis = $pengajuan->jenis;
+        $backUrl = match ($activeMenu) {
+            'transaksi' => route('pencairan.transaksi', $activeJenis),
+            'verifikasi' => route('pencairan.verifikasi'),
+            default => route('pencairan.pengajuan', [
+                'jenis' => $activeJenis,
+                'tab' => in_array($pengajuan->status, PencairanPengajuan::STATUS_NONAKTIF, true) ? 'nonaktif' : 'aktif',
+            ]),
+        };
+
+        return compact('activeMenu', 'activeJenis', 'backUrl');
     }
 
     private function requireAdmin(): void

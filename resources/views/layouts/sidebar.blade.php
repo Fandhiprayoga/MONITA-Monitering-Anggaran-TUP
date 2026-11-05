@@ -1,3 +1,9 @@
+@php
+    $pencairanMenu = $activeMenu ?? (request()->routeIs('pencairan.transaksi') ? 'transaksi'
+        : (request()->routeIs('pencairan.verifikasi') ? 'verifikasi'
+            : (request()->routeIs('pencairan.pengajuan', 'pencairan.form', 'pencairan.show', 'pencairan.edit') ? 'pengajuan' : null)));
+    $pencairanJenis = $activeJenis ?? request()->route('jenis');
+@endphp
 <nav class="pc-sidebar">
 
     <div class="navbar-wrapper">
@@ -151,7 +157,7 @@
 
                 <!-- Pengajuan -->
                 <li class="pc-item">
-                    <a class="pc-link {{ request()->routeIs('pencairan.pengajuan', 'pencairan.form') ? 'active' : '' }}"
+                    <a class="pc-link {{ $pencairanMenu === 'pengajuan' ? 'active' : '' }}"
                         href="{{ route('pencairan.pengajuan') }}">
                         <span class="pc-micon"><i class="ti ti-file-plus"></i></span>
                         <span class="pc-mtext">Pengajuan</span>
@@ -161,7 +167,7 @@
                 @if($userRole === 'admin')
                     <!-- Verifikasi Pengajuan -->
                     <li class="pc-item">
-                        <a class="pc-link {{ request()->routeIs('pencairan.verifikasi') ? 'active' : '' }}"
+                        <a class="pc-link {{ $pencairanMenu === 'verifikasi' ? 'active' : '' }}"
                             href="{{ route('pencairan.verifikasi') }}">
                             <span class="pc-micon"><i class="ti ti-list-check"></i></span>
                             <span class="pc-mtext">Verifikasi Pengajuan</span>
@@ -169,27 +175,27 @@
                     </li>
 
                     <!-- Transaksi -->
-                    <li class="pc-item pc-hasmenu">
+                    <li class="pc-item pc-hasmenu {{ $pencairanMenu === 'transaksi' ? 'active pc-trigger' : '' }}">
                         <a href="#!" class="pc-link">
                             <span class="pc-micon"><i class="ti ti-exchange"></i></span>
                             <span class="pc-mtext">Transaksi</span>
                             <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
                         </a>
                         <ul class="pc-submenu">
-                            <li class="pc-item">
-                                <a class="pc-link {{ request()->routeIs('pencairan.transaksi') && request()->route('jenis') === 'impresfund' ? 'active' : '' }}"
+                            <li class="pc-item {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'impresfund' ? 'active' : '' }}">
+                                <a class="pc-link {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'impresfund' ? 'active' : '' }}"
                                     href="{{ route('pencairan.transaksi', 'impresfund') }}">
                                     Pengajuan Impresfund
                                 </a>
                             </li>
-                            <li class="pc-item">
-                                <a class="pc-link {{ request()->routeIs('pencairan.transaksi') && request()->route('jenis') === 'beban' ? 'active' : '' }}"
+                            <li class="pc-item {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'beban' ? 'active' : '' }}">
+                                <a class="pc-link {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'beban' ? 'active' : '' }}"
                                     href="{{ route('pencairan.transaksi', 'beban') }}">
                                     Pengajuan Beban
                                 </a>
                             </li>
-                            <li class="pc-item">
-                                <a class="pc-link {{ request()->routeIs('pencairan.transaksi') && request()->route('jenis') === 'honor' ? 'active' : '' }}"
+                            <li class="pc-item {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'honor' ? 'active' : '' }}">
+                                <a class="pc-link {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'honor' ? 'active' : '' }}"
                                     href="{{ route('pencairan.transaksi', 'honor') }}">
                                     Pengajuan Honor
                                 </a>

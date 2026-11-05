@@ -96,9 +96,9 @@
     </section>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-2 mt-3" data-workflow-actions>
-        <a href="{{ route('pencairan.pengajuan') }}" class="btn btn-outline-secondary">Kembali ke Daftar</a>
+        <a href="{{ $backUrl }}" class="btn btn-outline-secondary">Kembali ke Daftar</a>
         @if($ownPp && in_array($pengajuan->status,['draft','returned']))
-            <a href="{{ route('pencairan.edit',$pengajuan) }}" class="btn btn-primary">Edit / Submit</a>
+            <a href="{{ route('pencairan.edit', ['pengajuan' => $pengajuan, 'menu' => $activeMenu]) }}" class="btn btn-primary">Edit / Submit</a>
         @endif
         @foreach($actions as $action => $label)
             <button type="button" class="btn {{ in_array($action,['cancel','return']) ? 'btn-outline-danger' : 'btn-primary' }}{{ $loop->first ? ' ms-auto' : '' }}" data-bs-toggle="modal" data-bs-target="#workflow-{{ $action }}-{{ $pengajuan->id }}">{{ $label }}</button>

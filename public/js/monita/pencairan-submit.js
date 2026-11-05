@@ -9,6 +9,11 @@ export function mountSubmission(form, grid, initial, baseUrl) {
     const drk = form.querySelector('#pilih-drk');
     // Disabled source selectors must not erase the saved DRK while Sheets is unavailable.
     const chosenDrk = () => drk.disabled ? initial?.drk_id ?? null : drk.value || null;
+    const navigationUrl = (path) => {
+        const url = new URL(path, window.location.href);
+        url.searchParams.set('menu', form.dataset.menu || 'pengajuan');
+        return url.href;
+    };
     const markDirty = () => { dirty = true; submitKey = null; };
     form.addEventListener('input', markDirty);
     form.addEventListener('change', markDirty);
@@ -35,12 +40,12 @@ export function mountSubmission(form, grid, initial, baseUrl) {
             if (!submitKey || !submit) {
                 const result = await request(uuid ? `${baseUrl}/${uuid}` : baseUrl, uuid ? 'PATCH' : 'POST', { ...payload, ...(uuid ? { lock_version: version } : {}) });
                 uuid = result.uuid; version = result.lock_version; dirty = false;
-                history.replaceState(null, '', `${baseUrl}/${uuid}/edit`);
+                history.replaceState(null, '', navigationUrl(`${baseUrl}/${uuid}/edit`));
             }
             if (submit) {
                 submitKey ??= crypto.randomUUID();
                 const result = await request(`${baseUrl}/${uuid}/submit`, 'POST', { lock_version: version, confirmed: true, idempotency_key: submitKey });
-                dirty = false; window.location.assign(result.redirect_url);
+                dirty = false; window.location.assign(navigationUrl(result.redirect_url));
             } else {
                 message.className = 'alert alert-success'; message.textContent = 'Isian berhasil disimpan.';
             }
