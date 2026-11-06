@@ -31,6 +31,20 @@ class PencairanDrkSourceTest extends TestCase
         return [' pp01 ', 'Operasional', 'DRK-1', $account, 'Akun', 'Uraian', 1000.5, 100.25, 900.25, 'OTHER', 'Nama', '', 'SIM1'];
     }
 
+    public function test_submission_units_read_columns_b_and_c_including_first_user_and_normalize_codes(): void
+    {
+        $resource = Mockery::mock(SpreadsheetsValues::class);
+        $resource->shouldReceive('get')->once()->with('original', 'users!B2:C')
+            ->andReturn(new ValueRange(['values' => [
+                [' pp01 ', ' Unit Satu '], ['PP01', 'Unit Satu'], ['00123', 'Unit Dua'],
+                ['', 'Kosong'], ['PP03'], ['kode_pp', 'nama_pp'],
+            ]]));
+        $sheets = new Sheets(); $sheets->spreadsheets_values = $resource;
+        $service = $this->service([]);
+        (new \ReflectionClass($service))->getProperty('service')->setValue($service, $sheets);
+        $this->assertSame(['PP01' => 'Unit Satu', '00123' => 'Unit Dua'], $service->getPencairanUnitsFromSheet());
+    }
+
     public function test_stable_id_ignores_row_order_text_label_and_simkug_changes_but_distinguishes_account_and_type(): void
     {
         $a = $this->row(); $b = $this->row('002');

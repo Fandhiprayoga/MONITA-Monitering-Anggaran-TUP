@@ -18,12 +18,24 @@ class PencairanController extends Controller
     public function form(string $jenis)
     {
         $kodePp = trim((string) Session::get('user_data.kode_pp', ''));
-        abort_if($kodePp === '', 403, 'Unit akun belum tersedia. Silakan login kembali.');
+        $canChooseUnit = Session::get('user_data.role', Session::get('user_role')) === 'admin';
+        abort_if(!$canChooseUnit && $kodePp === '', 403, 'Unit akun belum tersedia. Silakan login kembali.');
         $activeTw = (int) ceil(now()->month / 3);
+        $unitOptions = [];
+        $unitError = null;
+        if ($canChooseUnit) {
+            try {
+                $unitOptions = app(PencairanService::class)->submissionUnits();
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+                $unitError = $exception->getMessage();
+            }
+        }
         $drkOptions = [];
         $drkError = null;
         try {
-            $drkOptions = app(GoogleSheetService::class)->getPencairanDrkOptions($kodePp, $activeTw, now()->year);
+            if ($kodePp !== '' && (!$canChooseUnit || array_key_exists(strtoupper($kodePp), $unitOptions))) {
+                $drkOptions = app(GoogleSheetService::class)->getPencairanDrkOptions($kodePp, $activeTw, now()->year);
+            }
         } catch (\Exception $exception) {
             report($exception);
             $drkError = 'Gagal memuat DRK dan saldo anggaran. Silakan muat ulang halaman atau hubungi administrator.';
@@ -35,7 +47,29 @@ class PencairanController extends Controller
             'activeTw' => $activeTw,
             'drkOptions' => $drkOptions,
             'drkError' => $drkError,
+            'canChooseUnit' => $canChooseUnit,
+            'unitOptions' => $unitOptions,
+            'unitError' => $unitError,
+            'selectedUnit' => strtoupper($kodePp),
+            'selectedUnitName' => $unitOptions[strtoupper($kodePp)] ?? Session::get('user_data.nama_pp'),
         ]);
+    }
+
+    public function drkOptions(Request $request)
+    {
+        $service = app(PencairanService::class);
+        $actor = $service->actor($request);
+        $data = $request->validate(['unit_kode_pp' => 'required|string|max:100']);
+        $unit = $service->submissionUnit($actor, $data['unit_kode_pp']);
+        try {
+            $options = app(GoogleSheetService::class)->getPencairanDrkOptions(
+                $unit['kode_pp'], (int) ceil(now()->month / 3), now()->year
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
+            abort(503, 'Gagal memuat DRK dan saldo anggaran. Silakan coba kembali.');
+        }
+        return response()->json(['options' => $options]);
     }
 
     public function verifikasi(Request $request)
@@ -144,12 +178,13 @@ class PencairanController extends Controller
     public function edit(Request $request, PencairanPengajuan $pengajuan)
     {
         $actor = app(PencairanService::class)->authorize($request, $pengajuan);
-        abort_unless($actor['kode_pp'] !== '' && $pengajuan->kode_pp === $actor['kode_pp'] && in_array($pengajuan->status, ['draft', 'returned'], true), 403);
+        abort_unless(($actor['role'] === 'admin' || ($actor['kode_pp'] !== '' && $pengajuan->kode_pp === $actor['kode_pp'])) && in_array($pengajuan->status, ['draft', 'returned'], true), 403);
         $options = []; $error = null;
         try { $options = app(GoogleSheetService::class)->getPencairanDrkOptions($pengajuan->kode_pp, $pengajuan->triwulan, $pengajuan->tahun_anggaran); }
         catch (\Throwable $e) { report($e); $error = 'Gagal memuat DRK dan saldo. Draft tetap dapat disimpan; submit memerlukan data sumber terkini.'; }
         return view('main.pencairan.form', ['jenis' => $pengajuan->jenis, 'jenisNama' => ucfirst($pengajuan->jenis),
-            'activeTw' => $pengajuan->triwulan, 'drkOptions' => $options, 'drkError' => $error, 'pengajuan' => $pengajuan]
+            'activeTw' => $pengajuan->triwulan, 'drkOptions' => $options, 'drkError' => $error, 'pengajuan' => $pengajuan,
+            'selectedUnit' => $pengajuan->kode_pp, 'selectedUnitName' => $pengajuan->nama_pp]
             + $this->detailNavigation($request, $pengajuan));
     }
 

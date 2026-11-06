@@ -29,7 +29,7 @@
     @include('main.pencairan.partials.detail-data', ['simkug' => false])
     @if($pengajuan->histories->where('action','return')->last())<div class="alert alert-info">Remark pengembalian terakhir: {{ $pengajuan->histories->where('action','return')->last()->remark }}</div>@endif
     @php
-        $ownPp = $actor['kode_pp'] !== '' && $actor['kode_pp'] === $pengajuan->kode_pp;
+        $ownPp = $actor['role'] === 'admin' || ($actor['kode_pp'] !== '' && $actor['kode_pp'] === $pengajuan->kode_pp);
         $actions = $actor['role'] === 'admin'
             ? match($pengajuan->status) {
                 'submitted' => ['verify' => 'Verifikasi', 'return' => 'Kembalikan', 'cancel' => 'Batalkan'],

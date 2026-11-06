@@ -9,6 +9,8 @@ test('save and submit retain the originating menu in edit and detail URLs', asyn
             const savedUrls = [];
             const redirects = [];
             const message = {};
+            const unit = { value: 'OTHER', disabled: false };
+            const payloads = [];
             const button = { addEventListener: (event, handler) => { events.save = handler; } };
             const fields = {
                 '#pilih-drk': { disabled: false, value: 'drk' },
@@ -18,15 +20,19 @@ test('save and submit retain the originating menu in edit and detail URLs', asyn
                 '[data-save-draft]': button,
             };
             const form = {
+                elements: { namedItem: () => unit },
                 dataset: { jenis: 'honor', menu },
                 querySelector: (selector) => fields[selector],
                 querySelectorAll: (selector) => selector === 'button' ? [button] : [],
                 addEventListener: (event, handler) => { events[event] = handler; },
             };
-            t.mock.method(globalThis, 'fetch', async () => ({
-                ok: true,
-                json: async () => ({ uuid: 'submission', lock_version: 2, redirect_url: '/pencairan/pengajuan/submission' }),
-            }));
+            t.mock.method(globalThis, 'fetch', async (url, options) => {
+                payloads.push(JSON.parse(options.body));
+                return {
+                    ok: true,
+                    json: async () => ({ uuid: 'submission', lock_version: 2, redirect_url: '/pencairan/pengajuan/submission' }),
+                };
+            });
             for (const [name, value] of Object.entries({
                 document: { getElementById: () => message },
                 window: {
@@ -45,7 +51,14 @@ test('save and submit retain the originating menu in edit and detail URLs', asyn
             }
             mountSubmission(form, { rows: () => [] }, { uuid: 'submission', lock_version: 1 }, '/pencairan/pengajuan');
             await events.save();
+            assert.equal(payloads[0].unit_kode_pp, 'OTHER');
+            assert.equal(unit.disabled, true);
             assert.equal(savedUrls.at(-1), `http://localhost/pencairan/pengajuan/submission/edit?menu=${menu}`);
+            form.dataset.drkLoading = 'true';
+            await events.save();
+            assert.equal(payloads.length, 1);
+            assert.equal(message.className, 'alert alert-warning');
+            form.dataset.drkLoading = 'false';
             await events.submit({ preventDefault() {} });
             await new Promise(setImmediate);
             assert.equal(redirects.at(-1), `http://localhost/pencairan/pengajuan/submission?menu=${menu}`);

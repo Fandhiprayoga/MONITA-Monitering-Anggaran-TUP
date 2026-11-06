@@ -55,6 +55,33 @@ class PencairanService
         return PencairanActor::where('source_key', $actor['source_key'])->firstOrFail();
     }
 
+    public function submissionUnit(array $actor, ?string $kodePp = null): array
+    {
+        $code = strtoupper(trim($kodePp ?? $actor['kode_pp']));
+        if ($actor['role'] !== 'admin') {
+            if ($code !== $actor['kode_pp']) {
+                PencairanDecimal::invalid('unit_kode_pp', 'Unit harus sesuai akun yang sedang login.');
+            }
+            return ['kode_pp' => $actor['kode_pp'], 'nama_pp' => $actor['nama_pp']];
+        }
+        $units = $this->submissionUnits();
+        if ($code === '' || !array_key_exists($code, $units)) {
+            PencairanDecimal::invalid('unit_kode_pp', 'Pilih unit yang tersedia pada sheet users.');
+        }
+        return ['kode_pp' => $code, 'nama_pp' => $units[$code]];
+    }
+
+    public function submissionUnits(): array
+    {
+        try {
+            $this->sheets ??= app(GoogleSheetService::class);
+            return $this->sheets->getPencairanUnitsFromSheet();
+        } catch (\Throwable $exception) {
+            report($exception);
+            abort(503, 'Gagal memuat daftar unit dari spreadsheet. Silakan coba kembali.');
+        }
+    }
+
     private function validatePayload(Request $request, string $operation): array
     {
         $actor = $this->actor($request);
@@ -70,6 +97,7 @@ class PencairanService
         }
         $rules = match ($operation) {
             'store', 'update' => ['jenis' => ($operation === 'store' ? 'required' : 'sometimes').'|in:impresfund,beban,honor',
+                'unit_kode_pp' => 'sometimes|required|string|max:100',
                 'drk_id' => 'nullable|string|max:64', 'uraian_pengajuan' => 'nullable|string|max:5000',
                 'details' => 'present|array|max:500', 'details.*' => 'array'],
             'return' => ['remark' => 'required|string|max:5000', 'confirmed' => 'required|accepted'],
@@ -229,12 +257,12 @@ class PencairanService
         if ($admin) { abort_unless($actor['role'] === 'admin', 403, 'Tindakan tidak diizinkan untuk peran ini.'); }
         if ($operation === 'simkug') { abort_unless($p->jenis === 'impresfund', 403, 'Penyimpanan SIMKUG hanya tersedia untuk Impresfund.'); }
         if (in_array($operation, ['update', 'submit'], true)) {
-            abort_unless($actor['kode_pp'] !== '' && $p->kode_pp === $actor['kode_pp'], 403, 'Pengajuan hanya dapat diubah atau disubmit untuk PP sendiri.');
+            abort_unless($actor['role'] === 'admin' || ($actor['kode_pp'] !== '' && $p->kode_pp === $actor['kode_pp']), 403, 'Pengajuan hanya dapat diubah atau disubmit untuk PP sendiri.');
         }
         $allowed = match ($operation) {
             'update', 'submit' => ['draft', 'returned'], 'return' => ['submitted', 'verified'],
             'verify' => ['submitted'], 'complete', 'simkug' => ['verified'],
-            'cancel' => $actor['role'] === 'admin' ? ($p->kode_pp === $actor['kode_pp'] ? ['draft', 'submitted', 'returned'] : ['submitted', 'returned']) : ['draft', 'returned'],
+            'cancel' => $actor['role'] === 'admin' ? ['draft', 'submitted', 'returned'] : ['draft', 'returned'],
         };
         abort_unless(in_array($p->status, $allowed, true), 409, 'Status telah berubah atau transisi tidak diizinkan. Muat ulang pengajuan.');
     }
@@ -254,10 +282,11 @@ class PencairanService
     public function store(Request $request): array
     {
         $actor = $this->actor($request);
-        abort_unless($actor['kode_pp'] !== '', 403, 'PP akun belum tersedia untuk membuat pengajuan.');
+        abort_unless($actor['role'] === 'admin' || $actor['kode_pp'] !== '', 403, 'PP akun belum tersedia untuk membuat pengajuan.');
         $data = $this->validatePayload($request, 'store');
+        $unit = $this->submissionUnit($actor, $data['unit_kode_pp'] ?? null);
         [$records, $totals] = $this->calculate($data['jenis'], $data['details']);
-        $p = new PencairanPengajuan(['jenis' => $data['jenis'], 'status' => 'draft', 'kode_pp' => $actor['kode_pp'], 'nama_pp' => $actor['nama_pp'],
+        $p = new PencairanPengajuan(['jenis' => $data['jenis'], 'status' => 'draft', 'kode_pp' => $unit['kode_pp'], 'nama_pp' => $unit['nama_pp'],
             'tahun_anggaran' => now()->year, 'triwulan' => (int) ceil(now()->month / 3), 'drk_source_id' => $data['drk_id'] ?? null,
             'uraian_pengajuan' => $data['uraian_pengajuan'] ?? null, 'lock_version' => 0, 'revision_no' => 0] + $totals);
         $p->header_snapshot = $this->drk($p, false);
@@ -328,6 +357,9 @@ class PencairanService
             $data['simkug']['nilai'] = PencairanDecimal::format($nilai);
         }
         if ($operation === 'update') {
+            if (isset($data['unit_kode_pp']) && strtoupper(trim($data['unit_kode_pp'])) !== $p->kode_pp) {
+                PencairanDecimal::invalid('unit_kode_pp', 'Unit draft tidak dapat diganti. Buat pengajuan baru untuk unit lain.');
+            }
             if (isset($data['jenis']) && $data['jenis'] !== $p->jenis) { PencairanDecimal::invalid('jenis', 'Jenis draft tidak dapat diganti.'); }
             [$records, $totals] = $this->calculate($p->jenis, $data['details']);
             $candidate = clone $p;

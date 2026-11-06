@@ -18,6 +18,7 @@ class PencairanFormTest extends TestCase
         $this->travelTo(now()->setDate(2026, 10, 29));
         $this->mock(GoogleSheetService::class, function (MockInterface $mock) {
             $mock->shouldReceive('getUnitsFromSheet')->andReturn(['TEST' => 'Unit Test']);
+            $mock->shouldReceive('getPencairanUnitsFromSheet')->andReturn(['TEST' => 'Unit Test', 'OTHER' => 'Unit Lain'])->byDefault();
             $mock->shouldReceive('getPencairanDrkOptions')->with('TEST', 4, 2026)->andReturn([
                 [
                     'id' => '2', 'tipe' => 'Operasional', 'drk_tup' => 'DRK-TEST', 'kode_drk' => 'SIMKUG-TEST',
@@ -43,8 +44,13 @@ class PencairanFormTest extends TestCase
                 ->assertSee('Pilih DRK')
                 ->assertSee('id="cari-drk"', false)
                 ->assertSee('id="hasil-cari-drk"', false)
+                ->assertSee('1 DRK ditemukan')
+                ->assertDontSee('Kode PP yang ditampilkan dari kolom K')
+                ->assertDontSee('Daftar unit dari sheet users:')
                 ->assertSee('DRK-TEST')
                 ->assertSee('pencairan-header.js')
+                ->assertSee('select2.min.js')
+                ->assertSee("['pilih-drk', '-- Pilih DRK --']", false)
                 ->assertDontSee('Total Pengajuan:')
                 ->assertDontSee('data-total>', false)
                 ->assertDontSee('data-total-tax', false)
@@ -149,6 +155,53 @@ class PencairanFormTest extends TestCase
             ->get('/pencairan/form/unknown')->assertNotFound();
     }
 
+    public function test_admin_forms_offer_sheet_units_and_load_drk_for_selected_unit(): void
+    {
+        $this->withSession(['user_authenticated' => true, 'user_role' => 'admin',
+            'user_data' => ['username' => 'admin', 'role' => 'admin', 'kode_pp' => 'TEST', 'nama_pp' => 'Unit Test']]);
+        foreach (['impresfund', 'beban', 'honor'] as $kind) {
+            $response = $this->get(route('pencairan.form', $kind))->assertOk()
+                ->assertSee('id="pilih-unit"', false)->assertSee('OTHER - Unit Lain')
+                ->assertSee('select2.min.css')->assertSee('select2.min.js')
+                ->assertSee("selector.on('select2:select'", false)
+                ->assertViewHas('selectedUnit', 'TEST');
+            $this->assertLessThan(
+                strpos($response->getContent(), 'select2.min.js'),
+                strpos($response->getContent(), 'jquery.min.js')
+            );
+        }
+        app(GoogleSheetService::class)->shouldReceive('getPencairanDrkOptions')
+            ->with('OTHER', 4, 2026)->once()->andReturn([['id' => 'other-drk', 'kode_pp' => 'OTHER']]);
+        $this->getJson(route('pencairan.drk-options', ['unit_kode_pp' => ' other ']))
+            ->assertOk()->assertJsonPath('options.0.kode_pp', 'OTHER');
+        $this->getJson(route('pencairan.drk-options', ['unit_kode_pp' => 'UNKNOWN']))
+            ->assertUnprocessable()->assertJsonValidationErrors('unit_kode_pp');
+    }
+
+    public function test_user_cannot_request_another_units_drk(): void
+    {
+        $this->withSession(['user_authenticated' => true, 'user_role' => 'user',
+            'user_data' => ['username' => 'user', 'role' => 'user', 'kode_pp' => 'TEST', 'nama_pp' => 'Unit Test']]);
+        $this->get(route('pencairan.form', 'impresfund'))->assertOk()->assertDontSee('id="pilih-unit"', false)
+            ->assertSee('select2.min.js');
+        $this->getJson(route('pencairan.drk-options', ['unit_kode_pp' => 'OTHER']))
+            ->assertUnprocessable()->assertJsonValidationErrors('unit_kode_pp');
+    }
+
+    public function test_admin_without_session_unit_can_choose_unit_and_unit_source_errors_are_explicit(): void
+    {
+        $this->withSession(['user_authenticated' => true, 'user_role' => 'admin',
+            'user_data' => ['username' => 'admin', 'role' => 'admin', 'kode_pp' => '', 'nama_pp' => '']]);
+        $this->get(route('pencairan.form', 'beban'))->assertOk()
+            ->assertSee('id="pilih-unit"', false)->assertViewHas('drkOptions', []);
+        app(GoogleSheetService::class)->shouldReceive('getPencairanUnitsFromSheet')
+            ->andThrow(new \RuntimeException('Unit source unavailable'));
+        $this->getJson(route('pencairan.drk-options', ['unit_kode_pp' => 'OTHER']))
+            ->assertStatus(503)->assertJsonPath('message', 'Gagal memuat daftar unit dari spreadsheet. Silakan coba kembali.');
+        $this->get(route('pencairan.form', 'beban'))->assertOk()
+            ->assertSee('Gagal memuat daftar unit dari spreadsheet');
+    }
+
     public function test_drk_uses_session_unit_and_current_quarter_not_query_parameters(): void
     {
         $this->withSession(['user_authenticated' => true])
@@ -172,7 +225,7 @@ class PencairanFormTest extends TestCase
         $this->withSession(['user_authenticated' => true])
             ->get(route('pencairan.form', 'honor'))
             ->assertOk()
-            ->assertSee('Tidak ada DRK untuk unit Anda')
+            ->assertSee('Tidak ada DRK untuk unit yang dipilih')
             ->assertViewHas('drkError', null);
 
         $service->shouldReceive('getPencairanDrkOptions')->with('TEST', 4, 2026)->once()

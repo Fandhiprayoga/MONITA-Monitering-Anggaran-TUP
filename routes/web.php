@@ -47,6 +47,7 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
 
     Route::prefix('pencairan')->name('pencairan.')->group(function () {
         Route::get('/pengajuan', [PencairanController::class, 'pengajuan'])->name('pengajuan');
+        Route::get('/drk-options', [PencairanController::class, 'drkOptions'])->middleware('throttle:60,1')->name('drk-options');
         Route::get('/pengajuan/{pengajuan}', [PencairanController::class, 'show'])->whereUuid('pengajuan')->name('show');
         Route::get('/pengajuan/{pengajuan}/edit', [PencairanController::class, 'edit'])->whereUuid('pengajuan')->name('edit');
         Route::get('/lampiran/{attachment}', [PencairanWorkflowController::class, 'attachment'])->whereNumber('attachment')->name('attachment');

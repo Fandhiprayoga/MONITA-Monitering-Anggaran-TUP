@@ -1,12 +1,13 @@
 <h6 class="mb-3">Informasi Anggaran</h6>
 <div class="row g-3 mb-4">
     <div class="col-12">
+        <div id="drk-search-controls">
         <label for="cari-drk" class="form-label">Cari DRK</label>
         <input id="cari-drk" type="search" class="form-control mb-2"
             placeholder="Ketik kode DRK, kode/nama akun, uraian, atau tipe anggaran..."
             aria-controls="pilih-drk" aria-describedby="hasil-cari-drk"
             @disabled($drkError || count($drkOptions) === 0)>
-        <div id="hasil-cari-drk" class="text-muted small mb-2" role="status" aria-live="polite"></div>
+        </div>
         <label for="pilih-drk" class="form-label">Pilih DRK <span class="text-danger">*</span></label>
         <select id="pilih-drk" name="drk_id" class="form-select" required
             aria-describedby="drk-info" @disabled($drkError || count($drkOptions) === 0)>
@@ -18,14 +19,12 @@
             @endforeach
         </select>
         <small id="drk-info" class="text-muted">
-            DRK unit akun {{ session('user_data.kode_pp') }}, TW {{ $activeTw }}.
-            Kode PP yang ditampilkan dari kolom K, Nama PP dari kolom L, dan Kode DRK SIMKUG dari kolom N.
-            Jika data kolom tersebut kosong, input terkait tetap kosong.
+            <span id="hasil-cari-drk" role="status" aria-live="polite">{{ count($drkOptions) }} DRK ditemukan</span>
         </small>
         @if ($drkError)
-            <div class="alert alert-danger mt-2 mb-0" role="alert">{{ $drkError }}</div>
+            <div data-drk-source-message class="alert alert-danger mt-2 mb-0" role="alert">{{ $drkError }}</div>
         @elseif (count($drkOptions) === 0)
-            <div class="alert alert-info mt-2 mb-0" role="status">Tidak ada DRK untuk unit Anda pada triwulan ini.</div>
+            <div data-drk-source-message class="alert alert-info mt-2 mb-0" role="status">Tidak ada DRK untuk unit yang dipilih pada triwulan ini.</div>
         @endif
         <div data-header-error class="alert alert-danger mt-2 mb-0 d-none" role="alert"></div>
     </div>

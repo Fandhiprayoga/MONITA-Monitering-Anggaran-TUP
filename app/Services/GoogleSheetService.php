@@ -127,6 +127,23 @@ class GoogleSheetService
         }
     }
 
+    public function getPencairanUnitsFromSheet(): array
+    {
+        if (empty($this->spreadsheetId)) {
+            throw new \RuntimeException('Sumber spreadsheet unit belum dikonfigurasi.');
+        }
+        $response = $this->service->spreadsheets_values->get($this->spreadsheetId, 'users!B2:C');
+        $units = [];
+        foreach ($response->getValues() ?? [] as $row) {
+            $code = strtoupper(trim((string) ($row[0] ?? '')));
+            $name = trim((string) ($row[1] ?? ''));
+            if ($code !== '' && $name !== '' && !in_array($code, ['KODE_PP', 'KODE PP'], true)) {
+                $units[$code] = $name;
+            }
+        }
+        return $units;
+    }
+
     /**
      * Ambil data units dari Google Sheets - tab users kolom B dan C mulai dari B3
      */

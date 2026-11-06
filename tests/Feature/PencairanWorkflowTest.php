@@ -51,6 +51,7 @@ class PencairanWorkflowTest extends TestCase
                 return $this->options;
             });
             $mock->shouldReceive('getUnitsFromSheet')->andReturn([]);
+            $mock->shouldReceive('getPencairanUnitsFromSheet')->andReturn(['PP01' => 'PP Satu', 'PP02' => 'PP Dua']);
         });
         $this->login();
     }
@@ -374,7 +375,7 @@ class PencairanWorkflowTest extends TestCase
     }
 
     #[DataProvider('kinds')]
-    public function test_admin_can_create_edit_submit_and_revise_only_own_pp(string $jenis): void
+    public function test_admin_can_create_edit_submit_and_revise_across_pp(string $jenis): void
     {
         $this->login('admin', 'PP01', 'admin-pp');
         $this->get(route('pencairan.pengajuan'))->assertOk()->assertSee('Tambah Pengajuan');
@@ -393,8 +394,8 @@ class PencairanWorkflowTest extends TestCase
         $this->login('admin', 'PP02', 'other-admin');
         $this->get(route('pencairan.show', $p))->assertOk()->assertDontSee('Edit / Submit');
         $this->get(route('pencairan.edit', $p))->assertForbidden();
-        $this->patchJson(route('pencairan.update', $p), ['lock_version'=>$p->fresh()->lock_version, 'details'=>[]])->assertForbidden();
-        $this->action($p,'submit')->assertForbidden();
+        $this->patchJson(route('pencairan.update', $p), ['lock_version'=>$p->fresh()->lock_version, 'details'=>[]])->assertStatus(409);
+        $this->action($p,'submit')->assertStatus(409);
         $this->action($p,'verify')->assertOk();
     }
 
@@ -404,13 +405,57 @@ class PencairanWorkflowTest extends TestCase
         $this->postJson(route('pencairan.store'), ['jenis'=>'beban','details'=>[],'kode_pp'=>'OTHER'])->assertUnprocessable();
         $p = $this->draft();
         $this->login('admin', 'PP02', 'other-admin');
-        $this->action($p, 'cancel', ['remark'=>'Tidak berhak draft asing'])->assertStatus(409);
-        $this->login('admin', 'PP01', 'admin-pp');
-        $this->action($p, 'cancel', ['remark'=>'Batal draft sendiri'])->assertOk();
+        $this->action($p, 'cancel', ['remark'=>'Batal draft unit lain'])->assertOk();
         $this->assertSame('cancelled', $p->fresh()->status);
         $this->login('admin', '', 'admin');
-        $this->get(route('pencairan.pengajuan'))->assertOk()->assertDontSee('Tambah Pengajuan');
-        $this->postJson(route('pencairan.store'), ['jenis'=>'beban','details'=>[]])->assertForbidden();
+        $this->get(route('pencairan.pengajuan'))->assertOk()->assertSee('Tambah Pengajuan');
+        $this->postJson(route('pencairan.store'), ['jenis'=>'beban','details'=>[]])->assertUnprocessable();
+        $response = $this->postJson(route('pencairan.store'), [
+            'jenis' => 'beban', 'details' => [], 'unit_kode_pp' => 'PP02',
+        ])->assertCreated();
+        $this->assertSame('PP02', PencairanPengajuan::where('uuid', $response->json('uuid'))->firstOrFail()->kode_pp);
+    }
+
+    #[DataProvider('kinds')]
+    public function test_admin_submits_for_selected_sheet_unit_and_unit_cannot_change_after_save(string $jenis): void
+    {
+        $this->login('admin', 'PP02', 'admin-unit');
+        $response = $this->postJson(route('pencairan.store'), [
+            'jenis' => $jenis, 'unit_kode_pp' => ' pp01 ', 'nama_pp' => 'Forged Name',
+            'drk_id' => str_repeat('a', 64), 'uraian_pengajuan' => 'Narasi', 'details' => [$this->row($jenis)],
+        ])->assertCreated();
+        $p = PencairanPengajuan::where('uuid', $response->json('uuid'))->firstOrFail();
+        $this->assertSame('PP01', $p->kode_pp);
+        $this->assertSame('PP Satu', $p->nama_pp);
+        $this->assertSame('admin-unit', $p->histories()->first()->actor_name);
+        $this->get(route('pencairan.edit', $p))->assertOk()->assertSee('PP Satu')
+            ->assertDontSee('id="pilih-unit"', false);
+        $this->patchJson(route('pencairan.update', $p), [
+            'lock_version' => $p->lock_version, 'unit_kode_pp' => 'PP02', 'details' => [],
+        ])->assertUnprocessable()->assertJsonValidationErrors('unit_kode_pp');
+        $this->patchJson(route('pencairan.update', $p), [
+            'lock_version' => $p->lock_version, 'unit_kode_pp' => 'PP01',
+            'drk_id' => str_repeat('a', 64), 'uraian_pengajuan' => 'Narasi diperbarui', 'details' => [$this->row($jenis)],
+        ])->assertOk();
+        $this->action($p, 'submit')->assertOk();
+        $this->assertSame('submitted', $p->fresh()->status);
+        $this->assertSame(['PP01', 4, 2026], end($this->lookups));
+        $this->assertStringEndsWith('/8910', $p->fresh()->nomor_pengajuan);
+        $this->action($p, 'returnToUser', ['remark' => 'Perbaiki'])->assertOk();
+        $this->get(route('pencairan.show', $p))->assertOk()->assertSee('Edit / Submit');
+        $this->get(route('pencairan.edit', $p))->assertOk();
+        $this->action($p, 'submit')->assertOk();
+    }
+
+    public function test_selected_unit_is_validated_for_role_and_drk_ownership(): void
+    {
+        $payload = ['jenis' => 'beban', 'unit_kode_pp' => 'PP02', 'drk_id' => str_repeat('a', 64), 'details' => []];
+        $this->postJson(route('pencairan.store'), $payload)->assertUnprocessable()->assertJsonValidationErrors('unit_kode_pp');
+        $this->login('admin', 'PP01', 'admin-unit');
+        $this->postJson(route('pencairan.store'), array_replace($payload, ['unit_kode_pp' => 'UNKNOWN']))
+            ->assertUnprocessable()->assertJsonValidationErrors('unit_kode_pp');
+        $this->postJson(route('pencairan.store'), $payload)->assertUnprocessable()->assertJsonValidationErrors('drk_id');
+        $this->assertSame(0, PencairanPengajuan::count());
     }
 
     public function test_initial_draft_with_selected_drk_can_be_saved_during_source_outage(): void
@@ -600,9 +645,9 @@ class PencairanWorkflowTest extends TestCase
         foreach (['submit', 'cancel', 'verify', 'returnToUser', 'complete'] as $action) { $this->action($p, $action)->assertForbidden(); }
         $this->patchJson('/_workflow/'.$p->uuid, ['lock_version' => 0, 'details' => []])->assertForbidden();
         $this->login('admin', '', 'admin');
-        $this->postJson('/_workflow', ['jenis' => 'beban', 'details' => []])->assertForbidden();
-        $this->action($p, 'submit')->assertForbidden();
-        $this->patchJson('/_workflow/'.$p->uuid, ['lock_version' => 0, 'details' => []])->assertForbidden();
+        $this->postJson('/_workflow', ['jenis' => 'beban', 'details' => []])->assertUnprocessable();
+        $this->action($p, 'submit')->assertOk();
+        $this->patchJson('/_workflow/'.$p->uuid, ['lock_version' => 0, 'details' => []])->assertStatus(409);
         $this->withSession(['user_authenticated' => false]);
         $this->action($p, 'cancel')->assertForbidden();
     }

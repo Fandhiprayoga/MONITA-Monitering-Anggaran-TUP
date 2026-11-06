@@ -7,6 +7,7 @@ export function mountSubmission(form, grid, initial, baseUrl) {
     const message = document.getElementById('save-message');
     const buttons = [...form.querySelectorAll('button')];
     const drk = form.querySelector('#pilih-drk');
+    const unit = form.elements.namedItem('unit_kode_pp');
     // Disabled source selectors must not erase the saved DRK while Sheets is unavailable.
     const chosenDrk = () => drk.disabled ? initial?.drk_id ?? null : drk.value || null;
     const navigationUrl = (path) => {
@@ -30,12 +31,18 @@ export function mountSubmission(form, grid, initial, baseUrl) {
     }
     async function save(submit) {
         if (busy) return;
+        if (form.dataset.drkLoading === 'true') {
+            message.className = 'alert alert-warning'; message.textContent = 'Tunggu hingga DRK unit selesai dimuat.';
+            return;
+        }
         if (submit && !window.confirm('Kirim pengajuan untuk verifikasi? Isi akan dikunci setelah berhasil.')) return;
         if (!submit) submitKey = null;
         busy = true; buttons.forEach((button) => { button.disabled = true; });
+        if (unit) unit.disabled = true;
         message.className = 'alert alert-info'; message.textContent = 'Menyimpan…';
         try {
-            const payload = { jenis: form.dataset.jenis, drk_id: chosenDrk(), uraian_pengajuan: form.querySelector('#uraian-pengajuan').value, details: grid.rows() };
+            const payload = { jenis: form.dataset.jenis, drk_id: chosenDrk(), uraian_pengajuan: form.querySelector('#uraian-pengajuan').value, details: grid.rows(),
+                ...(unit ? { unit_kode_pp: unit.value } : {}) };
             // A failed submit retry retains its idempotency key and version, without rewriting the draft.
             if (!submitKey || !submit) {
                 const result = await request(uuid ? `${baseUrl}/${uuid}` : baseUrl, uuid ? 'PATCH' : 'POST', { ...payload, ...(uuid ? { lock_version: version } : {}) });
@@ -53,6 +60,7 @@ export function mountSubmission(form, grid, initial, baseUrl) {
             message.className = 'alert alert-danger'; message.textContent = error.message;
         } finally {
             busy = false; buttons.forEach((button) => { button.disabled = false; });
+            if (unit && !uuid) unit.disabled = false;
         }
     }
     form.querySelector('[data-save-draft]').addEventListener('click', () => save(false));

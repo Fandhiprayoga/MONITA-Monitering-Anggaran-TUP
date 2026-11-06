@@ -49,7 +49,7 @@
                     <i class="ti ti-filter me-1" aria-hidden="true"></i>Filter
                     @if($advancedCount)<span class="badge bg-primary ms-1">{{ $advancedCount }}</span>@endif
                 </button>
-                @if ($mode === 'pengajuan' && trim((string) session('user_data.kode_pp', '')) !== '')
+                @if ($mode === 'pengajuan' && (session('user_data.role', session('user_role')) === 'admin' || trim((string) session('user_data.kode_pp', '')) !== ''))
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPilihForm">
                     <i class="ti ti-plus me-1"></i> Tambah Pengajuan
                 </button>

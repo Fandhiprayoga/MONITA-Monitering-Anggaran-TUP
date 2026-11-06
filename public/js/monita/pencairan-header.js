@@ -3,7 +3,9 @@ export function mountBudgetHeader(form) {
     const error = form.querySelector('[data-header-error]');
     const search = form.querySelector('#cari-drk');
     const searchStatus = form.querySelector('#hasil-cari-drk');
-    const options = [...select.options];
+    let options = [...select.options];
+    const unit = document.getElementById('pilih-unit');
+    let loadId = 0;
 
     function filterOptions() {
         const query = search.value.trim().toLocaleLowerCase('id-ID');
@@ -11,8 +13,8 @@ export function mountBudgetHeader(form) {
         const matches = options.filter((option) => option.value && option.textContent.toLocaleLowerCase('id-ID').includes(query));
         select.replaceChildren(...options.filter((option) => !option.value || option.value === selected || matches.includes(option)));
         select.value = selected;
-        const retained = selected && !matches.some((option) => option.value === selected);
-        searchStatus.textContent = `${matches.length} DRK ditemukan.${retained ? ' DRK terpilih tetap ditampilkan meskipun tidak cocok dengan pencarian.' : ''}`;
+        select.dispatchEvent(new Event('drk:options-updated'));
+        searchStatus.textContent = `${matches.length} DRK ditemukan`;
     }
     const fields = {
         kode_akun: '#kode-akun',
@@ -45,6 +47,50 @@ export function mountBudgetHeader(form) {
     }
 
     search.addEventListener('input', filterOptions);
+    if (unit) unit.addEventListener('change', async () => {
+        const currentLoad = ++loadId;
+        form.dataset.drkLoading = 'true';
+        form.dispatchEvent(new Event('change', { bubbles: true }));
+        select.replaceChildren(options[0]);
+        options = [...select.options];
+        select.value = '';
+        search.value = '';
+        select.disabled = true;
+        search.disabled = true;
+        form.querySelectorAll('[data-drk-source-message]').forEach((message) => { message.hidden = true; });
+        update();
+        filterOptions();
+        searchStatus.textContent = unit.value ? 'Memuat DRK unit terpilih...' : 'Pilih unit terlebih dahulu.';
+        try {
+            if (!unit.value) return;
+            const url = new URL(unit.dataset.drkUrl, window.location.href);
+            url.searchParams.set('unit_kode_pp', unit.value);
+            const response = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+            const result = await response.json();
+            if (currentLoad !== loadId) return;
+            if (!response.ok) throw new Error(Object.values(result.errors ?? {}).flat().join(' ') || result.message || 'Gagal memuat DRK.');
+            if (!Array.isArray(result.options)) throw new Error('Respons daftar DRK tidak valid.');
+            const newOptions = result.options.map((header) => {
+                const option = document.createElement('option');
+                option.value = header.id;
+                option.dataset.header = JSON.stringify(header);
+                option.textContent = `${header.drk_tup} - SIMKUG: ${header.kode_drk || 'Belum tersedia'} - ${header.kode_akun} - ${header.nama_akun} - ${header.uraian_drk} (${header.tipe})`;
+                return option;
+            });
+            select.append(...newOptions);
+            options = [...select.options];
+            select.disabled = newOptions.length === 0;
+            search.disabled = newOptions.length === 0;
+            filterOptions();
+        } catch (exception) {
+            if (currentLoad !== loadId) return;
+            console.error('Gagal memuat DRK unit.', exception);
+            error.textContent = exception.message || 'Gagal memuat DRK unit. Silakan coba kembali.';
+            error.classList.remove('d-none');
+        } finally {
+            if (currentLoad === loadId) form.dataset.drkLoading = 'false';
+        }
+    });
     select.addEventListener('change', () => {
         update();
         filterOptions();
