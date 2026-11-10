@@ -8,22 +8,22 @@ export const schemas = {
     impresfund: [
         { key: 'uraian', label: 'Uraian' },
         { key: 'volume', label: 'Volume', numeric: true },
-        { key: 'tarif', label: 'Tarif', numeric: true },
-        { key: 'subtotal', label: 'Subtotal', numeric: true, optional: true },
+        { key: 'tarif', label: 'Tarif', numeric: true, money: true },
+        { key: 'subtotal', label: 'Subtotal', numeric: true, optional: true, money: true },
     ],
     beban: [
-        { key: 'nominal', label: 'Nominal', numeric: true },
-        { key: 'pajak', label: 'Pot Pajak', numeric: true, defaultValue: '0' },
-        { key: 'neto', label: 'Nominal Setelah Pajak', numeric: true },
+        { key: 'nominal', label: 'Nominal', numeric: true, money: true },
+        { key: 'pajak', label: 'Pot Pajak', numeric: true, defaultValue: '0', money: true },
+        { key: 'neto', label: 'Nominal Setelah Pajak', numeric: true, money: true },
         { key: 'bank', label: 'Nama Bank' },
         { key: 'nama', label: 'Nama Rekening' },
         { key: 'rekening', label: 'No Rekening' },
     ],
     honor: [
         { key: 'kewarganegaraan', label: 'WNI / WNA', choices: ['WNI', 'WNA'], list: 'honor-kewarganegaraan' },
-        { key: 'nominal', label: 'Nominal Honor', numeric: true },
-        { key: 'pajak', label: 'Potongan Pajak', numeric: true, defaultValue: '0' },
-        { key: 'neto', label: 'Total Diterima', numeric: true },
+        { key: 'nominal', label: 'Nominal Honor', numeric: true, money: true },
+        { key: 'pajak', label: 'Potongan Pajak', numeric: true, defaultValue: '0', money: true },
+        { key: 'neto', label: 'Total Diterima', numeric: true, money: true },
         { key: 'penerima', label: 'Nama Penerima' },
         { key: 'nama', label: 'Nama Rekening' },
         { key: 'bank', label: 'Nama Bank' },
@@ -186,6 +186,12 @@ export function mountGrid(form) {
         return tr;
     }
 
+    function formatMoneyCell(input) {
+        const column = columns[position(input).col];
+        if (!column.money) return;
+        try { input.value = format(parseAmount(input.value)); } catch { /* biarkan nilai mentah agar validasi menandainya */ }
+    }
+
     function recalculate() {
         let gross = 0;
         const issues = [];
@@ -230,10 +236,12 @@ export function mountGrid(form) {
 
     function finishEditing() {
         if (!editing) return;
+        const input = editing;
         editing.readOnly = true;
         editing.classList.remove('is-editing');
         editing.removeAttribute('list');
         editing = null;
+        formatMoneyCell(input);
     }
 
     function select(input, extend = false, focus = true) {
@@ -310,6 +318,7 @@ export function mountGrid(form) {
         if (column.list) input.setAttribute('list', column.list);
         if (replace) input.value = '';
         else input.select();
+        formatMoneyCell(input);
     }
 
     body.addEventListener('focusin', (event) => {
