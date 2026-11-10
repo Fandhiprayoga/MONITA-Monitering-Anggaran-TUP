@@ -4,10 +4,13 @@ namespace Tests\Feature;
 
 use Tests\TestCase;
 use App\Services\GoogleSheetService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
 
 class PencairanFormTest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -210,7 +213,8 @@ class PencairanFormTest extends TestCase
                     && $options[0]['kode_pp_sheet'] === '00123'
                     && $options[0]['nama_pp'] === 'Nama PP dari Sheet'
                     && $options[0]['kode_drk'] === 'SIMKUG-TEST'
-                    && $options[0]['saldo_terkini'] === '900.000,00';
+                    && $options[0]['anggaran_terpakai'] === '0,00'
+                    && $options[0]['saldo_terkini'] === '1000000,00';
             })
             ->assertSee('id="nama-akun" name="nama_akun" type="hidden"', false);
     }

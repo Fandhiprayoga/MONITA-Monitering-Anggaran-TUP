@@ -34,7 +34,7 @@ class PencairanController extends Controller
         $drkError = null;
         try {
             if ($kodePp !== '' && (!$canChooseUnit || array_key_exists(strtoupper($kodePp), $unitOptions))) {
-                $drkOptions = app(GoogleSheetService::class)->getPencairanDrkOptions($kodePp, $activeTw, now()->year);
+                $drkOptions = app(PencairanService::class)->drkOptionsForPeriod($kodePp, $activeTw, now()->year);
             }
         } catch (\Exception $exception) {
             report($exception);
@@ -62,7 +62,7 @@ class PencairanController extends Controller
         $data = $request->validate(['unit_kode_pp' => 'required|string|max:100']);
         $unit = $service->submissionUnit($actor, $data['unit_kode_pp']);
         try {
-            $options = app(GoogleSheetService::class)->getPencairanDrkOptions(
+            $options = $service->drkOptionsForPeriod(
                 $unit['kode_pp'], (int) ceil(now()->month / 3), now()->year
             );
         } catch (\Throwable $exception) {
@@ -128,7 +128,7 @@ class PencairanController extends Controller
         $pengajuan->load([$pengajuan->jenis.'Details', 'histories', 'revisions', 'completion.attachments']);
         $pending = PencairanPengajuan::where('kode_pp', $pengajuan->kode_pp)
             ->where('drk_source_id', $pengajuan->drk_source_id)->where('tahun_anggaran', $pengajuan->tahun_anggaran)
-            ->where('triwulan', $pengajuan->triwulan)->whereIn('status', ['submitted', 'verified'])->sum('total_bruto');
+            ->where('triwulan', $pengajuan->triwulan)->whereIn('status', ['submitted', 'verified', 'completed'])->sum('total_bruto');
         $displayRows = $pengajuan->detailRows();
         if ($pengajuan->jenis === 'impresfund') {
             $displayRows = $pengajuan->impresfundDetails->map(function ($detail) {
@@ -177,10 +177,11 @@ class PencairanController extends Controller
 
     public function edit(Request $request, PencairanPengajuan $pengajuan)
     {
-        $actor = app(PencairanService::class)->authorize($request, $pengajuan);
+        $service = app(PencairanService::class);
+        $actor = $service->authorize($request, $pengajuan);
         abort_unless(($actor['role'] === 'admin' || ($actor['kode_pp'] !== '' && $pengajuan->kode_pp === $actor['kode_pp'])) && in_array($pengajuan->status, ['draft', 'returned'], true), 403);
         $options = []; $error = null;
-        try { $options = app(GoogleSheetService::class)->getPencairanDrkOptions($pengajuan->kode_pp, $pengajuan->triwulan, $pengajuan->tahun_anggaran); }
+        try { $options = $service->drkOptionsForPeriod($pengajuan->kode_pp, $pengajuan->triwulan, $pengajuan->tahun_anggaran); }
         catch (\Throwable $e) { report($e); $error = 'Gagal memuat DRK dan saldo. Draft tetap dapat disimpan; submit memerlukan data sumber terkini.'; }
         return view('main.pencairan.form', ['jenis' => $pengajuan->jenis, 'jenisNama' => ucfirst($pengajuan->jenis),
             'activeTw' => $pengajuan->triwulan, 'drkOptions' => $options, 'drkError' => $error, 'pengajuan' => $pengajuan,

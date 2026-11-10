@@ -43,7 +43,7 @@
     @endforeach
     <div class="col-12">
         <small id="saldo-info" class="text-muted">
-            Saldo Awal = Anggaran, Anggaran Terpakai = Realisasi, Saldo Terkini = Saldo pada data unit TW {{ $activeTw }} (Rp).
+            Saldo Awal berasal dari spreadsheet. Anggaran Terpakai adalah total bruto pengajuan DRK ini yang berstatus Diajukan, Diverifikasi, atau Selesai dari semua jenis form. Saldo Terkini = Saldo Awal - Anggaran Terpakai (Rp).
         </small>
     </div>
     <div class="col-12">

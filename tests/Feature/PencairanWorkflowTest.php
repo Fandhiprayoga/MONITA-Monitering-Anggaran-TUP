@@ -635,7 +635,30 @@ class PencairanWorkflowTest extends TestCase
         $this->assertSame('100.00', $p->total_bruto);
         $this->assertSame(2026, $p->tahun_anggaran); $this->assertSame(4, $p->triwulan);
         $this->assertSame('PP Satu', $p->nama_pp); $this->assertSame('draft', $p->status);
-        $this->assertSame('10.000,00', $p->header_snapshot['saldo_terkini']);
+        $this->assertSame('10000,00', $p->header_snapshot['saldo_terkini']);
+    }
+
+    public function test_drk_budget_options_sum_all_committed_form_types_for_the_matching_period(): void
+    {
+        foreach ([
+            ['impresfund', 'submitted'],
+            ['beban', 'verified'],
+            ['honor', 'completed'],
+            ['impresfund', 'draft'],
+            ['beban', 'returned'],
+            ['honor', 'cancelled'],
+        ] as [$jenis, $status]) {
+            $pengajuan = $this->draft($jenis);
+            $pengajuan->update(['status' => $status]);
+        }
+
+        $otherYear = $this->draft('honor');
+        $otherYear->update(['status' => 'completed', 'tahun_anggaran' => 2025]);
+
+        $options = app(PencairanService::class)->drkOptionsForPeriod('PP01', 4, 2026);
+
+        $this->assertSame('300,00', $options[0]['anggaran_terpakai']);
+        $this->assertSame('9700,00', $options[0]['saldo_terkini']);
     }
 
     public function test_auth_roles_and_cross_pp_are_enforced_for_every_action(): void
@@ -656,11 +679,11 @@ class PencairanWorkflowTest extends TestCase
     {
         $p = $this->draft();
         foreach (['99,99', '-1,00'] as $balance) {
-            $this->options[0]['saldo_terkini'] = $balance;
+            $this->options[0]['saldo_awal'] = $balance;
             $this->action($p, 'submit')->assertUnprocessable()->assertJsonValidationErrors('saldo');
         }
         foreach ([null, '', 'garbage'] as $balance) {
-            $this->options[0]['saldo_terkini'] = $balance;
+            $this->options[0]['saldo_awal'] = $balance;
             $this->action($p, 'submit')->assertStatus(503);
         }
         $this->offline = true;
@@ -669,11 +692,11 @@ class PencairanWorkflowTest extends TestCase
         $this->assertDatabaseCount('pengajuan_number_sequences', 0);
         $this->assertDatabaseCount('pengajuan_revisions', 0);
         $this->assertDatabaseCount('pengajuan_histories', 1);
-        $this->offline = false; $this->options[0]['saldo_terkini'] = '100,00';
+        $this->offline = false; $this->options[0]['saldo_awal'] = '100,00';
         $this->action($p, 'submit')->assertOk();
         $this->login('admin', '', 'admin'); $this->offline = true;
         $this->action($p, 'verify')->assertStatus(503);
-        $this->offline = false; $this->options[0]['saldo_terkini'] = '99,00';
+        $this->offline = false; $this->options[0]['saldo_awal'] = '99,00';
         $this->action($p, 'verify')->assertUnprocessable();
         $this->offline = true;
         $this->action($p, 'returnToUser', ['remark' => 'Saldo gagal tersedia'])->assertOk();

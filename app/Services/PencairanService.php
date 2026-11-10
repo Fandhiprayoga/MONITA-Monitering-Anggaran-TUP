@@ -82,6 +82,51 @@ class PencairanService
         }
     }
 
+    public function drkOptionsForPeriod(string $kodePp, int $triwulan, int $year): array
+    {
+        $this->sheets ??= app(GoogleSheetService::class);
+        $options = $this->sheets->getPencairanDrkOptions($kodePp, $triwulan, $year);
+        return $this->applyCommittedBudget($options, $kodePp, $triwulan, $year);
+    }
+
+    private function applyCommittedBudget(array $options, string $kodePp, int $triwulan, int $year, ?int $excludeId = null): array
+    {
+        if ($options === []) {
+            return [];
+        }
+
+        $ids = array_column($options, 'id');
+        $query = DB::table('pengajuans')
+            ->select('drk_source_id')
+            ->selectRaw('SUM(total_bruto) AS anggaran_terpakai')
+            ->where('kode_pp', strtoupper(trim($kodePp)))
+            ->where('tahun_anggaran', $year)
+            ->where('triwulan', $triwulan)
+            ->whereIn('drk_source_id', $ids)
+            ->whereIn('status', ['submitted', 'verified', 'completed'])
+            ->groupBy('drk_source_id');
+        if ($excludeId !== null) {
+            $query->where('id', '!=', $excludeId);
+        }
+        $usedByDrk = $query->pluck('anggaran_terpakai', 'drk_source_id');
+
+        foreach ($options as &$option) {
+            $used = BigDecimal::of((string) ($usedByDrk[$option['id']] ?? '0'))->toScale(2);
+            $option['anggaran_terpakai'] = PencairanDecimal::format((string) $used);
+            if (($option['saldo_awal'] ?? null) !== null) {
+                $opening = PencairanDecimal::raw($option['saldo_awal'], 'saldo_awal', true, false);
+                $option['saldo_terkini'] = $opening === null
+                    ? null
+                    : PencairanDecimal::format((string) BigDecimal::of($opening)->minus($used)->toScale(2));
+            } else {
+                $option['saldo_terkini'] = null;
+            }
+        }
+        unset($option);
+
+        return $options;
+    }
+
     private function validatePayload(Request $request, string $operation): array
     {
         $actor = $this->actor($request);
@@ -226,7 +271,11 @@ class PencairanService
         }
         $matches = array_values(array_filter($options, fn ($o) => ($o['id'] ?? null) === $p->drk_source_id && strtoupper(trim($o['kode_pp'] ?? '')) === $p->kode_pp));
         if (count($matches) !== 1) { PencairanDecimal::invalid('drk_id', count($matches) > 1 ? 'Identitas DRK ambigu/duplikat. Hubungi administrator.' : 'DRK tidak aktif atau tidak tersedia untuk PP/periode ini.'); }
-        $option = $matches[0];
+        try {
+            $option = $this->applyCommittedBudget($matches, $p->kode_pp, $p->triwulan, $p->tahun_anggaran, (int) $p->getKey())[0];
+        } catch (ValidationException $e) {
+            abort(503, 'Data saldo sumber tidak valid.');
+        }
         if ($required) {
             foreach (['saldo_awal', 'anggaran_terpakai', 'saldo_terkini'] as $key) {
                 try { $value = PencairanDecimal::raw($option[$key] ?? null, $key, true, false); }
@@ -395,6 +444,20 @@ class PencairanService
                 $current = PencairanPengajuan::findOrFail($p->id);
                 $this->checkState($current, $operation, $actor);
                 if ($operation === 'submit') { $this->checkPeriod($current); }
+                if ($drk && in_array($operation, ['submit', 'verify'], true)) {
+                    $drk = $this->applyCommittedBudget([$drk], $current->kode_pp, $current->triwulan, $current->tahun_anggaran, (int) $current->getKey())[0];
+                    foreach (['saldo_awal', 'anggaran_terpakai', 'saldo_terkini'] as $key) {
+                        try { $value = PencairanDecimal::raw($drk[$key] ?? null, $key, true, false); }
+                        catch (ValidationException $e) { abort(503, 'Data saldo sumber tidak valid.'); }
+                        abort_if($value === null, 503, 'Data saldo sumber tidak lengkap.');
+                        abort_if(BigDecimal::of($value)->abs()->isGreaterThan('9999999999999999.99'), 503, 'Data saldo sumber melebihi kapasitas penyimpanan.');
+                        $drk[$key.'_decimal'] = $value;
+                    }
+                    if (BigDecimal::of($current->total_bruto)->isGreaterThan($drk['saldo_terkini_decimal'])) {
+                        PencairanDecimal::invalid('saldo', 'Nominal diajukan '.$current->total_bruto.' melebihi saldo terkini '.$drk['saldo_terkini_decimal'].'.');
+                    }
+                    $drk['checked_at'] = now()->toISOString();
+                }
                 $local = $this->localActor($actor); $from = $current->status;
                 if ($totals) { $current->fill($totals); }
                 if ($operation === 'update') {
