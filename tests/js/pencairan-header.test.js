@@ -101,8 +101,16 @@ test('header money fields render in Indonesian currency format', (t) => {
     state.select.value = 'money';
     state.selectChange();
     assert.equal(state.fields['#saldo_awal'].value, '100.000,50');
-    assert.equal(state.fields['#anggaran_terpakai'].value, '0,00');
+    assert.equal(state.fields['#anggaran_terpakai'].value, '0');
     assert.equal(state.fields['#saldo_terkini'].value, '900.000,25');
+    const whole = header('whole', 'PP01');
+    whole.saldo_awal = '1.000.000,00'; whole.anggaran_terpakai = '1.000,50'; whole.saldo_terkini = '999.999,00';
+    state.select.options.splice(1, 1, { value: 'whole', textContent: 'DRK2', dataset: { header: JSON.stringify(whole) } });
+    state.select.value = 'whole';
+    state.selectChange();
+    assert.equal(state.fields['#saldo_awal'].value, '1.000.000');
+    assert.equal(state.fields['#anggaran_terpakai'].value, '1.000,50');
+    assert.equal(state.fields['#saldo_terkini'].value, '999.999');
     assert.equal(state.fields['#kode-akun'].value, '001');
 });
 

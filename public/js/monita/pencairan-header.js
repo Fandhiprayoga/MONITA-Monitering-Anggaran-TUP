@@ -29,11 +29,11 @@ export function mountBudgetHeader(form) {
     };
     const moneyFields = new Set(['saldo_awal', 'anggaran_terpakai', 'saldo_terkini']);
 
-    // Backend sudah mengirim format "1.234,56"; samakan tampilan ke rupiah.
+    // Backend sudah mengirim format "1.234,56"; tampilkan tanpa ",00" di belakang.
     function formatMoney(value) {
         const parsed = Number(String(value).replace(/\./g, '').replace(',', '.'));
         return Number.isFinite(parsed)
-            ? parsed.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            ? parsed.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/,00$/, '')
             : value;
     }
 
