@@ -29,8 +29,11 @@
         </style>
     @endif
     <div class="card">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center gap-2">
             <h5 class="mb-0">Form Pencairan Anggaran - {{ $jenisNama }}</h5>
+            <button id="grid-help-button" type="button" class="btn btn-sm btn-outline-secondary"
+                data-bs-toggle="modal" data-bs-target="#grid-help-modal" aria-controls="grid-help-modal"
+                aria-haspopup="dialog">Bantuan</button>
         </div>
         <div class="card-body">
             <div class="row mb-4">

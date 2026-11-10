@@ -1,9 +1,6 @@
 <section aria-labelledby="rincian-title">
-    <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+    <div class="align-items-center gap-2 mb-3">
         <h6 id="rincian-title" class="mb-0">Rincian Pengajuan</h6>
-        <button id="grid-help-button" type="button" class="btn btn-sm btn-outline-secondary"
-            data-bs-toggle="modal" data-bs-target="#grid-help-modal" aria-controls="grid-help-modal"
-            aria-haspopup="dialog">Bantuan</button>
     </div>
     <p id="grid-help-summary" class="visually-hidden">Gunakan tombol Bantuan untuk petunjuk pengisian dan copy-paste Excel.</p>
     <div class="d-flex flex-wrap gap-2 mb-3">
