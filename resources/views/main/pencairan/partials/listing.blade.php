@@ -76,6 +76,21 @@
                 <a href="{{ $resetUrl }}" class="small">Hapus semua</a>
             </div>
             @endif
+            @if ($mode === 'pengajuan')
+            <form method="GET" action="{{ request()->url() }}" class="d-flex flex-wrap align-items-center gap-2 mb-3" aria-label="Jumlah data pengajuan">
+                @foreach (request()->only(['tab', 'q', 'status', 'jenis', 'tahun', 'tw', 'pp']) as $key => $value)
+                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                @endforeach
+                <label for="pengajuan-per-page" class="mb-0">Tampilkan</label>
+                <select id="pengajuan-per-page" name="per_page" class="form-select form-select-sm w-auto" onchange="this.form.requestSubmit()">
+                    @foreach (['10' => '10', '50' => '50', '100' => '100', 'all' => 'Semua data'] as $value => $label)
+                        <option value="{{ $value }}" @selected((string) $perPage === (string) $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <span>data</span>
+                <noscript><button type="submit" class="btn btn-sm btn-primary">Terapkan</button></noscript>
+            </form>
+            @endif
             <div class="table-responsive">
                 <table class="table table-striped table-bordered align-middle mb-0">
                     <thead class="bg-secondary text-center">

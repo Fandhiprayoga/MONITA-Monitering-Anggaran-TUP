@@ -117,7 +117,21 @@ class PencairanController extends Controller
         if ($actor['role'] === 'admin' && $request->filled('pp')) { $query->where('kode_pp', strtoupper(trim((string) $request->pp))); }
         $mode === 'verifikasi' ? $query->orderBy('last_submitted_at') : $query->latest('updated_at');
         $view = $mode === 'transaksi' ? 'main.pencairan.transaksi.'.$jenis : 'main.pencairan.pengajuan';
-        return view($view, ['items' => $query->paginate(20)->withQueryString(),
+        $perPage = 20;
+        if ($mode === 'pengajuan') {
+            if ($request->query->has('per_page')) {
+                $data = $request->validate([
+                    'per_page' => ['required', 'string', \Illuminate\Validation\Rule::in(['10', '50', '100', 'all'])],
+                ]);
+                $request->session()->put('pencairan.pengajuan.per_page', $data['per_page']);
+            }
+            $perPage = $request->session()->get('pencairan.pengajuan.per_page', '10');
+        }
+        $items = $perPage === 'all'
+            ? $query->paginate(max(1, (clone $query)->count()), ['*'], 'page', 1)
+            : $query->paginate((int) $perPage);
+
+        return view($view, ['items' => $items->withQueryString(), 'perPage' => $perPage,
             'title' => $title, 'mode' => $mode, 'tab' => $tab,
             'statusFilter' => $status, 'allowedStatuses' => $allowedStatuses]);
     }
