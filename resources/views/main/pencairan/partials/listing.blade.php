@@ -76,7 +76,6 @@
                 <a href="{{ $resetUrl }}" class="small">Hapus semua</a>
             </div>
             @endif
-            @if ($mode === 'pengajuan')
             <form method="GET" action="{{ request()->url() }}" class="d-flex flex-wrap align-items-center gap-2 mb-3" aria-label="Jumlah data pengajuan">
                 @foreach (request()->only(['tab', 'q', 'status', 'jenis', 'tahun', 'tw', 'pp']) as $key => $value)
                     <input type="hidden" name="{{ $key }}" value="{{ $value }}">
@@ -90,7 +89,6 @@
                 <span>data</span>
                 <noscript><button type="submit" class="btn btn-sm btn-primary">Terapkan</button></noscript>
             </form>
-            @endif
             <div class="table-responsive">
                 <table class="table table-striped table-bordered align-middle mb-0">
                     <thead class="bg-secondary text-center">

@@ -43,9 +43,11 @@ Kondisi awal: halaman form dan grid sudah tersedia, tetapi belum ada endpoint pe
 - Simpan dan buka kembali draft untuk tiga jenis form.
 - Submit pertama, penomoran resmi, dan submit ulang setelah revisi.
 - Daftar/detail pengajuan berdasarkan PP, filter jenis/status/periode, pencarian nomor.
-- Daftar pengajuan menyediakan jumlah tampilan 10 (default), 50, 100, atau Semua data.
-  Pilihan disimpan di sesi agar tetap berlaku setelah reload, perubahan filter,
-  dan perpindahan tab Aktif/Nonaktif. Perubahan jumlah melalui dropdown kembali
+- Daftar pengajuan, verifikasi, dan transaksi semua jenis menyediakan jumlah
+  tampilan 10 (default), 50, 100, atau Semua data dengan satu pengaturan sesi bersama.
+  Pilihan tetap berlaku setelah reload, perubahan filter, perpindahan halaman,
+  dan perpindahan tab Aktif/Nonaktif. Pilihan sesi pengajuan sebelumnya ikut dipakai.
+  Perubahan jumlah melalui dropdown kembali
   ke halaman pertama; Semua data tetap mengikuti filter dan hak akses unit.
 - Verifikasi admin, pengembalian dengan remark, dan antrean transaksi per jenis.
 - Penyelesaian transaksi dengan tanggal proses dan flag sesuai jenis, tanpa pencatatan nomor bukti eksternal.

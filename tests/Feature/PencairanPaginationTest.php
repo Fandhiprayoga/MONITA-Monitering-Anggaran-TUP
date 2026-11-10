@@ -29,7 +29,7 @@ class PencairanPaginationTest extends TestCase
 
         foreach (['10' => 10, '50' => 50, '100' => 100, 'all' => 111] as $value => $count) {
             $response = $this->get($url.'?per_page='.$value)->assertOk()
-                ->assertSessionHas('pencairan.pengajuan.per_page', (string) $value);
+                ->assertSessionHas('pencairan.per_page', (string) $value);
             $items = $response->viewData('items');
             $this->assertSame(111, $items->total());
             $this->assertSame($count, $items->count());
@@ -55,7 +55,7 @@ class PencairanPaginationTest extends TestCase
         $this->assertTrue($items->getCollection()->every(fn ($item) => $item->kode_pp === 'AKA'));
     }
 
-    public function test_page_size_control_preserves_filters_but_resets_page_and_does_not_change_other_lists(): void
+    public function test_page_size_control_preserves_filters_but_resets_page(): void
     {
         $this->mock(GoogleSheetService::class)->shouldReceive('getUnitsFromSheet')->andReturn([]);
         $this->withSession([
@@ -80,8 +80,43 @@ class PencairanPaginationTest extends TestCase
         $this->assertSame(['10', '50', '100', 'all'], array_map(fn ($node) => $node->nodeValue, iterator_to_array($options)));
 
         $response = $this->get(route('pencairan.verifikasi'))->assertOk()
-            ->assertDontSee('id="pengajuan-per-page"', false);
-        $this->assertSame(20, $response->viewData('items')->perPage());
+            ->assertSee('id="pengajuan-per-page"', false);
+        $this->assertSame(50, $response->viewData('items')->perPage());
+    }
+
+    public function test_all_lists_share_page_size_and_migrate_the_previous_preference(): void
+    {
+        $this->mock(GoogleSheetService::class)->shouldReceive('getUnitsFromSheet')->andReturn([]);
+        $this->seed(PencairanPengajuanSeeder::class);
+        $draft = PencairanPengajuan::where('status', 'submitted')->firstOrFail();
+        for ($i = 0; $i < 105; $i++) {
+            $draft->replicate(['uuid', 'nomor_pengajuan', 'nomor_urut', 'tahun_nomor'])->save();
+        }
+        $this->withSession([
+            'user_authenticated' => true, 'user_role' => 'admin',
+            'user_data' => ['username' => 'admin', 'role' => 'admin', 'kode_pp' => 'SIF'],
+            'pencairan' => ['pengajuan' => ['per_page' => '50']],
+        ]);
+        $urls = [
+            route('pencairan.verifikasi'), route('pencairan.pengajuan'),
+            route('pencairan.transaksi', 'impresfund'), route('pencairan.transaksi', 'beban'),
+            route('pencairan.transaksi', 'honor'),
+        ];
+        $this->get($urls[0])->assertOk()->assertSessionHas('pencairan.per_page', '50')
+            ->assertSessionMissing('pencairan.pengajuan.per_page');
+        foreach (['10', '50', '100', 'all'] as $index => $value) {
+            $this->get($urls[$index].'?per_page='.$value)->assertOk()
+                ->assertSessionHas('pencairan.per_page', $value);
+            foreach ($urls as $url) {
+                $response = $this->get($url)->assertOk()->assertSee('id="pengajuan-per-page"', false);
+                $this->assertSame($value, $response->viewData('perPage'));
+                $items = $response->viewData('items');
+                $this->assertSame($value === 'all' ? $items->total() : min((int) $value, $items->total()), $items->count());
+                $this->assertMatchesRegularExpression(
+                    '/<option value="'.$value.'"[^>]*selected/', $response->getContent()
+                );
+            }
+        }
     }
 
     public function test_invalid_page_size_is_rejected_without_overwriting_saved_preference(): void
@@ -90,12 +125,17 @@ class PencairanPaginationTest extends TestCase
         $this->withSession([
             'user_authenticated' => true, 'user_role' => 'admin',
             'user_data' => ['username' => 'admin', 'role' => 'admin', 'kode_pp' => 'SIF'],
-            'pencairan' => ['pengajuan' => ['per_page' => '50']],
+            'pencairan' => ['per_page' => '50'],
         ]);
         foreach (['0', '-1', '20', '1000', 'invalid', '', ['10']] as $value) {
-            $this->getJson(route('pencairan.pengajuan', ['per_page' => $value]))
-                ->assertUnprocessable()->assertJsonValidationErrors('per_page')
-                ->assertSessionHas('pencairan.pengajuan.per_page', '50');
+            foreach ([
+                route('pencairan.pengajuan', ['per_page' => $value]),
+                route('pencairan.verifikasi', ['per_page' => $value]),
+                route('pencairan.transaksi', ['jenis' => 'honor', 'per_page' => $value]),
+            ] as $url) {
+                $this->getJson($url)->assertUnprocessable()->assertJsonValidationErrors('per_page')
+                    ->assertSessionHas('pencairan.per_page', '50');
+            }
         }
     }
 
