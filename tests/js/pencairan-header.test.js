@@ -90,6 +90,22 @@ test('changing unit clears old DRK/header and populates the new unit options', a
     assert.equal(state.fields['#nama-pp'].value, 'PP02');
 });
 
+test('header money fields render in Indonesian currency format', (t) => {
+    const state = mount(t);
+    const raw = header('money', 'PP01');
+    raw.saldo_awal = '100.000,5'; raw.anggaran_terpakai = '0'; raw.saldo_terkini = '900000,25';
+    state.select.options = [
+        { value: '', textContent: '-- Pilih DRK --', dataset: {} },
+        { value: 'money', textContent: 'DRK1', dataset: { header: JSON.stringify(raw) } },
+    ];
+    state.select.value = 'money';
+    state.selectChange();
+    assert.equal(state.fields['#saldo_awal'].value, '100.000,50');
+    assert.equal(state.fields['#anggaran_terpakai'].value, '0,00');
+    assert.equal(state.fields['#saldo_terkini'].value, '900.000,25');
+    assert.equal(state.fields['#kode-akun'].value, '001');
+});
+
 test('a stale unit response cannot overwrite the latest selection', async (t) => {
     const state = mount(t);
     const responses = [];

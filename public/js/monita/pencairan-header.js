@@ -27,6 +27,15 @@ export function mountBudgetHeader(form) {
         anggaran_terpakai: '#anggaran_terpakai',
         saldo_terkini: '#saldo_terkini',
     };
+    const moneyFields = new Set(['saldo_awal', 'anggaran_terpakai', 'saldo_terkini']);
+
+    // Backend sudah mengirim format "1.234,56"; samakan tampilan ke rupiah.
+    function formatMoney(value) {
+        const parsed = Number(String(value).replace(/\./g, '').replace(',', '.'));
+        return Number.isFinite(parsed)
+            ? parsed.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : value;
+    }
 
     function update() {
         Object.values(fields).forEach((selector) => { form.querySelector(selector).value = ''; });
@@ -38,7 +47,7 @@ export function mountBudgetHeader(form) {
             if (!data || !Object.keys(fields).every((key) => typeof data[key] === 'string')) {
                 throw new Error('Informasi anggaran DRK tidak lengkap.');
             }
-            Object.entries(fields).forEach(([key, selector]) => { form.querySelector(selector).value = data[key]; });
+            Object.entries(fields).forEach(([key, selector]) => { const value = moneyFields.has(key) ? formatMoney(data[key]) : data[key]; form.querySelector(selector).value = value; });
         } catch (exception) {
             console.error('Gagal mengisi header DRK.', exception);
             error.textContent = 'Gagal mengisi informasi DRK. Silakan muat ulang halaman atau hubungi administrator.';
