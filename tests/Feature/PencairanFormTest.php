@@ -37,8 +37,6 @@ class PencairanFormTest extends TestCase
             $this->withSession(['user_authenticated' => true])
                 ->get(route('pencairan.form', $kind))
                 ->assertOk()
-                ->assertSee('Nama Akun')
-                ->assertSee('Kode PP')
                 ->assertSee('Uraian Pengajuan')
                 ->assertSee('Nominal Diajukan')
                 ->assertSee('Pilih DRK')
@@ -78,8 +76,7 @@ class PencairanFormTest extends TestCase
                 ->assertSee('type="submit" class="btn btn-primary">', false)
                 ->assertSee('pencairan-submit.js')
                 ->assertSee('data-jenis="'.$kind.'"', false)
-                ->assertSee('Kode Akun')
-                ->assertSee('id="kode-akun" name="kode_akun" class="form-control bg-light" type="text" readonly', false)
+                ->assertSee('id="kode-akun" name="kode_akun" type="hidden"', false)
                 ->assertDontSee('Simpan draft untuk menyimpan isian belum lengkap.')
                 ->assertDontSee('Nomor resmi diberikan saat submit pertama.');
         }
@@ -215,7 +212,7 @@ class PencairanFormTest extends TestCase
                     && $options[0]['kode_drk'] === 'SIMKUG-TEST'
                     && $options[0]['saldo_terkini'] === '900.000,00';
             })
-            ->assertSee('id="nama-akun" name="nama_akun" class="form-control bg-light" type="text" readonly', false);
+            ->assertSee('id="nama-akun" name="nama_akun" type="hidden"', false);
     }
 
     public function test_empty_drk_and_source_errors_are_explicit(): void

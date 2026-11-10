@@ -28,30 +28,12 @@
         @endif
         <div data-header-error class="alert alert-danger mt-2 mb-0 d-none" role="alert"></div>
     </div>
-    <div class="col-md-4">
-        <label for="kode-akun" class="form-label">Kode Akun</label>
-        <input id="kode-akun" name="kode_akun" class="form-control bg-light" type="text" readonly>
-    </div>
-    <div class="col-md-8">
-        <label for="nama-akun" class="form-label">Nama Akun</label>
-        <input id="nama-akun" name="nama_akun" class="form-control bg-light" type="text" readonly>
-    </div>
-    <div class="col-md-4">
-        <label for="kode-pp" class="form-label">Kode PP <span class="text-danger">*</span></label>
-        <input id="kode-pp" name="kode_pp" class="form-control bg-light" type="text" readonly>
-    </div>
-    <div class="col-md-8">
-        <label for="nama-pp" class="form-label">Nama PP</label>
-        <input id="nama-pp" name="nama_pp" class="form-control bg-light" type="text" readonly>
-    </div>
-    <div class="col-md-4">
-        <label for="kode-drk" class="form-label">Kode DRK (SIMKUG)</label>
-        <input id="kode-drk" name="kode_drk" class="form-control bg-light" type="text" readonly>
-    </div>
-    <div class="col-md-8">
-        <label for="uraian-drk" class="form-label">Uraian DRK (SIMKUG)</label>
-        <input id="uraian-drk" name="uraian_drk" class="form-control bg-light" type="text" readonly>
-    </div>
+    <input id="kode-akun" name="kode_akun" type="hidden">
+    <input id="nama-akun" name="nama_akun" type="hidden">
+    <input id="kode-pp" name="kode_pp" type="hidden">
+    <input id="nama-pp" name="nama_pp" type="hidden">
+    <input id="kode-drk" name="kode_drk" type="hidden">
+    <input id="uraian-drk" name="uraian_drk" type="hidden">
     @foreach (['saldo_awal' => 'Saldo Awal TW', 'anggaran_terpakai' => 'Anggaran Terpakai TW', 'saldo_terkini' => 'Saldo Terkini TW'] as $field => $label)
         <div class="col-md-4">
             <label for="{{ $field }}" class="form-label">{{ $label }}</label>
