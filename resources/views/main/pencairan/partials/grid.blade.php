@@ -7,7 +7,7 @@
         <button type="button" class="btn btn-sm btn-outline-primary" data-grid-add>Tambah Baris</button>
         <button type="button" class="btn btn-sm btn-outline-secondary" data-grid-copy>Salin Semua ke Excel</button>
         <button type="button" class="btn btn-sm btn-outline-danger" data-grid-delete>Hapus Baris Aktif/Rentang</button>
-        <span data-grid-address class="spreadsheet-address align-self-center" aria-live="polite">Pilih sel</span>
+        <span data-grid-address class="spreadsheet-address align-self-center ms-auto" aria-live="polite">Pilih sel</span>
     </div>
     <div data-grid-message class="alert d-none" role="status" aria-live="polite"></div>
     <div class="table-responsive border rounded spreadsheet-viewport">
