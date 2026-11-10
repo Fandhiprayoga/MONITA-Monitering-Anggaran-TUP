@@ -66,9 +66,9 @@ class PencairanFormTest extends TestCase
                 ->assertSee('data-grid-select-all', false)
                 ->assertSee('data-grid-select-column="0"', false)
                 ->assertSee('Pilih seluruh tabel')
-                ->assertSee('Nomor baris terpisah dari input No.')
+                ->assertDontSee('Nomor baris terpisah dari input No.')
                 ->assertDontSee('spreadsheet-column', false)
-                ->assertSee('aria-label="Pilih kolom No"', false)
+                ->assertDontSee('aria-label="Pilih kolom No"', false)
                 ->assertSee('Shift+panah')
                 ->assertSee('klik dua kali atau F2')
                 ->assertSee('Simpan sebagai Draft')
@@ -110,7 +110,7 @@ class PencairanFormTest extends TestCase
         $this->withSession(['user_authenticated' => true])
             ->get(route('pencairan.form', 'impresfund'))
             ->assertOk()
-            ->assertSee('No, Uraian, Volume, Tarif, Subtotal')
+            ->assertSee('Uraian, Volume, Tarif, Subtotal')
             ->assertSee('kosongkan untuk kembali otomatis')
             ->assertSee('yang disalin lalu ditempel kembali menjadi nilai manual.');
     }

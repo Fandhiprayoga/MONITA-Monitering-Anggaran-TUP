@@ -45,7 +45,7 @@
         'nama' => 'Nama Rekening', 'rekening' => 'No Rekening', 'kewarganegaraan' => 'WNI / WNA',
         'penerima' => 'Nama Penerima', 'identitas' => 'No KTP / Paspor', 'npwp' => 'No NPWP',
     ];
-    $columns = array_keys($rows[0] ?? []);
+    $columns = array_values(array_filter(array_keys($rows[0] ?? []), fn ($column) => $column !== 'no'));
     $numericColumns = ['volume', 'tarif', 'subtotal', 'nominal', 'pajak', 'neto'];
 @endphp
 <div class="table-responsive border rounded spreadsheet-viewport">

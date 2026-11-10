@@ -6,14 +6,12 @@ const format = (cents) => (cents / 100).toLocaleString('id-ID', {
 
 export const schemas = {
     impresfund: [
-        { key: 'no', label: 'No', optional: true },
         { key: 'uraian', label: 'Uraian' },
         { key: 'volume', label: 'Volume', numeric: true },
         { key: 'tarif', label: 'Tarif', numeric: true },
         { key: 'subtotal', label: 'Subtotal', numeric: true, optional: true },
     ],
     beban: [
-        { key: 'no', label: 'No', optional: true },
         { key: 'nominal', label: 'Nominal', numeric: true },
         { key: 'pajak', label: 'Pot Pajak', numeric: true, defaultValue: '0' },
         { key: 'neto', label: 'Nominal Setelah Pajak', numeric: true },
@@ -22,7 +20,6 @@ export const schemas = {
         { key: 'rekening', label: 'No Rekening' },
     ],
     honor: [
-        { key: 'no', label: 'No', optional: true },
         { key: 'kewarganegaraan', label: 'WNI / WNA', choices: ['WNI', 'WNA'], list: 'honor-kewarganegaraan' },
         { key: 'nominal', label: 'Nominal Honor', numeric: true },
         { key: 'pajak', label: 'Potongan Pajak', numeric: true, defaultValue: '0' },
@@ -52,7 +49,7 @@ export function parseAmount(value) {
 export function calculateRow(kind, values) {
     const columns = schemas[kind];
     if (!columns) throw new Error('Jenis form tidak dikenal.');
-    if (columns.filter((column) => !column.computed && column.key !== 'no').every((column) => {
+    if (columns.filter((column) => !column.computed).every((column) => {
         const value = String(values[column.key] ?? '').trim();
         return !value || value === column.defaultValue;
     })) {
@@ -176,9 +173,9 @@ export function mountGrid(form) {
             const input = document.createElement('input');
             input.type = 'text';
             input.className = `spreadsheet-cell${column.numeric || column.computed ? ' spreadsheet-numeric' : ''}${column.computed ? ' spreadsheet-computed' : ''}`;
-            input.style.minWidth = column.key === 'no' ? '64px' : column.numeric || column.computed ? '145px' : '190px';
+            input.style.minWidth = column.numeric || column.computed ? '145px' : '190px';
             input.dataset.key = column.key;
-            input.value = column.key === 'no' ? String(body.rows.length + 1) : column.defaultValue ?? '';
+            input.value = column.defaultValue ?? '';
             input.readOnly = true;
             input.tabIndex = -1;
             if (column.numeric) input.inputMode = 'decimal';
@@ -496,7 +493,7 @@ export function mountGrid(form) {
             finishEditing(); active = null; anchor = null; clearSelection(); body.replaceChildren();
             for (const values of rows.slice(0, MAX_ROWS)) {
                 const row = addRow();
-                row.querySelectorAll('input').forEach((input) => { input.value = String(values[input.dataset.key] ?? (input.dataset.key === 'no' ? body.rows.length : '')); });
+                row.querySelectorAll('input').forEach((input) => { input.value = String(values[input.dataset.key] ?? ''); });
             }
             if (!body.rows.length) addRow();
             recalculate(); select(body.rows[0].querySelector('input'), false, false);

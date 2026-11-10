@@ -33,7 +33,7 @@ test('Impresfund subtotal overrides automatic calculation and blank restores it'
         ...values, volume: '10000000000', tarif: '10000000000', subtotal: '500',
     }).gross, 50000);
     assert.deepEqual(schemas.impresfund.filter((column) => !column.computed).map((column) => column.key),
-        ['no', 'uraian', 'volume', 'tarif', 'subtotal']);
+        ['uraian', 'volume', 'tarif', 'subtotal']);
 });
 
 test('Beban uses gross and manual after-tax amount independently', () => {
@@ -56,7 +56,7 @@ test('Blank rows are ignored, incomplete rows are invalid, zero tax is allowed',
 
 test('Beban clipboard includes editable after-tax amount in table order', () => {
     assert.deepEqual(schemas.beban.filter((column) => !column.computed).map((column) => column.key),
-        ['no', 'nominal', 'pajak', 'neto', 'bank', 'nama', 'rekening']);
+        ['nominal', 'pajak', 'neto', 'bank', 'nama', 'rekening']);
 });
 
 test('Tax defaults to zero without activating unused Honor and Beban rows', () => {
@@ -107,19 +107,14 @@ test('Honor rejects invalid citizenship, missing recipient/identity and excessiv
 
 test('Honor clipboard columns include manual received amount and preserve text identifiers', () => {
     const keys = schemas.honor.filter((column) => !column.computed).map((column) => column.key);
-    assert.deepEqual(keys, ['no', 'kewarganegaraan', 'nominal', 'pajak', 'neto', 'penerima', 'nama', 'bank', 'rekening', 'identitas', 'npwp']);
+    assert.deepEqual(keys, ['kewarganegaraan', 'nominal', 'pajak', 'neto', 'penerima', 'nama', 'bank', 'rekening', 'identitas', 'npwp']);
     const values = keys.map((key) => honor[key]);
     assert.deepEqual(parseTsv(toTsv([values])), [values]);
 });
 
-test('No is an optional text input, included first in every clipboard schema without affecting totals', () => {
+test('Every clipboard schema excludes the optional No column without affecting totals', () => {
     for (const kind of Object.keys(schemas)) {
-        assert.deepEqual(schemas[kind][0], { key: 'no', label: 'No', optional: true });
-        assert.equal(calculateRow(kind, { no: '007', pajak: '0' }).empty, true);
-    }
-    const values = { uraian: 'ATK', volume: '2', tarif: '1.000' };
-    for (const no of ['', '007', 'A-1']) {
-        assert.deepEqual(calculateRow('impresfund', { ...values, no }), calculateRow('impresfund', values));
-        assert.deepEqual(parseTsv(toTsv([[no, 'ATK', '2', '1.000']]))[0][0], no);
+        assert.equal(calculateRow(kind, { pajak: '0' }).empty, true);
+        assert.ok(!schemas[kind].some((column) => column.key === 'no'));
     }
 });

@@ -50,14 +50,13 @@
                     <p>{{ $detailHelp }}</p>
                     <h6>Copy dan paste Excel</h6>
                     <p>
-                        Paste dari Excel mulai sel aktif dengan urutan kolom input: <strong>No, {{ $pasteColumns }}</strong>.
-                        Jangan sertakan header. Jika data Excel tidak menyertakan No, mulai paste dari kolom setelah No.
+                        Paste dari Excel mulai sel aktif dengan urutan kolom input: <strong>{{ $pasteColumns }}</strong>.
+                        Jangan sertakan header.
                         Ctrl+C/Ctrl+V (Mac: Cmd+C/Cmd+V) menyalin/menempel kolom input.
                         Salin Semua ke Excel memakai urutan yang sama sehingga dapat ditempel kembali ke sel input pertama.
                     </p>
                     <h6>Format data</h6>
                     <p>
-                        No dapat diedit atau dikosongkan dan ikut disalin ke Excel. Nomor tidak diurutkan ulang otomatis.
                         Angka menggunakan format Indonesia (contoh: 1.250,50).
                         No Rekening harus berformat teks di Excel agar nol di depan tetap utuh. Maksimal 500 baris.
                     </p>
@@ -65,7 +64,7 @@
                     <p>
                         Klik atau drag untuk memilih sel; Shift+klik atau Shift+panah untuk memilih rentang.
                         Klik nomor baris di sisi kiri untuk memilih seluruh baris, header untuk memilih kolom,
-                        atau sudut kiri atas untuk memilih seluruh tabel. Nomor baris terpisah dari input No.
+                        atau sudut kiri atas untuk memilih seluruh tabel.
                     </p>
                     <h6>Navigasi dan edit</h6>
                     <p class="mb-0">
