@@ -192,6 +192,13 @@ export function mountGrid(form) {
         try { input.value = format(parseAmount(input.value)); } catch { /* biarkan nilai mentah agar validasi menandainya */ }
     }
 
+    // Volume/Tarif changes invalidate a manual Subtotal override so it follows the product again.
+    function resetSubtotal(input) {
+        if (!input || !['volume', 'tarif'].includes(input.dataset.key)) return;
+        const subtotal = input.closest('tr').querySelector('[data-key="subtotal"]');
+        if (subtotal) subtotal.value = '';
+    }
+
     function recalculate() {
         let gross = 0;
         const issues = [];
@@ -220,7 +227,7 @@ export function mountGrid(form) {
                 subtotal.placeholder = !result.errors && !result.empty ? format(result.gross) : '';
                 subtotal.setAttribute('aria-description', subtotal.value.trim()
                     ? 'Subtotal manual. Kosongkan untuk menghitung otomatis dari Volume x Tarif.'
-                    : `Subtotal otomatis: ${subtotal.placeholder || 'belum tersedia'}. Isi untuk mengganti manual.`);
+                    : `Subtotal otomatis: ${subtotal.placeholder || 'belum tersedia'}. Isi untuk mengganti manual; ubah Volume/Tarif untuk kembali otomatis.`);
             }
             if (!result.errors) gross += result.gross;
         });
@@ -347,7 +354,10 @@ export function mountGrid(form) {
     body.addEventListener('dblclick', (event) => {
         if (event.target.matches('input')) startEditing(event.target);
     });
-    body.addEventListener('input', recalculate);
+    body.addEventListener('input', (event) => {
+        resetSubtotal(event.target);
+        recalculate();
+    });
     body.addEventListener('keydown', (event) => {
         const input = event.target;
         if (!input.matches('input') || event.isComposing) return;
@@ -383,7 +393,9 @@ export function mountGrid(form) {
             [...body.rows].slice(bounds.top, bounds.bottom + 1).forEach((tr) => {
                 columns.forEach((column, c) => {
                     if (!column.computed && c >= bounds.left && c <= bounds.right) {
-                        tr.querySelector(`[data-key="${column.key}"]`).value = '';
+                        const input = tr.querySelector(`[data-key="${column.key}"]`);
+                        input.value = '';
+                        resetSubtotal(input);
                     }
                 });
             });
@@ -430,7 +442,9 @@ export function mountGrid(form) {
         finishEditing();
         while (body.rows.length < start + rows.length) addRow();
         rows.forEach((row, r) => row.forEach((value, c) => {
-            body.rows[start + r].querySelector(`[data-key="${editable[offset + c].key}"]`).value = value;
+            const input = body.rows[start + r].querySelector(`[data-key="${editable[offset + c].key}"]`);
+            input.value = value;
+            resetSubtotal(input);
         }));
         recalculate();
         anchor = { row: start, col: startCol };
