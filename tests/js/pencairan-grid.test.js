@@ -45,7 +45,11 @@ test('Impresfund subtotal overrides automatic calculation and blank restores it'
 test('Beban calculates after-tax amount by default and allows a manual override', () => {
     const values = { nominal: '100.000', pajak: '2.500', neto: '90.000', bank: 'Bank', nama: 'Nama', rekening: '00123456789012345678' };
     const result = calculateRow('beban', values);
-    assert.deepEqual(result, { gross: 10000000, tax: 250000, net: 9000000 });
+    assert.equal(result.gross, 10000000);
+    assert.equal(result.tax, 250000);
+    assert.equal(result.net, 9000000);
+    assert.match(result.warnings.neto, /seharusnya 97\.500/);
+    assert.equal(result.errors, undefined);
     assert.equal(calculateRow('beban', { ...values, nominal: '200.000', pajak: '5.000' }).net, 9000000);
     assert.equal(calculateRow('beban', { ...values, neto: '0' }).net, 0);
     assert.equal(calculateRow('beban', { ...values, neto: '' }).net, 9750000);
@@ -54,6 +58,36 @@ test('Beban calculates after-tax amount by default and allows a manual override'
         assert.ok(calculateRow('beban', { ...values, neto }).errors.neto);
     }
     assert.ok(calculateRow('beban', { nominal: '100', pajak: '101', bank: 'B', nama: 'N', rekening: '001' }).errors.pajak);
+});
+
+test('Beban warns on mismatched net amounts to the cent without blocking manual values', () => {
+    const values = { nominal: '1.250,50', pajak: '250,25', bank: 'B', nama: 'N', rekening: '001' };
+    for (const neto of ['1.000,24', '1.000,26', '0', '2.000']) {
+        const result = calculateRow('beban', { ...values, neto });
+        assert.equal(result.net, parseAmount(neto));
+        assert.equal(result.errors, undefined);
+        assert.match(result.warnings.neto, /seharusnya 1\.000,25/);
+    }
+    for (const neto of ['', '  ', '1.000,25', '1000,25']) {
+        assert.equal(calculateRow('beban', { ...values, neto }).warnings, undefined);
+    }
+    assert.equal(calculateRow('beban', { nominal: '0', pajak: '0', neto: '0', bank: 'B', nama: 'N', rekening: '001' }).warnings, undefined);
+});
+
+test('Beban warnings remain visible on incomplete rows but not invalid numeric operands', () => {
+    const result = calculateRow('beban', { nominal: '100', pajak: '10', neto: '80' });
+    assert.ok(result.errors.bank);
+    assert.match(result.warnings.neto, /seharusnya 90/);
+    for (const values of [
+        { nominal: '', pajak: '10', neto: '80' },
+        { nominal: 'invalid', pajak: '10', neto: '80' },
+        { nominal: '100', pajak: 'invalid', neto: '80' },
+        { nominal: '100', pajak: '101', neto: '80' },
+        { nominal: '100', pajak: '10', neto: 'invalid' },
+    ]) {
+        assert.ok(calculateRow('beban', values).errors);
+        assert.equal(calculateRow('beban', values).warnings, undefined);
+    }
 });
 
 test('Blank rows are ignored, incomplete rows are invalid, zero tax is allowed', () => {

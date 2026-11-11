@@ -77,12 +77,20 @@ export function calculateRow(kind, values) {
     }
     if (kind === 'impresfund' && numbers.volume === 0) errors.volume = 'Volume harus lebih dari nol.';
     if (kind !== 'impresfund' && numbers.pajak > numbers.nominal) errors.pajak = 'Potongan pajak tidak boleh melebihi nominal.';
-    if (Object.keys(errors).length) return { errors };
+    const warnings = {};
+    if (kind === 'beban' && numbers.nominal !== undefined && numbers.pajak !== undefined
+        && numbers.neto !== undefined && numbers.pajak <= numbers.nominal
+        && numbers.neto !== numbers.nominal - numbers.pajak) {
+        warnings.neto = `Perhitungan kurang tepat. Nominal Setelah Pajak seharusnya ${format(numbers.nominal - numbers.pajak)} (Nominal - Pot Pajak). Nilai yang diisi tetap digunakan.`;
+    }
+    const warningResult = Object.keys(warnings).length ? { warnings } : {};
+    if (Object.keys(errors).length) return { errors, ...warningResult };
     if (kind === 'beban') {
         return {
             gross: numbers.nominal,
             tax: numbers.pajak,
             net: numbers.neto ?? numbers.nominal - numbers.pajak,
+            ...warningResult,
         };
     }
     if (kind === 'honor') return { gross: numbers.nominal, tax: numbers.pajak, net: numbers.neto };
@@ -235,6 +243,7 @@ export function mountGrid(form) {
     function recalculate() {
         let gross = 0;
         const issues = [];
+        const warnings = [];
         [...body.rows].forEach((row, index) => {
             const rowButton = row.querySelector('[data-grid-select-row]');
             rowButton.textContent = index + 1;
@@ -268,15 +277,27 @@ export function mountGrid(form) {
                     : `Subtotal otomatis: ${subtotal.placeholder || 'belum tersedia'}. Isi untuk mengganti manual; ubah Volume/Tarif untuk kembali otomatis.`);
             }
             if (kind === 'beban') {
-                neto.setAttribute('aria-description', neto.dataset.manualNeto === 'true'
+                const warningText = result.warnings?.neto ?? '';
+                if (warningText) warnings.push(`Baris ${index + 1}: ${warningText}`);
+                neto.closest('td').classList.toggle('has-warning', Boolean(warningText));
+                neto.title = result.errors?.neto ?? warningText;
+                const description = neto.dataset.manualNeto === 'true'
                     ? 'Nominal Setelah Pajak diisi manual. Ubah Nominal atau Pot Pajak untuk kembali ke perhitungan otomatis.'
-                    : 'Nominal Setelah Pajak dihitung otomatis dari Nominal dikurangi Pot Pajak. Isi sel untuk menggunakan nilai manual.');
+                    : 'Nominal Setelah Pajak dihitung otomatis dari Nominal dikurangi Pot Pajak. Isi sel untuk menggunakan nilai manual.';
+                neto.setAttribute('aria-description', warningText ? `${warningText} ${description}` : description);
             }
             if (!result.errors) gross += result.gross;
         });
         if (!Number.isSafeInteger(gross)) issues.push('Total terlalu besar untuk dihitung secara akurat.');
         const total = issues.length ? 'Belum valid' : format(gross);
         form.querySelector('#nominal-diajukan').value = total;
+        const warningBox = form.querySelector('[data-grid-warnings]');
+        warningBox.replaceChildren(...warnings.map((text) => {
+            const item = document.createElement('div');
+            item.textContent = text;
+            return item;
+        }));
+        warningBox.classList.toggle('d-none', !warnings.length);
         form.querySelector('[data-grid-errors]').textContent = issues.slice(0, 5).join(' ') + (issues.length > 5 ? ` (+${issues.length - 5} kesalahan lainnya)` : '');
     }
 
@@ -505,7 +526,7 @@ export function mountGrid(form) {
         anchor = { row: start, col: startCol };
         const width = Math.max(...rows.map((row) => row.length));
         select(body.rows[start + rows.length - 1].querySelector(`[data-key="${editable[offset + width - 1].key}"]`), true);
-        notify(`${rows.length} baris ditempel. Periksa penanda merah bila ada data tidak valid.`);
+        notify(`${rows.length} baris ditempel. Periksa penanda merah bila ada data tidak valid.${kind === 'beban' ? ' Peringatan kuning menandai Nominal Setelah Pajak yang tidak sesuai perhitungan.' : ''}`);
     });
 
     function clipboardRows(all) {

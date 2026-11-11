@@ -119,7 +119,7 @@ class PencairanFormTest extends TestCase
     {
         foreach ([
             'impresfund' => 'Subtotal otomatis = Volume x Tarif',
-            'beban' => 'Nominal Setelah Pajak diisi manual',
+            'beban' => 'Isi Nominal Setelah Pajak untuk memakai nilai manual',
             'honor' => 'Isi kewarganegaraan dengan WNI atau WNA',
         ] as $kind => $instruction) {
             $response = $this->withSession(['user_authenticated' => true])
@@ -143,6 +143,12 @@ class PencairanFormTest extends TestCase
             $this->assertSame(0, $xpath->query('//form//*[@id="grid-help-modal" or @id="grid-help"]')->length);
             $help = $xpath->query('//*[@id="grid-help"]')->item(0)->textContent;
             $this->assertStringContainsString($instruction, $help);
+            if ($kind === 'beban') {
+                $this->assertStringContainsString('peringatan di atas tabel yang mencantumkan nomor baris dan nilai yang seharusnya', $help);
+                $this->assertStringContainsString('tanpa mengubah nilai isian atau menghalangi penyimpanan', $help);
+                $this->assertSame(1, $xpath->query('//form//div[@data-grid-warnings and @role="status" and @aria-live="polite"]/following-sibling::div[contains(@class, "spreadsheet-viewport")]')->length);
+                $this->assertSame(0, $xpath->query('//table//*[@data-grid-warnings]')->length);
+            }
             $this->assertStringContainsString('Shift+panah', $help);
             $this->assertStringContainsString('Salin Semua ke Excel', $help);
         }

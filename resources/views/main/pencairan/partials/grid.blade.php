@@ -10,6 +10,7 @@
         <span data-grid-address class="spreadsheet-address align-self-center ms-auto" aria-live="polite">Pilih sel</span>
     </div>
     <div data-grid-message class="alert d-none" role="status" aria-live="polite"></div>
+    <div data-grid-warnings class="alert alert-warning d-none" role="status" aria-live="polite"></div>
     <div class="table-responsive border rounded spreadsheet-viewport">
         <table class="table table-bordered align-middle mb-0 spreadsheet-grid" role="grid" aria-label="Rincian pengajuan" aria-multiselectable="true" aria-describedby="grid-help-summary">
             <thead class="table-light">
