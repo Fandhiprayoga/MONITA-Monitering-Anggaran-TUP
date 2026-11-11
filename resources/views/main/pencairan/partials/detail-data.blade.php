@@ -2,6 +2,32 @@
     $headerFieldOrder = ['kode_akun', 'nama_akun', 'kode_pp', 'nama_pp', 'kode_drk', 'uraian_drk', 'saldo_awal', 'anggaran_terpakai', 'saldo_terkini', 'tipe', 'drk_tup'];
     $orderedHeaderSnapshot = array_replace(array_fill_keys($headerFieldOrder, null), $headerSnapshot);
     $visibleHeader = array_filter($orderedHeaderSnapshot, fn ($value, $key) => is_scalar($value) && !in_array($key, ['id', 'checked_at']) && !str_ends_with($key, '_decimal'), ARRAY_FILTER_USE_BOTH);
+    $formatNominal = static function ($value) {
+        if (!is_scalar($value) || trim((string) $value) === '') {
+            return $value;
+        }
+
+        $value = trim((string) $value);
+        if (preg_match('/^-?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/D', $value)) {
+            $normalized = str_replace([ '.', ',' ], [ '', '.' ], $value);
+        } elseif (preg_match('/^-?\d+(?:,\d{1,2})?$/D', $value)) {
+            $normalized = str_replace(',', '.', $value);
+        } elseif (is_numeric($value)) {
+            $normalized = $value;
+        } else {
+            return $value;
+        }
+
+        $formatted = number_format((float) $normalized, 2, ',', '.');
+        [$integer, $fraction] = explode(',', $formatted);
+
+        return $fraction === '00' ? $integer : $formatted;
+    };
+    foreach (['saldo_awal', 'anggaran_terpakai', 'saldo_terkini'] as $nominalField) {
+        if (isset($visibleHeader[$nominalField])) {
+            $visibleHeader[$nominalField] = $formatNominal($visibleHeader[$nominalField]);
+        }
+    }
 @endphp
 @if($simkug)
     @php
@@ -9,7 +35,7 @@
             'tahun_anggaran' => $pengajuan->tahun_anggaran,
             'triwulan' => $pengajuan->triwulan,
             'uraian_pengajuan' => $pengajuan->uraian_pengajuan,
-        ] + $visibleHeader + ['nominal' => number_format((float) $pengajuan->total_bruto, 2, ',', '.')];
+        ] + $visibleHeader + ['nominal' => $formatNominal($pengajuan->total_bruto)];
     @endphp
     <div class="row g-2 mb-3">
         @foreach($simkugHeader as $key => $value)
@@ -35,7 +61,7 @@
     <p><strong>{{ $pengajuan->nama_pp }} ({{ $pengajuan->kode_pp }})</strong> · {{ $pengajuan->tahun_anggaran }} / TW {{ $pengajuan->triwulan }}</p>
     <p class="text-muted">{{ $pengajuan->uraian_pengajuan }}</p>
     <div class="row g-2 mb-3">@foreach($visibleHeader as $key => $value)<div class="col-md-4"><small class="text-muted">{{ ucfirst(str_replace('_',' ',$key)) }}</small><div>{{ $value }}</div></div>@endforeach</div>
-    <div class="d-flex gap-4 flex-wrap mb-3"><strong>Nominal: Rp {{ number_format((float)$pengajuan->total_bruto,2,',','.') }}</strong></div>
+    <div class="d-flex gap-4 flex-wrap mb-3"><strong>Nominal: Rp {{ $formatNominal($pengajuan->total_bruto) }}</strong></div>
 @endif
 @php
     $rows = $displayRows;
@@ -47,6 +73,7 @@
     ];
     $columns = array_values(array_filter(array_keys($rows[0] ?? []), fn ($column) => $column !== 'no'));
     $numericColumns = ['volume', 'tarif', 'subtotal', 'nominal', 'pajak', 'neto'];
+    $nominalColumns = ['tarif', 'subtotal', 'nominal', 'pajak', 'neto'];
 @endphp
 <div class="table-responsive border rounded spreadsheet-viewport">
     <table class="table table-bordered align-middle mb-0 spreadsheet-grid" role="grid" aria-label="{{ $simkug ? 'Rincian pengajuan SIMKUG' : 'Rincian pengajuan' }}" aria-multiselectable="true" data-detail-grid>
@@ -63,7 +90,13 @@
                 <tr data-grid-row>
                     <th scope="row" class="spreadsheet-row-header"><button type="button" class="spreadsheet-selector" data-grid-select-row aria-label="Pilih baris {{ $loop->iteration }}">{{ $loop->iteration }}</button></th>
                     @foreach($columns as $column)
-                        <td role="gridcell" aria-selected="false" data-grid-cell><div class="spreadsheet-cell{{ in_array($column, $numericColumns, true) ? ' spreadsheet-numeric' : '' }}" tabindex="0" title="{{ $row[$column] ?? '' }}">{{ $row[$column] ?? '' }}</div></td>
+                        @php
+                            $cellValue = $row[$column] ?? '';
+                            if (in_array($column, $nominalColumns, true)) {
+                                $cellValue = $formatNominal($cellValue);
+                            }
+                        @endphp
+                        <td role="gridcell" aria-selected="false" data-grid-cell><div class="spreadsheet-cell{{ in_array($column, $numericColumns, true) ? ' spreadsheet-numeric' : '' }}" tabindex="0" title="{{ $cellValue }}">{{ $cellValue }}</div></td>
                     @endforeach
                 </tr>
             @empty

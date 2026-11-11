@@ -101,12 +101,15 @@ class PencairanWorkflowTest extends TestCase
     {
         $p = $this->draft('impresfund', [
             ['no'=>'1', 'uraian'=>'Otomatis', 'volume'=>'2', 'tarif'=>'123,45', 'subtotal'=>''],
-            ['no'=>'2', 'uraian'=>'Manual', 'volume'=>'2', 'tarif'=>'100', 'subtotal'=>'175'],
+            ['no'=>'2', 'uraian'=>'Manual', 'volume'=>'2', 'tarif'=>'1000000', 'subtotal'=>'1234567,89'],
             ['no'=>'3', 'uraian'=>'Manual nol', 'volume'=>'1', 'tarif'=>'100', 'subtotal'=>'0'],
             ['no'=>'4', 'uraian'=>'Belum lengkap', 'volume'=>'', 'tarif'=>'100', 'subtotal'=>''],
         ]);
         $legacySnapshot = $p->header_snapshot;
         unset($legacySnapshot['kode_pp_sheet']);
+        $legacySnapshot['saldo_awal'] = '36135000,00';
+        $legacySnapshot['anggaran_terpakai'] = '0,00';
+        $legacySnapshot['saldo_terkini'] = '36135000,00';
         $p->header_snapshot = $legacySnapshot;
         $p->save();
         $detailUrl = route('pencairan.show', $p);
@@ -125,15 +128,16 @@ class PencairanWorkflowTest extends TestCase
         $response->assertSee('workflow-timeline', false)
             ->assertSee('Pengajuan dibuat')->assertSee('Draft')->assertSee('Terbaru');
         $response->assertSee('Nominal: Rp')->assertDontSee('Pajak: Rp')->assertDontSee('Neto: Rp');
+        $response->assertSee('<div>36.135.000</div>', false)->assertSee('<div>0</div>', false);
         $document = new \DOMDocument();
         $previous = libxml_use_internal_errors(true);
         try { $document->loadHTML($response->getContent()); }
         finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
         $xpath = new \DOMXPath($document);
         $cells = $xpath->query('//table[contains(@class,"table-bordered")]/tbody/tr/td[last()]');
-        $this->assertSame(['246,90','175,00','0,00','Belum dihitung'], array_map(fn($cell) => trim($cell->textContent), iterator_to_array($cells)));
+        $this->assertSame(['246,90','1.234.567,89','0','Belum dihitung'], array_map(fn($cell) => trim($cell->textContent), iterator_to_array($cells)));
         $this->assertSame('', $p->detailRows()[0]['subtotal']);
-        $this->assertSame('175,00', $p->detailRows()[1]['subtotal']);
+        $this->assertSame('1234567,89', $p->detailRows()[1]['subtotal']);
     }
 
     #[DataProvider('readonlySimkugKinds')]
@@ -167,7 +171,8 @@ class PencairanWorkflowTest extends TestCase
         $this->assertSame($p->uraian_pengajuan, $values['Uraian pengajuan']);
         $this->assertSame('2026', $values['Tahun anggaran']);
         $this->assertSame('4', $values['Triwulan']);
-        $this->assertSame(number_format((float) $p->total_bruto, 2, ',', '.'), $values['Nominal']);
+        $expectedNominal = rtrim(rtrim(number_format((float) $p->total_bruto, 2, ',', '.'), '0'), ',');
+        $this->assertSame($expectedNominal, $values['Nominal']);
         foreach (['Id', 'Checked at', 'Saldo terkini decimal', 'Kode pp sheet'] as $hidden) {
             $this->assertArrayNotHasKey($hidden, $values);
         }
