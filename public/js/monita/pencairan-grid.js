@@ -14,7 +14,7 @@ export const schemas = {
     beban: [
         { key: 'nominal', label: 'Nominal', numeric: true, money: true },
         { key: 'pajak', label: 'Pot Pajak', numeric: true, defaultValue: '0', money: true },
-        { key: 'neto', label: 'Nominal Setelah Pajak', numeric: true, money: true },
+        { key: 'neto', label: 'Nominal Setelah Pajak', numeric: true, optional: true, money: true },
         { key: 'bank', label: 'Nama Bank' },
         { key: 'nama', label: 'Nama Rekening' },
         { key: 'rekening', label: 'No Rekening' },
@@ -78,7 +78,14 @@ export function calculateRow(kind, values) {
     if (kind === 'impresfund' && numbers.volume === 0) errors.volume = 'Volume harus lebih dari nol.';
     if (kind !== 'impresfund' && numbers.pajak > numbers.nominal) errors.pajak = 'Potongan pajak tidak boleh melebihi nominal.';
     if (Object.keys(errors).length) return { errors };
-    if (kind !== 'impresfund') return { gross: numbers.nominal, tax: numbers.pajak, net: numbers.neto };
+    if (kind === 'beban') {
+        return {
+            gross: numbers.nominal,
+            tax: numbers.pajak,
+            net: numbers.neto ?? numbers.nominal - numbers.pajak,
+        };
+    }
+    if (kind === 'honor') return { gross: numbers.nominal, tax: numbers.pajak, net: numbers.neto };
     if (numbers.subtotal !== undefined) return { gross: numbers.subtotal, tax: 0, net: numbers.subtotal };
     // Both operands are scaled by 100; bound the product before rounding to cents.
     const product = numbers.volume * numbers.tarif;
@@ -180,6 +187,7 @@ export function mountGrid(form) {
             input.style.minWidth = column.numeric || column.computed ? '145px' : '190px';
             input.dataset.key = column.key;
             input.value = column.defaultValue ?? '';
+            if (kind === 'beban' && column.key === 'neto') input.dataset.manualNeto = 'false';
             input.readOnly = true;
             input.tabIndex = -1;
             if (column.numeric) input.inputMode = 'decimal';
@@ -203,6 +211,27 @@ export function mountGrid(form) {
         if (subtotal) subtotal.value = '';
     }
 
+    function resetBebanNeto(input) {
+        if (kind !== 'beban' || !input) return;
+        if (['nominal', 'pajak'].includes(input.dataset.key)) {
+            const neto = input.closest('tr').querySelector('[data-key="neto"]');
+            neto.value = '';
+            neto.dataset.manualNeto = 'false';
+        } else if (input.dataset.key === 'neto' && !input.value.trim()) {
+            input.dataset.manualNeto = 'false';
+        }
+    }
+
+    function automaticBebanNeto(values) {
+        try {
+            const nominal = parseAmount(values.nominal);
+            const pajak = parseAmount(values.pajak);
+            return pajak <= nominal ? format(nominal - pajak) : '';
+        } catch {
+            return '';
+        }
+    }
+
     function recalculate() {
         let gross = 0;
         const issues = [];
@@ -218,6 +247,11 @@ export function mountGrid(form) {
                 input.removeAttribute('aria-invalid');
                 input.removeAttribute('title');
             });
+            const neto = row.querySelector('[data-key="neto"]');
+            if (kind === 'beban' && neto.dataset.manualNeto !== 'true') {
+                neto.value = automaticBebanNeto(values);
+                values.neto = neto.value;
+            }
             const result = calculateRow(kind, values);
             for (const [key, error] of Object.entries(result.errors ?? {})) {
                 const input = row.querySelector(`[data-key="${key}"]`);
@@ -232,6 +266,11 @@ export function mountGrid(form) {
                 subtotal.setAttribute('aria-description', subtotal.value.trim()
                     ? 'Subtotal manual. Kosongkan untuk menghitung otomatis dari Volume x Tarif.'
                     : `Subtotal otomatis: ${subtotal.placeholder || 'belum tersedia'}. Isi untuk mengganti manual; ubah Volume/Tarif untuk kembali otomatis.`);
+            }
+            if (kind === 'beban') {
+                neto.setAttribute('aria-description', neto.dataset.manualNeto === 'true'
+                    ? 'Nominal Setelah Pajak diisi manual. Ubah Nominal atau Pot Pajak untuk kembali ke perhitungan otomatis.'
+                    : 'Nominal Setelah Pajak dihitung otomatis dari Nominal dikurangi Pot Pajak. Isi sel untuk menggunakan nilai manual.');
             }
             if (!result.errors) gross += result.gross;
         });
@@ -360,6 +399,11 @@ export function mountGrid(form) {
     });
     body.addEventListener('input', (event) => {
         resetSubtotal(event.target);
+        if (kind === 'beban' && event.target.dataset.key === 'neto') {
+            event.target.dataset.manualNeto = event.target.value.trim() ? 'true' : 'false';
+        } else {
+            resetBebanNeto(event.target);
+        }
         recalculate();
     });
     body.addEventListener('keydown', (event) => {
@@ -400,6 +444,7 @@ export function mountGrid(form) {
                         const input = tr.querySelector(`[data-key="${column.key}"]`);
                         input.value = '';
                         resetSubtotal(input);
+                        resetBebanNeto(input);
                     }
                 });
             });
@@ -450,6 +495,11 @@ export function mountGrid(form) {
             input.value = value;
             formatNumericCell(input);
             resetSubtotal(input);
+            if (kind === 'beban' && input.dataset.key === 'neto') {
+                input.dataset.manualNeto = input.value.trim() ? 'true' : 'false';
+            } else {
+                resetBebanNeto(input);
+            }
         }));
         recalculate();
         anchor = { row: start, col: startCol };
@@ -521,7 +571,12 @@ export function mountGrid(form) {
             finishEditing(); active = null; anchor = null; clearSelection(); body.replaceChildren();
             for (const values of rows.slice(0, MAX_ROWS)) {
                 const row = addRow();
-                row.querySelectorAll('input').forEach((input) => { input.value = String(values[input.dataset.key] ?? ''); });
+                row.querySelectorAll('input').forEach((input) => {
+                    input.value = String(values[input.dataset.key] ?? '');
+                    if (kind === 'beban' && input.dataset.key === 'neto') {
+                        input.dataset.manualNeto = input.value.trim() ? 'true' : 'false';
+                    }
+                });
             }
             if (!body.rows.length) addRow();
             recalculate(); select(body.rows[0].querySelector('input'), false, false);

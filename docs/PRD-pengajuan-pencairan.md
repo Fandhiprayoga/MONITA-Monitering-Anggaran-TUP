@@ -160,10 +160,10 @@ Transisi lain ditolak server. `completed` dan `cancelled` terminal pada MVP. Pen
 ### FR-04 — Rincian dan perhitungan
 - Impresfund: uraian, volume, tarif, subtotal. Volume > 0; subtotal otomatis = volume × tarif, dibulatkan ke 2 desimal; subtotal manual diperbolehkan.
 - Simpan `subtotal_manual` nullable (null = otomatis) dan `subtotal_efektif`. Nilai manual nol berbeda dari kosong.
-- Beban: nominal bruto, potongan pajak, neto manual, bank, nama rekening, nomor rekening.
+- Beban: nominal bruto, potongan pajak, neto otomatis (bruto dikurangi pajak) dengan nilai manual yang dapat menggantinya, bank, nama rekening, nomor rekening. Perubahan bruto atau pajak mengembalikan neto ke hitung otomatis.
 - Honor: WNI/WNA, nominal honor, pajak, neto manual, nama penerima, nama rekening, bank, nomor rekening, KTP/paspor, NPWP opsional.
 - Pajak tidak negatif dan tidak melebihi bruto; volume/tarif/nominal/neto tidak negatif. WNI/WNA dinormalisasi ke huruf besar.
-- Neto Beban/Honor tidak dipaksa sama dengan bruto dikurangi pajak; tidak wajib alasan tambahan. Admin tetap dapat melihat bruto, pajak, dan neto untuk pemeriksaan.
+- Neto manual Beban/Honor tidak dipaksa sama dengan bruto dikurangi pajak; tidak wajib alasan tambahan. Admin tetap dapat melihat bruto, pajak, dan neto untuk pemeriksaan.
 - Total dihitung ulang dari rincian di server menggunakan decimal/fixed-point, bukan floating-point atau total payload.
 - Maksimal 500 baris sesuai grid saat ini; batas per nilai dan batas total didokumentasikan serta diselaraskan frontend/backend sebelum implementasi.
 - Rekening, identitas, NPWP, dan kode disimpan sebagai teks; nol di depan tidak hilang.
@@ -285,7 +285,7 @@ Kode respons: 422 untuk input/saldo, 403 atau 404 konsisten untuk akses terlaran
 8. Saldo kurang menolak submit, menampilkan nominal/saldo/alasan, tanpa nomor/status/history submit baru.
 9. Saldo sama dengan total lolos; gagal memperoleh saldo terkini dari Google Sheets menolak submit tanpa menggunakan cache/snapshot lama sebagai pengganti.
 10. DRK lintas PP, periode tidak valid, dan field readonly palsu ditolak/diabaikan server.
-11. Subtotal manual/otomatis dan neto manual dipertahankan; total server tidak bergantung pada total browser.
+11. Subtotal manual/otomatis dan neto manual dipertahankan; neto Beban otomatis dari bruto dikurangi pajak kecuali diisi manual. Total server tidak bergantung pada total browser.
 12. Verifikasi gagal saat saldo tidak cukup; verifikasi valid menghasilkan antrean transaksi sesuai jenis.
 13. Selesai tanpa tanggal ditolak untuk semua jenis; semua jenis dapat selesai tanpa nomor bukti/referensi eksternal dan tidak menampilkan/menerima field tersebut. Label Impresfund tetap Dicairkan, Beban/Honor Diajukan ke TUB.
 14. Retry submit/complete tidak menggandakan nomor, completion, snapshot, atau riwayat.

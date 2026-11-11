@@ -42,13 +42,15 @@ test('Impresfund subtotal overrides automatic calculation and blank restores it'
         ['uraian', 'volume', 'tarif', 'subtotal']);
 });
 
-test('Beban uses gross and manual after-tax amount independently', () => {
+test('Beban calculates after-tax amount by default and allows a manual override', () => {
     const values = { nominal: '100.000', pajak: '2.500', neto: '90.000', bank: 'Bank', nama: 'Nama', rekening: '00123456789012345678' };
     const result = calculateRow('beban', values);
     assert.deepEqual(result, { gross: 10000000, tax: 250000, net: 9000000 });
     assert.equal(calculateRow('beban', { ...values, nominal: '200.000', pajak: '5.000' }).net, 9000000);
     assert.equal(calculateRow('beban', { ...values, neto: '0' }).net, 0);
-    for (const neto of ['', '-1', 'invalid']) {
+    assert.equal(calculateRow('beban', { ...values, neto: '' }).net, 9750000);
+    assert.equal(calculateRow('beban', { ...values, nominal: '200.000', pajak: '5.000', neto: '' }).net, 19500000);
+    for (const neto of ['-1', 'invalid']) {
         assert.ok(calculateRow('beban', { ...values, neto }).errors.neto);
     }
     assert.ok(calculateRow('beban', { nominal: '100', pajak: '101', bank: 'B', nama: 'N', rekening: '001' }).errors.pajak);

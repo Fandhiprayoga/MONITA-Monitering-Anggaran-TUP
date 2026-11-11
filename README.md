@@ -60,8 +60,9 @@ tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
   kosongkan untuk kembali otomatis. Total pengajuan = jumlah subtotal yang berlaku.
   Copy rentang/semua menyertakan nilai Subtotal yang berlaku; jika ditempel kembali,
   nilai otomatis yang disalin menjadi manual. Uraian, Volume dan Tarif tetap wajib valid.
-- Beban: potongan pajak dalam rupiah; total pengajuan memakai bruto, sedangkan
-  Nominal Setelah Pajak diisi manual dalam rupiah, tanpa perhitungan otomatis.
+- Beban: potongan pajak dalam rupiah; total pengajuan memakai bruto. Nominal
+  Setelah Pajak otomatis dihitung dari nominal dikurangi potongan pajak, dan
+  dapat diisi manual. Perubahan nominal atau pajak mengaktifkan hitung otomatis lagi.
 - Potongan pajak pada baris baru Honor dan Beban memiliki nilai awal 0 rupiah,
   tetap dapat diedit. Baris yang hanya berisi pajak default 0 tetap diabaikan.
 - Honor: Total Diterima diisi manual dalam rupiah, tanpa perhitungan otomatis;
