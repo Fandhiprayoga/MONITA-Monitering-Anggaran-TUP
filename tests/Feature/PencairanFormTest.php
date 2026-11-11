@@ -143,7 +143,7 @@ class PencairanFormTest extends TestCase
             $this->assertSame(0, $xpath->query('//form//*[@id="grid-help-modal" or @id="grid-help"]')->length);
             $help = $xpath->query('//*[@id="grid-help"]')->item(0)->textContent;
             $this->assertStringContainsString($instruction, $help);
-            if ($kind === 'beban') {
+            if (in_array($kind, ['beban', 'impresfund'], true)) {
                 $this->assertStringContainsString('peringatan di atas tabel yang mencantumkan nomor baris dan nilai yang seharusnya', $help);
                 $this->assertStringContainsString('tanpa mengubah nilai isian atau menghalangi penyimpanan', $help);
                 $this->assertSame(1, $xpath->query('//form//div[@data-grid-warnings and @role="status" and @aria-live="polite"]/following-sibling::div[contains(@class, "spreadsheet-viewport")]')->length);

@@ -24,8 +24,12 @@ test('Impresfund calculates fractional volume and rounds to cents', () => {
 
 test('Impresfund subtotal overrides automatic calculation and blank restores it', () => {
     const values = { uraian: 'ATK', volume: '2,5', tarif: '1.250,50' };
-    assert.deepEqual(calculateRow('impresfund', { ...values, subtotal: '4.000,25' }),
-        { gross: 400025, tax: 0, net: 400025 });
+    const result = calculateRow('impresfund', { ...values, subtotal: '4.000,25' });
+    assert.equal(result.gross, 400025);
+    assert.equal(result.net, 400025);
+    assert.equal(result.tax, 0);
+    assert.equal(result.errors, undefined);
+    assert.match(result.warnings.subtotal, /seharusnya 3\.126,25/);
     assert.equal(calculateRow('impresfund', { ...values, subtotal: '0' }).gross, 0);
     for (const subtotal of ['', '  ']) {
         assert.equal(calculateRow('impresfund', { ...values, subtotal }).gross, 312625);
@@ -40,6 +44,27 @@ test('Impresfund subtotal overrides automatic calculation and blank restores it'
     }).gross, 50000);
     assert.deepEqual(schemas.impresfund.filter((column) => !column.computed).map((column) => column.key),
         ['uraian', 'volume', 'tarif', 'subtotal']);
+});
+
+test('Impresfund warns on subtotal mismatches using the same rounded cents as automatic calculation', () => {
+    const values = { uraian: 'ATK', volume: '1,5', tarif: '0,01' };
+    for (const subtotal of ['0', '0,01', '0,03']) {
+        const result = calculateRow('impresfund', { ...values, subtotal });
+        assert.equal(result.gross, parseAmount(subtotal));
+        assert.equal(result.errors, undefined);
+        assert.match(result.warnings.subtotal, /seharusnya 0,02/);
+    }
+    for (const subtotal of ['', '  ', '0,02']) {
+        assert.equal(calculateRow('impresfund', { ...values, subtotal }).warnings, undefined);
+    }
+    assert.equal(calculateRow('impresfund', { ...values, tarif: '0', subtotal: '0' }).warnings, undefined);
+    assert.ok(calculateRow('impresfund', { ...values, uraian: '', subtotal: '0' }).warnings.subtotal);
+    for (const changes of [
+        { volume: '' }, { volume: 'invalid' }, { volume: '0' }, { tarif: 'invalid' },
+        { subtotal: 'invalid' }, { volume: '10000000000', tarif: '10000000000' },
+    ]) {
+        assert.equal(calculateRow('impresfund', { ...values, subtotal: '1', ...changes }).warnings, undefined);
+    }
 });
 
 test('Beban calculates after-tax amount by default and allows a manual override', () => {

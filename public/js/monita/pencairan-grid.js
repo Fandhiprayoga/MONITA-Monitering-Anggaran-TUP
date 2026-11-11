@@ -83,6 +83,13 @@ export function calculateRow(kind, values) {
         && numbers.neto !== numbers.nominal - numbers.pajak) {
         warnings.neto = `Perhitungan kurang tepat. Nominal Setelah Pajak seharusnya ${format(numbers.nominal - numbers.pajak)} (Nominal - Pot Pajak). Nilai yang diisi tetap digunakan.`;
     }
+    // Both operands are scaled by 100; bound the product before rounding to cents.
+    const product = kind === 'impresfund' ? numbers.volume * numbers.tarif : undefined;
+    const automaticSubtotal = Number.isSafeInteger(product) ? Math.round(product / 100) : undefined;
+    if (kind === 'impresfund' && numbers.volume > 0 && numbers.subtotal !== undefined
+        && automaticSubtotal !== undefined && numbers.subtotal !== automaticSubtotal) {
+        warnings.subtotal = `Perhitungan kurang tepat. Subtotal seharusnya ${format(automaticSubtotal)} (Volume x Tarif). Nilai yang diisi tetap digunakan.`;
+    }
     const warningResult = Object.keys(warnings).length ? { warnings } : {};
     if (Object.keys(errors).length) return { errors, ...warningResult };
     if (kind === 'beban') {
@@ -94,12 +101,9 @@ export function calculateRow(kind, values) {
         };
     }
     if (kind === 'honor') return { gross: numbers.nominal, tax: numbers.pajak, net: numbers.neto };
-    if (numbers.subtotal !== undefined) return { gross: numbers.subtotal, tax: 0, net: numbers.subtotal };
-    // Both operands are scaled by 100; bound the product before rounding to cents.
-    const product = numbers.volume * numbers.tarif;
-    if (!Number.isSafeInteger(product)) return { errors: { tarif: 'Hasil perkalian terlalu besar.' } };
-    const gross = Math.round(product / 100);
-    return { gross, tax: 0, net: gross };
+    if (numbers.subtotal !== undefined) return { gross: numbers.subtotal, tax: 0, net: numbers.subtotal, ...warningResult };
+    if (automaticSubtotal === undefined) return { errors: { tarif: 'Hasil perkalian terlalu besar.' } };
+    return { gross: automaticSubtotal, tax: 0, net: automaticSubtotal };
 }
 
 export function parseTsv(text) {
@@ -253,6 +257,7 @@ export function mountGrid(form) {
                 values[input.dataset.key] = input.value;
                 input.setAttribute('aria-label', `Baris ${index + 1}, ${columns.find((c) => c.key === input.dataset.key).label}`);
                 input.classList.remove('is-invalid');
+                input.closest('td').classList.remove('has-warning');
                 input.removeAttribute('aria-invalid');
                 input.removeAttribute('title');
             });
@@ -277,14 +282,17 @@ export function mountGrid(form) {
                     : `Subtotal otomatis: ${subtotal.placeholder || 'belum tersedia'}. Isi untuk mengganti manual; ubah Volume/Tarif untuk kembali otomatis.`);
             }
             if (kind === 'beban') {
-                const warningText = result.warnings?.neto ?? '';
-                if (warningText) warnings.push(`Baris ${index + 1}: ${warningText}`);
-                neto.closest('td').classList.toggle('has-warning', Boolean(warningText));
-                neto.title = result.errors?.neto ?? warningText;
                 const description = neto.dataset.manualNeto === 'true'
                     ? 'Nominal Setelah Pajak diisi manual. Ubah Nominal atau Pot Pajak untuk kembali ke perhitungan otomatis.'
                     : 'Nominal Setelah Pajak dihitung otomatis dari Nominal dikurangi Pot Pajak. Isi sel untuk menggunakan nilai manual.';
-                neto.setAttribute('aria-description', warningText ? `${warningText} ${description}` : description);
+                neto.setAttribute('aria-description', description);
+            }
+            for (const [key, warningText] of Object.entries(result.warnings ?? {})) {
+                const input = row.querySelector(`[data-key="${key}"]`);
+                warnings.push(`Baris ${index + 1}: ${warningText}`);
+                input.closest('td').classList.add('has-warning');
+                input.title = result.errors?.[key] ?? warningText;
+                input.setAttribute('aria-description', `${warningText} ${input.getAttribute('aria-description') ?? ''}`.trim());
             }
             if (!result.errors) gross += result.gross;
         });
@@ -526,7 +534,7 @@ export function mountGrid(form) {
         anchor = { row: start, col: startCol };
         const width = Math.max(...rows.map((row) => row.length));
         select(body.rows[start + rows.length - 1].querySelector(`[data-key="${editable[offset + width - 1].key}"]`), true);
-        notify(`${rows.length} baris ditempel. Periksa penanda merah bila ada data tidak valid.${kind === 'beban' ? ' Peringatan kuning menandai Nominal Setelah Pajak yang tidak sesuai perhitungan.' : ''}`);
+        notify(`${rows.length} baris ditempel. Periksa penanda merah bila ada data tidak valid.${['beban', 'impresfund'].includes(kind) ? ' Peringatan di atas tabel dan penanda kuning menunjukkan nilai yang tidak sesuai perhitungan.' : ''}`);
     });
 
     function clipboardRows(all) {
