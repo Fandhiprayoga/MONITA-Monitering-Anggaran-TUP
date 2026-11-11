@@ -206,6 +206,19 @@
 
                 @if($userRole === 'admin')
                     <li class="pc-item pc-caption">
+                        <label>Data Master</label>
+                        <i class="ti ti-database"></i>
+                    </li>
+
+                    <li class="pc-item">
+                        <a class="pc-link {{ request()->routeIs('jenis-penghasilan.*') ? 'active' : '' }}"
+                            href="{{ route('jenis-penghasilan.index') }}">
+                            <span class="pc-micon"><i class="ti ti-percentage"></i></span>
+                            <span class="pc-mtext">Jenis Penghasilan</span>
+                        </a>
+                    </li>
+
+                    <li class="pc-item pc-caption">
                         <label>Settings</label>
                         <i class="ti ti-settings"></i>
                     </li>

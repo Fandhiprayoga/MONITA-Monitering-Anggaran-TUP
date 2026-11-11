@@ -26,6 +26,7 @@ Tujuan utama sistem MONITA adalah mencapai efisiensi, akurasi, dan transparansi 
 - **Dashboard Interaktif**: Menampilkan ringkasan saldo, perbandingan anggaran vs. realisasi, dan status serapan per unit dalam bentuk grafik
 - **Manajemen Anggaran (CRUD)**: Kemampuan untuk mengimpor data dari file Excel/CSV/Google Sheets serta mencatat transaksi keuangan
 - **Manajemen Akun**: Admin memiliki akses penuh untuk menambah, mengubah, dan menghapus akun unit, serta mengelola peran pengguna
+- **Data Master Jenis Penghasilan**: Admin mengelola kode, nama jenis PPh, dan tarif PPh dalam persentase
 - **Pelaporan Otomatis**: Menghasilkan laporan keuangan terperinci dan ringkasan (Summary RKA, RKM, Pengembangan) dalam format PDF
 - **Preview Laporan PDF**: Fitur review laporan sebelum dicetak untuk memastikan akurasi data
 - **Keamanan Login**: Implementasi CAPTCHA untuk mencegah akses tidak sah

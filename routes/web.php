@@ -12,6 +12,7 @@ use App\Http\Controllers\ExportController;
 use App\Http\Controllers\PengajuanController;
 use App\Http\Controllers\PencairanController;
 use App\Http\Controllers\PencairanWorkflowController;
+use App\Http\Controllers\JenisPenghasilanController;
 
 // Redirect root ke login
 Route::get('/', function () {
@@ -87,6 +88,10 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
     Route::post('/management/update/{row}', [ManagementController::class, 'update'])->name('management.update');
     Route::delete('/management/delete/{row}', [ManagementController::class, 'destroy'])->name('management.destroy');
 
+    Route::get('/jenis-penghasilan', [JenisPenghasilanController::class, 'index'])->name('jenis-penghasilan.index');
+    Route::post('/jenis-penghasilan', [JenisPenghasilanController::class, 'store'])->name('jenis-penghasilan.store');
+    Route::patch('/jenis-penghasilan/{jenisPenghasilan}', [JenisPenghasilanController::class, 'update'])->name('jenis-penghasilan.update');
+    Route::delete('/jenis-penghasilan/{jenisPenghasilan}', [JenisPenghasilanController::class, 'destroy'])->name('jenis-penghasilan.destroy');
 
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::post('/settings/update', [SettingsController::class, 'update'])->name('settings.update');
