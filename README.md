@@ -77,7 +77,7 @@ tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
 - Paste Excel dimulai dari sel aktif, hanya kolom input (tanpa header
   tabel). Impresfund: No, Uraian, Volume, Tarif, Subtotal. Beban: No, Nominal, Pot Pajak, Nominal Setelah Pajak,
   Nama Bank, Nama Rekening, No Rekening.
-  Honor: No, WNI / WNA, Nominal Honor, Potongan Pajak, Total Diterima, Nama Penerima, Nama Rekening,
+  Honor: No, Kd Jenis, Nominal Honor, Potongan Pajak, Total Diterima, Nama Penerima, Nama Rekening,
   Nama Bank, Nomor Rekening, No KTP / Paspor, No NPWP.
 - Rincian tampil sebagai sel spreadsheet dengan header nama kolom tanpa kode huruf, nomor
   baris dan header yang tetap terlihat saat scroll, serta penanda rentang aktif.

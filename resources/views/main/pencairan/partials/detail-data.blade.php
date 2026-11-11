@@ -68,7 +68,7 @@
     $columnLabels = [
         'no' => 'No', 'uraian' => 'Uraian', 'volume' => 'Volume', 'tarif' => 'Tarif', 'subtotal' => 'Subtotal',
         'nominal' => 'Nominal', 'pajak' => 'Pot Pajak', 'neto' => 'Nominal Setelah Pajak', 'bank' => 'Nama Bank',
-        'nama' => 'Nama Rekening', 'rekening' => 'No Rekening', 'kewarganegaraan' => 'WNI / WNA',
+        'nama' => 'Nama Rekening', 'rekening' => 'No Rekening', 'kewarganegaraan' => 'Kd Jenis',
         'penerima' => 'Nama Penerima', 'identitas' => 'No KTP / Paspor', 'npwp' => 'No NPWP',
     ];
     $columns = array_values(array_filter(array_keys($rows[0] ?? []), fn ($column) => $column !== 'no'));

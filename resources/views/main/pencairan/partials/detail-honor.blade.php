@@ -3,8 +3,8 @@
     <option value="WNA"></option>
 </datalist>
 @include('main.pencairan.partials.grid', [
-    'columns' => ['WNI / WNA', 'Nominal Honor', 'Potongan Pajak', 'Total Diterima', 'Nama Penerima', 'Nama Rekening', 'Nama Bank', 'Nomor Rekening', 'No KTP / Paspor', 'No NPWP'],
-    'pasteColumns' => 'WNI / WNA, Nominal Honor, Potongan Pajak, Total Diterima, Nama Penerima, Nama Rekening, Nama Bank, Nomor Rekening, No KTP / Paspor, No NPWP',
+    'columns' => ['Kd Jenis', 'Nominal Honor', 'Potongan Pajak', 'Total Diterima', 'Nama Penerima', 'Nama Rekening', 'Nama Bank', 'Nomor Rekening', 'No KTP / Paspor', 'No NPWP'],
+    'pasteColumns' => 'Kd Jenis, Nominal Honor, Potongan Pajak, Total Diterima, Nama Penerima, Nama Rekening, Nama Bank, Nomor Rekening, No KTP / Paspor, No NPWP',
     'detailHelp' => 'Isi kewarganegaraan dengan WNI atau WNA. Potongan Pajak diisi dalam rupiah (isi 0 jika tidak ada);
         Total Diterima diisi manual dalam rupiah, tidak dihitung dari nominal honor dan pajak.
         No NPWP boleh kosong jika belum tersedia.

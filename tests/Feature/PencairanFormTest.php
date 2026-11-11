@@ -92,7 +92,7 @@ class PencairanFormTest extends TestCase
             ->assertOk()
             ->assertSee('data-grid-body', false)
             ->assertSee('pencairan-grid.js')
-            ->assertSee('WNI / WNA')
+            ->assertSee('Kd Jenis')
             ->assertSee('Nominal Honor')
             ->assertSee('Potongan Pajak')
             ->assertSee('Total Diterima')

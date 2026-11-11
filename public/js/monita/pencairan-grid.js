@@ -20,7 +20,7 @@ export const schemas = {
         { key: 'rekening', label: 'No Rekening' },
     ],
     honor: [
-        { key: 'kewarganegaraan', label: 'WNI / WNA', choices: ['WNI', 'WNA'], list: 'honor-kewarganegaraan' },
+        { key: 'kewarganegaraan', label: 'Kd Jenis', choices: ['WNI', 'WNA'], list: 'honor-kewarganegaraan' },
         { key: 'nominal', label: 'Nominal Honor', numeric: true, money: true },
         { key: 'pajak', label: 'Potongan Pajak', numeric: true, defaultValue: '0', money: true },
         { key: 'neto', label: 'Total Diterima', numeric: true, money: true },
