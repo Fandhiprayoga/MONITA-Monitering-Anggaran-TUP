@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateRow, parseAmount, parseTsv, toTsv, schemas } from '../../public/js/monita/pencairan-grid.js';
+import { calculateRow, formatAmount, parseAmount, parseTsv, toTsv, schemas } from '../../public/js/monita/pencairan-grid.js';
 
 test('Indonesian amounts are parsed exactly to cents; invalid formats are rejected', () => {
     assert.equal(parseAmount('1.250,50'), 125050);
@@ -8,6 +8,12 @@ test('Indonesian amounts are parsed exactly to cents; invalid formats are reject
     for (const value of ['', '-1', '1,250.50', '12.34', 'NaN', '1e3', '1,234', '10000000001']) {
         assert.throws(() => parseAmount(value));
     }
+});
+
+test('Pasted numeric values can be formatted with Indonesian separators', () => {
+    assert.equal(formatAmount('150000'), '150.000');
+    assert.equal(formatAmount('1250,5'), '1.250,5');
+    assert.throws(() => formatAmount('invalid'));
 });
 
 test('Impresfund calculates fractional volume and rounds to cents', () => {

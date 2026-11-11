@@ -46,6 +46,10 @@ export function parseAmount(value) {
     return cents;
 }
 
+export function formatAmount(value) {
+    return format(parseAmount(value));
+}
+
 export function calculateRow(kind, values) {
     const columns = schemas[kind];
     if (!columns) throw new Error('Jenis form tidak dikenal.');
@@ -186,10 +190,10 @@ export function mountGrid(form) {
         return tr;
     }
 
-    function formatMoneyCell(input) {
+    function formatNumericCell(input) {
         const column = columns[position(input).col];
-        if (!column.money) return;
-        try { input.value = format(parseAmount(input.value)); } catch { /* biarkan nilai mentah agar validasi menandainya */ }
+        if (!column.numeric) return;
+        try { input.value = formatAmount(input.value); } catch { /* biarkan nilai mentah agar validasi menandainya */ }
     }
 
     // Volume/Tarif changes invalidate a manual Subtotal override so it follows the product again.
@@ -248,7 +252,7 @@ export function mountGrid(form) {
         editing.classList.remove('is-editing');
         editing.removeAttribute('list');
         editing = null;
-        formatMoneyCell(input);
+        formatNumericCell(input);
     }
 
     function select(input, extend = false, focus = true) {
@@ -325,7 +329,7 @@ export function mountGrid(form) {
         if (column.list) input.setAttribute('list', column.list);
         if (replace) input.value = '';
         else input.select();
-        formatMoneyCell(input);
+        formatNumericCell(input);
     }
 
     body.addEventListener('focusin', (event) => {
@@ -444,6 +448,7 @@ export function mountGrid(form) {
         rows.forEach((row, r) => row.forEach((value, c) => {
             const input = body.rows[start + r].querySelector(`[data-key="${editable[offset + c].key}"]`);
             input.value = value;
+            formatNumericCell(input);
             resetSubtotal(input);
         }));
         recalculate();
