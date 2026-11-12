@@ -69,7 +69,7 @@ Kondisi awal: halaman form dan grid sudah tersedia, tetapi belum ada endpoint pe
 |---|---|---|
 | Lihat daftar/detail | Hanya PP sendiri | Semua PP |
 | Buat draft | PP sendiri | Unit yang dipilih dari sheet users kolom B/C |
-| Edit isi | PP sendiri, `draft`/`returned` | Semua PP, `draft`/`returned`; unit draft tidak dapat diganti |
+| Edit isi | PP sendiri, `draft`/`returned` | Semua PP, `draft`/`returned`/`submitted`/`verified`/`completed`; unit tidak dapat diganti |
 | Submit/submit ulang | PP sendiri, `draft`/`returned` | Semua PP, `draft`/`returned` |
 | Batalkan | PP sendiri, `draft`/`returned` | Semua PP, `draft`/`submitted`/`returned`; remark wajib |
 | Verifikasi | Tidak | Hanya `submitted` |
@@ -88,9 +88,9 @@ Kondisi awal: halaman form dan grid sudah tersedia, tetapi belum ada endpoint pe
 | Kode | Label | Makna |
 |---|---|---|
 | `draft` | Draft | Tersimpan, belum dikirim ke admin |
-| `submitted` | Menunggu Verifikasi | Isi terkunci, masuk antrean verifikasi |
+| `submitted` | Menunggu Verifikasi | Isi terkunci untuk pengguna PP, masuk antrean verifikasi |
 | `returned` | Dikembalikan untuk Perbaikan | Isi dapat diperbaiki; tampilkan remark terakhir dan riwayat |
-| `verified` | Terverifikasi / Menunggu Transaksi | Lolos verifikasi; isi terkunci |
+| `verified` | Terverifikasi / Menunggu Transaksi | Lolos verifikasi; isi terkunci untuk pengguna PP |
 | `completed` | Berdasarkan jenis | Proses MONITA selesai |
 | `cancelled` | Dibatalkan | Terminal; isi tidak dapat diedit atau disubmit |
 
@@ -107,7 +107,7 @@ Transisi yang diperbolehkan:
 8. `submitted/returned → cancelled`: admin verifikator, remark wajib dan konfirmasi; termasuk pengembalian yang sudah melewati periode asal. Pengguna tidak perlu mengedit atau submit ulang untuk pembatalan ini. Pengajuan verified harus dikembalikan dahulu sebelum dibatalkan; completed tidak dapat dibatalkan.
 9. `draft → cancelled`: admin dapat membatalkan draft semua PP, remark wajib. Transisi create/edit/submit pengguna juga berlaku untuk admin pada unit terpilih dengan seluruh validasi periode, saldo, dan konflik tetap sama.
 
-Transisi lain ditolak server. `completed` dan `cancelled` terminal pada MVP. Pengembalian dari antrean transaksi membatalkan kelayakan verifikasi versi sebelumnya, tetapi tidak menghapus audit atau snapshot. Metadata verifikasi aktif direset; riwayat verifikasi sebelumnya tetap tersimpan. Pengajuan selesai belum dapat dibuka kembali.
+Transisi lain ditolak server. `completed` dan `cancelled` terminal untuk perubahan status. Admin tetap dapat mengedit isi `completed` tanpa mengubah status atau data penyelesaian; snapshot revisi yang disubmit tetap tersimpan. Pengembalian dari antrean transaksi membatalkan kelayakan verifikasi versi sebelumnya, tetapi tidak menghapus audit atau snapshot. Metadata verifikasi aktif direset; riwayat verifikasi sebelumnya tetap tersimpan. Pengajuan selesai belum dapat dibuka kembali.
 
 ## 6. Nomor pengajuan
 
@@ -173,7 +173,7 @@ Transisi lain ditolak server. `completed` dan `cancelled` terminal pada MVP. Pen
 - Admin melihat rincian, total, snapshot anggaran, dan seluruh remark/revisi.
 - Tombol verifikasi dan kembalikan meminta konfirmasi.
 - Pengembalian wajib remark bermakna (bukan whitespace), ditampilkan ke pengguna.
-- Admin boleh edit draft/returned semua PP lalu submit, tetapi isi tetap terkunci pada submitted/verified/completed/cancelled. Koreksi setelah verifikasi tetap melalui pengembalian dan submit ulang.
+- Admin boleh edit draft/returned semua PP lalu submit, serta mengedit submitted/verified/completed tanpa mengubah status. Isi cancelled tetap terkunci. Pengembalian untuk perbaikan pengguna tetap melalui submit dan verifikasi ulang.
 - Verifikator memiliki aksi “Batalkan Pengajuan” untuk submitted/returned dengan konfirmasi dan remark wajib. Tersedia di antrean menunggu verifikasi dan daftar/detail returned, termasuk lintas periode. Pembatalan langsung tidak mensyaratkan pengguna mengedit form; nomor, snapshot, dan riwayat dipertahankan. Pengajuan keluar dari antrean aktif dan alasan pembatalan ditampilkan kepada PP.
 
 ### FR-06 — Transaksi dan penyelesaian

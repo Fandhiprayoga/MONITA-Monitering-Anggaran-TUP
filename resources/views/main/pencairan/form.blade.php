@@ -91,7 +91,9 @@
                     </div>
                     <p id="pengajuan-actions-info" class="text-muted small text-end mt-2 mb-0">
                         @if($adminStatusEdit ?? false)
-                            @if($pengajuan->status === 'verified')
+                            @if($pengajuan->status === 'completed')
+                                Perubahan tersimpan tanpa mengubah status selesai.
+                            @elseif($pengajuan->status === 'verified')
                                 Perubahan tersimpan tanpa mengubah status menunggu transaksi.
                             @else
                                 Perubahan tersimpan tanpa mengubah status menunggu verifikasi.

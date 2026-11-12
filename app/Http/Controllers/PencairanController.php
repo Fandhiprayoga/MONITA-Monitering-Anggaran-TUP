@@ -203,7 +203,7 @@ class PencairanController extends Controller
     {
         $service = app(PencairanService::class);
         $actor = $service->authorize($request, $pengajuan);
-        $adminStatusEdit = $actor['role'] === 'admin' && in_array($pengajuan->status, ['submitted', 'verified'], true);
+        $adminStatusEdit = $actor['role'] === 'admin' && in_array($pengajuan->status, ['submitted', 'verified', 'completed'], true);
         $canEdit = $adminStatusEdit
             || (in_array($pengajuan->status, ['draft', 'returned'], true)
                 && ($actor['role'] === 'admin' || ($actor['kode_pp'] !== '' && $pengajuan->kode_pp === $actor['kode_pp'])));

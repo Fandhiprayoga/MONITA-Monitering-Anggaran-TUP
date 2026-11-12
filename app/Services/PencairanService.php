@@ -344,7 +344,7 @@ class PencairanService
             abort_unless($actor['role'] === 'admin' || ($actor['kode_pp'] !== '' && $p->kode_pp === $actor['kode_pp']), 403, 'Pengajuan hanya dapat diubah atau disubmit untuk PP sendiri.');
         }
         $allowed = match ($operation) {
-            'update' => $actor['role'] === 'admin' ? ['draft', 'returned', 'submitted', 'verified'] : ['draft', 'returned'],
+            'update' => $actor['role'] === 'admin' ? ['draft', 'returned', 'submitted', 'verified', 'completed'] : ['draft', 'returned'],
             'submit' => ['draft', 'returned'], 'return' => ['submitted', 'verified'],
             'verify' => ['submitted'], 'complete', 'simkug' => ['verified'],
             'cancel' => $actor['role'] === 'admin' ? ['draft', 'submitted', 'returned'] : ['draft', 'returned'],

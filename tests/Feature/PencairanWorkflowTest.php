@@ -645,6 +645,53 @@ class PencairanWorkflowTest extends TestCase
     }
 
     #[DataProvider('kinds')]
+    public function test_admin_can_edit_completed_pengajuan_without_changing_completion(string $jenis): void
+    {
+        $p = $this->verified($jenis);
+        $this->action($p, 'complete', ['completion_date' => '2026-10-31'])->assertOk();
+        $p->refresh();
+        $completion = $p->completion->toArray();
+        $revision = $p->revisions()->firstOrFail()->snapshot;
+        $payload = [
+            'lock_version' => $p->lock_version,
+            'drk_id' => str_repeat('a', 64),
+            'uraian_pengajuan' => 'Narasi selesai diperbarui',
+            'details' => [array_replace($this->row($jenis), $jenis === 'impresfund'
+                ? ['uraian' => 'Rincian diperbarui', 'tarif' => '100']
+                : ['nominal' => '200'])],
+        ];
+
+        $this->get(route('pencairan.show', ['pengajuan' => $p, 'menu' => 'transaksi']))
+            ->assertOk()->assertSee('Edit Data Pengajuan');
+        $this->get(route('pencairan.edit', ['pengajuan' => $p, 'menu' => 'transaksi']))
+            ->assertOk()->assertSee('Simpan Perubahan')->assertDontSee('Submit Pengajuan')
+            ->assertSee('Perubahan tersimpan tanpa mengubah status selesai.')
+            ->assertSee('data-menu="transaksi"', false);
+        $this->patchJson(route('pencairan.update', $p), $payload)->assertOk();
+        $this->patchJson(route('pencairan.update', $p), $payload)->assertConflict();
+
+        $saved = $p->fresh();
+        $this->assertSame('completed', $saved->status);
+        $this->assertSame('Narasi selesai diperbarui', $saved->uraian_pengajuan);
+        $this->assertSame('200.00', $saved->total_bruto);
+        $this->assertSame($completion, $saved->completion->toArray());
+        $this->assertSame($revision, $saved->revisions()->firstOrFail()->snapshot);
+        $this->assertSame(1, $saved->revisions()->count());
+        $history = $saved->histories()->where('action', 'save')->sole();
+        $this->assertSame('admin', $history->actor_role);
+        $this->assertSame('completed', $history->from_status);
+        $this->assertSame('completed', $history->to_status);
+
+        $this->login();
+        $this->get(route('pencairan.show', $p))->assertOk()->assertDontSee('Edit Data Pengajuan');
+        $this->get(route('pencairan.edit', $p))->assertForbidden();
+        $this->patchJson(route('pencairan.update', $p), array_replace($payload, [
+            'lock_version' => $saved->lock_version,
+        ]))->assertConflict();
+        $this->assertSame('Narasi selesai diperbarui', $p->fresh()->uraian_pengajuan);
+    }
+
+    #[DataProvider('kinds')]
     public function test_all_forms_save_incomplete_drafts_and_roundtrip_manual_values(string $jenis): void
     {
         $row = $this->row($jenis);
