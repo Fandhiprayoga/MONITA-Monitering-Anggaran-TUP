@@ -2,7 +2,7 @@
 @section('title', 'Detail Pengajuan | MONITA')
 @section('content')
 @php
-    $showSimkug = $pengajuan->status === 'verified'
+    $showSimkug = ($pengajuan->status === 'verified' && $actor['role'] === 'admin')
         || ($pengajuan->status === 'completed' && ($actor['role'] === 'admin' || $pengajuan->jenis === 'impresfund'));
     $simkugActive = $showSimkug && (request('tab') === 'simkug' || session()->hasOldInput('simkug'));
     $headerFieldOrder = ['kode_akun', 'nama_akun', 'kode_pp', 'nama_pp', 'kode_drk', 'uraian_drk', 'saldo_awal', 'anggaran_terpakai', 'saldo_terkini', 'tipe', 'drk_tup'];

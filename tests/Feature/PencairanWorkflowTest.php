@@ -368,6 +368,25 @@ class PencairanWorkflowTest extends TestCase
     }
 
     #[DataProvider('kinds')]
+    public function test_verified_simkug_is_visible_only_to_admin(string $jenis): void
+    {
+        $p = $this->verified($jenis);
+        $url = route('pencairan.show', ['pengajuan' => $p, 'tab' => 'simkug']);
+
+        $this->get($url)->assertOk()
+            ->assertSee('>SIMKUG</button>', false)
+            ->assertSee('id="pengajuan-simkug-'.$p->id.'"', false);
+
+        $this->login();
+        $this->get($url)->assertOk()
+            ->assertSee('>Detail</button>', false)
+            ->assertSee('>Riwayat</button>', false)
+            ->assertDontSee('>SIMKUG</button>', false)
+            ->assertDontSee('id="pengajuan-simkug-'.$p->id.'"', false)
+            ->assertDontSee('tabindex="0" data-simkug-panel', false);
+    }
+
+    #[DataProvider('kinds')]
     public function test_completed_simkug_is_visible_to_admin_and_remains_readonly(string $jenis): void
     {
         $p = $this->verified($jenis);
