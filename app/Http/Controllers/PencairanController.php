@@ -156,6 +156,12 @@ class PencairanController extends Controller
                 return $row;
             })->all();
         }
+        $jenisPphByCode = [];
+        if ($pengajuan->jenis === 'honor' && $pengajuan->status === 'verified') {
+            $jenisPphByCode = JenisPenghasilan::query()->get(['kode_jenis', 'nama_jenis_pph'])
+                ->mapWithKeys(fn (JenisPenghasilan $jenis) => [strtoupper(trim($jenis->kode_jenis)) => $jenis->nama_jenis_pph])
+                ->all();
+        }
         $headerSnapshot = $pengajuan->header_snapshot ?? [];
         $kodePpSheet = trim((string) ($headerSnapshot['kode_pp_sheet'] ?? ''));
         if ($kodePpSheet === '' && $pengajuan->drk_source_id) {
@@ -189,7 +195,7 @@ class PencairanController extends Controller
             'kode_drk' => $headerSnapshot['kode_drk'] ?? '',
             'nama_drk' => $headerSnapshot['uraian_drk'] ?? '',
         ];
-        return view('main.pencairan.show', compact('pengajuan', 'actor', 'pending', 'displayRows', 'headerSnapshot', 'simkugData')
+        return view('main.pencairan.show', compact('pengajuan', 'actor', 'pending', 'displayRows', 'headerSnapshot', 'simkugData', 'jenisPphByCode')
             + $this->detailNavigation($request, $pengajuan));
     }
 

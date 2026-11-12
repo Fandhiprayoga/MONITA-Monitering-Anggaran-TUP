@@ -193,14 +193,50 @@ class PencairanWorkflowTest extends TestCase
             $detailHeaders = $xpath->query('//section[@id="pengajuan-detail-'.$p->id.'"]//button[@data-grid-select-column]');
             $simkugHeaders = $xpath->query($panel.'//button[@data-grid-select-column]');
             $this->assertSame(['No KTP / Paspor', 'No NPWP'], array_slice($cellValues($detailHeaders), -2));
-            $this->assertSame(['No NPWP', 'No KTP / Paspor'], array_slice($cellValues($simkugHeaders), -2));
+            $this->assertSame(['No NPWP', 'Jenis PPh', 'No KTP / Paspor'], array_slice($cellValues($simkugHeaders), -3));
             $this->assertSame(['0000000000000098', '000012'], array_slice($expectedCells, -2));
             $last = count($expectedCells) - 1;
             [$expectedCells[$last - 1], $expectedCells[$last]] = [$expectedCells[$last], $expectedCells[$last - 1]];
+            array_splice($expectedCells, $last, 0, ['PPh Pasal 21']);
         }
         $this->assertSame($expectedCells, $cellValues($simkugCells));
         $this->assertSame(1, $xpath->query($panel.'//*[@data-simkug-copy-status][@role="status"]')->length);
         $this->assertSame(0, $xpath->query($panel.'//form')->length);
+    }
+
+    public function test_honor_simkug_uses_current_income_type_name_for_each_row(): void
+    {
+        $p = $this->draft('honor', [
+            $this->row('honor'),
+            array_replace($this->row('honor'), ['kode_jenis' => '01']),
+        ]);
+        $this->action($p, 'submit')->assertOk();
+        $this->login('admin', '', 'admin');
+        $this->action($p, 'verify')->assertOk();
+
+        $readRows = function () use ($p) {
+            $response = $this->get(route('pencairan.show', $p))->assertOk();
+            $document = new \DOMDocument();
+            $previous = libxml_use_internal_errors(true);
+            try { $document->loadHTML($response->getContent()); }
+            finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
+            $xpath = new \DOMXPath($document);
+            $rows = $xpath->query('//section[@data-simkug-panel]//tr[@data-grid-row]');
+            return array_map(
+                fn ($row) => array_map(fn ($cell) => trim($cell->textContent), iterator_to_array($xpath->query('./td', $row))),
+                iterator_to_array($rows)
+            );
+        };
+
+        $rows = $readRows();
+        $this->assertSame(['000012', 'PPh Pasal 21', '0000000000000098'], array_slice($rows[0], -3));
+        $this->assertSame(['000012', 'Honorarium', '0000000000000098'], array_slice($rows[1], -3));
+
+        JenisPenghasilan::where('kode_jenis', 'PPH-21')->update(['nama_jenis_pph' => 'PPh Baru']);
+        JenisPenghasilan::where('kode_jenis', '01')->delete();
+        $rows = $readRows();
+        $this->assertSame('PPh Baru', $rows[0][count($rows[0]) - 2]);
+        $this->assertSame('Tidak ditemukan di data jenis penghasilan', $rows[1][count($rows[1]) - 2]);
     }
 
     private function simkugPayload(): array
