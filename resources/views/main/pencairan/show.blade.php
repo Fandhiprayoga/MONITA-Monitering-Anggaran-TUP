@@ -126,7 +126,7 @@
                             <strong>{{ $toStatus }}</strong>
                             @if($event->revision_no)<span class="workflow-timeline-revision">Revisi {{ $event->revision_no }}</span>@endif
                         </div>
-                        @if($event->remark)<div class="workflow-timeline-remark"><strong>Catatan:</strong> {{ $event->remark }}</div>@endif
+                        @if($event->display_remark)<div class="workflow-timeline-remark"><strong>Catatan:</strong> {{ $event->display_remark }}</div>@endif
                     </article>
                 </li>
             @endforeach

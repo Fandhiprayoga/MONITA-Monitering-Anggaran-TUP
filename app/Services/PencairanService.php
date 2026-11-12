@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Bank;
 use App\Models\JenisPenghasilan;
 use App\Models\PencairanActor;
+use App\Models\PencairanHistory;
 use App\Models\PencairanPengajuan;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
@@ -540,9 +541,9 @@ class PencairanService
                             'detail_values' => $current->details->map(fn ($row) => $row->only(['urutan', 'volume', 'tarif', 'subtotal_manual', 'subtotal_efektif', 'nominal', 'pajak', 'neto']))->all(),
                             'totals' => $totals, 'budget' => $drk]]);
                 }
-                $remark = $operation === 'simkug' ? json_encode([
-                    'sebelum' => $p->simkug_data, 'sesudah' => $data['simkug'],
-                ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) : ($data['remark'] ?? null);
+                $remark = $operation === 'simkug'
+                    ? PencairanHistory::simkugRemark($data['simkug']['dc'])
+                    : ($data['remark'] ?? null);
                 $this->history($current, $actor, $local, $operation === 'update' ? 'save' : $operation, $from, $remark);
                 $response = $this->response($current);
                 if ($hash !== null) { DB::table('pengajuan_idempotencies')->insert(['actor_id' => $local->id, 'pengajuan_id' => $current->id, 'operation' => $operation, 'key' => $data['idempotency_key'], 'payload_hash' => $hash, 'response' => json_encode($response), 'created_at' => now(), 'updated_at' => now()]); }

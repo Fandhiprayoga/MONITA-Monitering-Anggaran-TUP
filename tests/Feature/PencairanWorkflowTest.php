@@ -295,11 +295,19 @@ class PencairanWorkflowTest extends TestCase
         $this->assertSame($details, $saved->detailRows());
         $history = $saved->histories()->where('action', 'simkug')->firstOrFail();
         $this->assertSame('admin', $history->actor_role);
-        $this->assertSame($saved->simkug_data, json_decode($history->remark, true)['sesudah']);
+        $this->assertSame('Posisi D/C diatur ke Kredit.', $history->remark);
+        $this->assertSame('Posisi D/C diatur ke Kredit.', $history->display_remark);
+        $legacyHistory = new PencairanHistory([
+            'action' => 'simkug',
+            'remark' => json_encode(['sebelum' => null, 'sesudah' => ['dc' => 'C']]),
+        ]);
+        $this->assertSame('Posisi D/C diatur ke Kredit.', $legacyHistory->display_remark);
         $this->get(route('pencairan.show', ['pengajuan' => $p, 'menu' => 'transaksi', 'tab' => 'simkug']))
             ->assertOk()->assertViewHas('simkugData', fn ($data) => $data['dc'] === 'C'
                 && $data['kode_akun'] === '001' && $data['nilai'] === '100,00')
-            ->assertSee('value="001"', false);
+            ->assertSee('value="001"', false)
+            ->assertSee('Posisi D/C diatur ke Kredit.')
+            ->assertDontSee('"sebelum"');
         $this->patchJson($url, ['lock_version' => $p->lock_version, 'simkug' => $this->simkugPayload()])
             ->assertStatus(409);
     }
