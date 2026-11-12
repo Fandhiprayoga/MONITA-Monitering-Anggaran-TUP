@@ -79,12 +79,22 @@
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4">
                         <a href="{{ $backUrl ?? route('pencairan.pengajuan', ['jenis' => $jenis]) }}" class="btn btn-outline-secondary">Kembali</a>
                         <div class="d-flex flex-wrap gap-2">
-                            <button type="button" data-save-draft class="btn btn-outline-primary">Simpan {{ isset($pengajuan) && $pengajuan->status === 'returned' ? 'Perbaikan' : 'sebagai Draft' }}</button>
-                            <button type="submit" class="btn btn-primary">Submit Pengajuan</button>
+                            <button type="button" data-save-draft class="btn btn-outline-primary">
+                                @if($adminPendingEdit ?? false) Simpan Perubahan
+                                @else Simpan {{ isset($pengajuan) && $pengajuan->status === 'returned' ? 'Perbaikan' : 'sebagai Draft' }}
+                                @endif
+                            </button>
+                            @unless($adminPendingEdit ?? false)
+                                <button type="submit" class="btn btn-primary">Submit Pengajuan</button>
+                            @endunless
                         </div>
                     </div>
                     <p id="pengajuan-actions-info" class="text-muted small text-end mt-2 mb-0">
-                        Perubahan belum tersimpan sampai tombol simpan berhasil. Isi terkunci setelah submit.
+                        @if($adminPendingEdit ?? false)
+                            Perubahan tersimpan tanpa mengubah status menunggu verifikasi.
+                        @else
+                            Perubahan belum tersimpan sampai tombol simpan berhasil. Isi terkunci setelah submit.
+                        @endif
                     </p>
                 </form>
                 <noscript><div class="alert alert-danger mt-3">Aktifkan JavaScript untuk mengisi rincian dan menghitung total.</div></noscript>

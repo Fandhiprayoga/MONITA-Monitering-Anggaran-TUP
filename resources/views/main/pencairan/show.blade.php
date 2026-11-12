@@ -57,7 +57,7 @@
     <h6 class="mb-3">Riwayat Tindakan</h6>
     @php
         $actionLabels = [
-            'create' => 'Pengajuan dibuat', 'save' => 'Draft diperbarui', 'submit' => 'Diajukan untuk verifikasi',
+            'create' => 'Pengajuan dibuat', 'save' => 'Data pengajuan diperbarui', 'submit' => 'Diajukan untuk verifikasi',
             'return' => 'Dikembalikan untuk perbaikan', 'verify' => 'Pengajuan diverifikasi',
             'cancel' => 'Pengajuan dibatalkan', 'complete' => 'Proses diselesaikan',
             'simkug' => 'Data SIMKUG disimpan',
@@ -109,6 +109,9 @@
         <a href="{{ $backUrl }}" class="btn btn-outline-secondary">Kembali ke Daftar</a>
         @if($ownPp && in_array($pengajuan->status,['draft','returned']))
             <a href="{{ route('pencairan.edit', ['pengajuan' => $pengajuan, 'menu' => $activeMenu]) }}" class="btn btn-primary">Edit / Submit</a>
+        @endif
+        @if($actor['role'] === 'admin' && $pengajuan->status === 'submitted')
+            <a href="{{ route('pencairan.edit', ['pengajuan' => $pengajuan, 'menu' => $activeMenu]) }}" class="btn btn-primary">Edit Data Pengajuan</a>
         @endif
         @foreach($actions as $action => $label)
             <button type="button" class="btn {{ in_array($action,['cancel','return']) ? 'btn-outline-danger' : 'btn-primary' }}{{ $loop->first ? ' ms-auto' : '' }}" data-bs-toggle="modal" data-bs-target="#workflow-{{ $action }}-{{ $pengajuan->id }}">{{ $label }}</button>

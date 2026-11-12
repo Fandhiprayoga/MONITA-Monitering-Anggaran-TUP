@@ -356,7 +356,7 @@ class PencairanWorkflowTest extends TestCase
         try { $document->loadHTML($response->getContent()); }
         finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
         $xpath = new \DOMXPath($document);
-        $this->assertSame(1, $xpath->query('//div[@data-workflow-actions]/a')->length);
+        $this->assertSame(2, $xpath->query('//div[@data-workflow-actions]/a')->length);
         $this->assertSame(3, $xpath->query('//div[@data-workflow-actions]/button[@data-bs-toggle="modal"]')->length);
         $this->assertSame(0, $xpath->query('//section//form[@data-workflow-form]')->length);
         foreach (['verify', 'return', 'cancel'] as $action) {
@@ -399,15 +399,18 @@ class PencairanWorkflowTest extends TestCase
         $this->patchJson(route('pencairan.update', $p), ['lock_version' => $p->lock_version, 'drk_id' => str_repeat('a',64), 'uraian_pengajuan' => 'Narasi admin', 'details' => [$this->row($jenis)]])->assertOk();
         $this->postJson(route('pencairan.submit', $p), ['lock_version' => $p->fresh()->lock_version, 'idempotency_key' => 'admin-'.$jenis])->assertOk();
         $number = $p->fresh()->nomor_pengajuan;
-        $this->get(route('pencairan.edit', $p))->assertForbidden();
+        $this->get(route('pencairan.edit', $p))->assertOk()->assertDontSee('Submit Pengajuan');
         $this->action($p, 'returnToUser', ['remark' => 'Perbaiki'])->assertOk();
         $this->get(route('pencairan.show', $p))->assertOk()->assertSee('Edit / Submit');
         $this->action($p, 'submit')->assertOk();
         $this->assertSame($number, $p->fresh()->nomor_pengajuan);
         $this->login('admin', 'PP02', 'other-admin');
         $this->get(route('pencairan.show', $p))->assertOk()->assertDontSee('Edit / Submit');
-        $this->get(route('pencairan.edit', $p))->assertForbidden();
-        $this->patchJson(route('pencairan.update', $p), ['lock_version'=>$p->fresh()->lock_version, 'details'=>[]])->assertStatus(409);
+        $this->get(route('pencairan.edit', $p))->assertOk()->assertSee('Simpan Perubahan');
+        $this->patchJson(route('pencairan.update', $p), [
+            'lock_version' => $p->fresh()->lock_version, 'drk_id' => str_repeat('a',64),
+            'uraian_pengajuan' => 'Narasi admin lain', 'details' => [$this->row($jenis)],
+        ])->assertOk();
         $this->action($p,'submit')->assertStatus(409);
         $this->action($p,'verify')->assertOk();
     }
@@ -509,6 +512,43 @@ class PencairanWorkflowTest extends TestCase
             $this->login('user','OTHER','other');
             $this->get(route('pencairan.show',$p))->assertForbidden();
         }
+    }
+
+    public function test_admin_can_edit_submitted_pengajuan_without_changing_its_status(): void
+    {
+        $p = $this->submitted();
+        $this->login('admin', '', 'admin');
+
+        $this->get(route('pencairan.show', ['pengajuan' => $p, 'menu' => 'verifikasi']))
+            ->assertOk()->assertSee('Edit Data Pengajuan');
+        $this->get(route('pencairan.edit', ['pengajuan' => $p, 'menu' => 'verifikasi']))
+            ->assertOk()->assertSee('Simpan Perubahan')->assertDontSee('Submit Pengajuan')
+            ->assertSee('Perubahan tersimpan tanpa mengubah status menunggu verifikasi.')
+            ->assertSee('data-menu="verifikasi"', false);
+
+        $this->patchJson(route('pencairan.update', $p), [
+            'lock_version' => $p->lock_version,
+            'drk_id' => str_repeat('a', 64),
+            'uraian_pengajuan' => 'Narasi diperbarui admin',
+            'details' => [array_replace($this->row('beban'), ['nominal' => '200'])],
+        ])->assertOk();
+
+        $saved = $p->fresh();
+        $this->assertSame('submitted', $saved->status);
+        $this->assertSame('Narasi diperbarui admin', $saved->uraian_pengajuan);
+        $this->assertSame('200.00', $saved->total_bruto);
+        $this->assertSame(1, $saved->revisions()->count());
+        $this->assertSame(1, $saved->histories()->where('action', 'save')->count());
+
+        $this->login();
+        $this->get(route('pencairan.show', $p))->assertOk()->assertDontSee('Edit Data Pengajuan');
+        $this->patchJson(route('pencairan.update', $p), [
+            'lock_version' => $saved->lock_version,
+            'drk_id' => str_repeat('a', 64),
+            'uraian_pengajuan' => 'Tidak boleh diubah user',
+            'details' => [$this->row('beban')],
+        ])->assertStatus(409);
+        $this->assertSame('Narasi diperbarui admin', $p->fresh()->uraian_pengajuan);
     }
 
     #[DataProvider('kinds')]

@@ -197,7 +197,11 @@ class PencairanController extends Controller
     {
         $service = app(PencairanService::class);
         $actor = $service->authorize($request, $pengajuan);
-        abort_unless(($actor['role'] === 'admin' || ($actor['kode_pp'] !== '' && $pengajuan->kode_pp === $actor['kode_pp'])) && in_array($pengajuan->status, ['draft', 'returned'], true), 403);
+        $adminPendingEdit = $actor['role'] === 'admin' && $pengajuan->status === 'submitted';
+        $canEdit = $adminPendingEdit
+            || (in_array($pengajuan->status, ['draft', 'returned'], true)
+                && ($actor['role'] === 'admin' || ($actor['kode_pp'] !== '' && $pengajuan->kode_pp === $actor['kode_pp'])));
+        abort_unless($canEdit, 403);
         $options = []; $error = null;
         try { $options = $service->drkOptionsForPeriod($pengajuan->kode_pp, $pengajuan->triwulan, $pengajuan->tahun_anggaran); }
         catch (\Throwable $e) { report($e); $error = 'Gagal memuat DRK dan saldo. Draft tetap dapat disimpan; submit memerlukan data sumber terkini.'; }
@@ -205,6 +209,7 @@ class PencairanController extends Controller
             'jenisPenghasilanOptions' => $this->jenisPenghasilanOptions($pengajuan->jenis),
             'bankOptions' => $this->bankOptions($pengajuan->jenis),
             'activeTw' => $pengajuan->triwulan, 'drkOptions' => $options, 'drkError' => $error, 'pengajuan' => $pengajuan,
+            'adminPendingEdit' => $adminPendingEdit,
             'selectedUnit' => $pengajuan->kode_pp, 'selectedUnitName' => $pengajuan->nama_pp]
             + $this->detailNavigation($request, $pengajuan));
     }
