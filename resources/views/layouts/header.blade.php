@@ -57,7 +57,7 @@
                     </a>
                     <div class="dropdown-menu dropdown-user-profile dropdown-menu-end pc-h-dropdown">
                         <div class="dropdown-header">
-                            <h4>Selamat Datang, {{ session('user_data.nama_pp') }}!</h4>
+                            <h4 class="user-welcome-heading">Selamat Datang, {{ session('user_data.nama_pp') }}!</h4>
                             <p class="text-muted">
                                 {{ session('user_data.role') === 'admin' ? 'Administrator' : 'Pengguna Unit' }}
                             </p>

@@ -60,6 +60,11 @@
             overflow-x: hidden !important;
         }
 
+        .pc-header .dropdown-user-profile .user-welcome-heading {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
         /* Pastikan elemen layout utama mengambil lebar 100% yang tersedia */
         .pc-content {
             box-sizing: border-box;
