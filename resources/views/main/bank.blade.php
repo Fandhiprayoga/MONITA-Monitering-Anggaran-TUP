@@ -35,6 +35,7 @@
                         <tr>
                             <th scope="col" class="text-white">No</th>
                             <th scope="col" class="text-white">Kode Bank</th>
+                            <th scope="col" class="text-white">Inisial</th>
                             <th scope="col" class="text-white">Nama Bank</th>
                             <th scope="col" class="text-white">Status</th>
                             <th scope="col" class="text-white">Aksi</th>
@@ -45,6 +46,7 @@
                             <tr>
                                 <td class="text-center">{{ $loop->iteration }}</td>
                                 <td>{{ $bank->kode_bank }}</td>
+                                <td>{{ $bank->inisial }}</td>
                                 <td>{{ $bank->nama_bank }}</td>
                                 <td class="text-center">
                                     <span class="badge {{ $bank->status === 'aktif' ? 'bg-success' : 'bg-secondary' }}">
@@ -61,7 +63,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-4">
+                                <td colspan="6" class="text-center text-muted py-4">
                                     <div class="d-flex flex-column align-items-center gap-2">
                                         <i class="ti ti-database-off f-30" aria-hidden="true"></i>
                                         <span>Belum ada data bank.</span>
@@ -95,6 +97,11 @@
                         <label for="kode-bank" class="form-label">Kode Bank</label>
                         <input id="kode-bank" name="kode_bank" class="form-control" maxlength="30"
                             value="{{ old('kode_bank', $editingBank->kode_bank) }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="inisial-bank" class="form-label">Inisial</label>
+                        <input id="inisial-bank" name="inisial" class="form-control" maxlength="30"
+                            value="{{ old('inisial', $editingBank->inisial) }}" required>
                     </div>
                     <div class="mb-3">
                         <label for="nama-bank" class="form-label">Nama Bank</label>

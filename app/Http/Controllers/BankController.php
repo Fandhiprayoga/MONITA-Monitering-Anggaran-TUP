@@ -25,6 +25,7 @@ class BankController extends Controller
         $this->ensureAdmin();
         $data = $this->validatedData($request);
         $data['kode_bank'] = strtoupper(trim($data['kode_bank']));
+        $data['inisial'] = strtoupper(trim($data['inisial']));
         $data['nama_bank'] = trim($data['nama_bank']);
 
         Bank::create($data);
@@ -37,6 +38,7 @@ class BankController extends Controller
         $this->ensureAdmin();
         $data = $this->validatedData($request, $bank);
         $data['kode_bank'] = strtoupper(trim($data['kode_bank']));
+        $data['inisial'] = strtoupper(trim($data['inisial']));
         $data['nama_bank'] = trim($data['nama_bank']);
 
         $bank->update($data);
@@ -48,6 +50,7 @@ class BankController extends Controller
     {
         $request->merge([
             'kode_bank' => strtoupper(trim((string) $request->input('kode_bank', ''))),
+            'inisial' => strtoupper(trim((string) $request->input('inisial', ''))),
         ]);
 
         $uniqueCode = Rule::unique('banks', 'kode_bank');
@@ -57,6 +60,7 @@ class BankController extends Controller
 
         return $request->validate([
             'kode_bank' => ['required', 'string', 'max:30', $uniqueCode],
+            'inisial' => ['required', 'string', 'max:30'],
             'nama_bank' => ['required', 'string', 'max:255'],
             'status' => ['required', Rule::in(['aktif', 'nonaktif'])],
         ]);

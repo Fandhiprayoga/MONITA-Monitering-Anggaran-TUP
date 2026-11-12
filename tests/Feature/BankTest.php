@@ -28,21 +28,25 @@ class BankTest extends TestCase
             ->assertOk()
             ->assertSee('Master Data Bank')
             ->assertSee('Kode Bank')
+            ->assertSee('Inisial')
             ->assertSee('Nama Bank')
             ->assertSee('Status');
 
         $this->post(route('bank.store'), [
             'kode_bank' => ' bni ',
+            'inisial' => 'bni',
             'nama_bank' => 'Bank Negara Indonesia',
             'status' => 'aktif',
         ])->assertRedirect(route('bank.index'));
 
         $bank = Bank::firstOrFail();
         $this->assertSame('BNI', $bank->kode_bank);
+        $this->assertSame('BNI', $bank->inisial);
         $this->assertSame('aktif', $bank->status);
 
         $this->patch(route('bank.update', $bank), [
             'kode_bank' => 'BNI',
+            'inisial' => 'BNI',
             'nama_bank' => 'BNI',
             'status' => 'nonaktif',
         ])->assertRedirect(route('bank.index'));
@@ -50,6 +54,7 @@ class BankTest extends TestCase
         $this->assertDatabaseHas('banks', [
             'id' => $bank->id,
             'kode_bank' => 'BNI',
+            'inisial' => 'BNI',
             'nama_bank' => 'BNI',
             'status' => 'nonaktif',
         ]);
@@ -62,6 +67,7 @@ class BankTest extends TestCase
         $this->from(route('bank.index'))
             ->post(route('bank.store'), [
                 'kode_bank' => 'bni',
+                'inisial' => 'BNI',
                 'nama_bank' => 'Duplikat',
                 'status' => 'invalid',
             ])
@@ -80,6 +86,7 @@ class BankTest extends TestCase
         $this->withSession(['user_role' => 'user'])
             ->post(route('bank.store'), [
                 'kode_bank' => 'BNI',
+                'inisial' => 'BNI',
                 'nama_bank' => 'BNI',
                 'status' => 'aktif',
             ])
