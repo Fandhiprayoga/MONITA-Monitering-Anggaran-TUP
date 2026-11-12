@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\JenisPenghasilan;
 use App\Services\GoogleSheetService;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
 use Tests\TestCase;
@@ -92,5 +93,30 @@ class JenisPenghasilanTest extends TestCase
             ->assertForbidden();
 
         $this->assertDatabaseCount('jenis_penghasilan', 0);
+    }
+
+    public function test_seeder_creates_existing_income_type_master_data_idempotently(): void
+    {
+        $this->app->instance('env', 'production');
+        $seeder = new DatabaseSeeder;
+        $seeder->run();
+        $seeder->run();
+
+        $this->assertDatabaseCount('jenis_penghasilan', 3);
+        $this->assertDatabaseHas('jenis_penghasilan', [
+            'kode_jenis' => '2A',
+            'nama_jenis_pph' => 'Bukan Pegawai Tidak Berkesinambungan',
+            'tarif_pph' => '2.50',
+        ]);
+        $this->assertDatabaseHas('jenis_penghasilan', [
+            'kode_jenis' => '4A',
+            'nama_jenis_pph' => 'PESERTA KEGIATAN',
+            'tarif_pph' => '5.00',
+        ]);
+        $this->assertDatabaseHas('jenis_penghasilan', [
+            'kode_jenis' => '5A',
+            'nama_jenis_pph' => 'PEMBERI JASA WAJIB PAJAK LUAR NEGERI',
+            'tarif_pph' => '20.00',
+        ]);
     }
 }

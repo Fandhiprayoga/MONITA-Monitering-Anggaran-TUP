@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(BankSeeder::class);
+        $this->call(JenisPenghasilanSeeder::class);
 
         if (app()->environment(['local', 'testing'])) {
             $this->call(PencairanPengajuanSeeder::class);
