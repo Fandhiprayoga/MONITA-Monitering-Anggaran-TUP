@@ -33,6 +33,11 @@ export const schemas = {
     ],
 };
 
+export function normalizeIdentity(value) {
+    const text = String(value ?? '').trim();
+    return /^\d+$/.test(text) && text.length < 16 ? text.padStart(16, '0') : text;
+}
+
 export function parseAmount(value) {
     const text = String(value).trim();
     if (!/^(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d{1,2})?$/.test(text)) {
@@ -100,6 +105,10 @@ export function calculateRow(kind, values, optionChoices = {}) {
                 }
             }
         }
+    }
+    const identity = String(values.identitas ?? '').trim();
+    if (kind === 'honor' && /^\d+$/.test(identity) && identity.length > 16) {
+        errors.identitas = 'No KTP harus tepat 16 digit.';
     }
     if (kind === 'honor' && numbers.nominal !== undefined) {
         const tax = calculateHonorTax(values.kode_jenis, values.nominal, optionChoices.jenisPenghasilan ?? []);
@@ -422,7 +431,11 @@ export function mountGrid(form, { jenisPenghasilanOptions = [], bankOptions = []
         editing.readOnly = true;
         editing.classList.remove('is-editing');
         editing = null;
+        if (kind === 'honor' && input.dataset.key === 'identitas') {
+            input.value = normalizeIdentity(input.value);
+        }
         formatNumericCell(input);
+        recalculate();
     }
 
     function select(input, extend = false, focus = true) {
@@ -637,7 +650,9 @@ export function mountGrid(form, { jenisPenghasilanOptions = [], bankOptions = []
         rows.forEach((row, r) => row.forEach((value, c) => {
             const input = body.rows[start + r].querySelector(`[data-key="${editable[offset + c].key}"]`);
             if (input.matches('select')) setChoiceValue(input, value);
-            else input.value = value;
+            else input.value = kind === 'honor' && input.dataset.key === 'identitas'
+                ? normalizeIdentity(value)
+                : value;
             formatNumericCell(input);
             resetSubtotal(input);
             if (kind === 'beban' && input.dataset.key === 'neto') {
@@ -720,7 +735,9 @@ export function mountGrid(form, { jenisPenghasilanOptions = [], bankOptions = []
                     if (input.matches('select')) {
                         setChoiceValue(input, values[input.dataset.key], { allowAliases: true });
                     } else {
-                        input.value = String(values[input.dataset.key] ?? '');
+                        input.value = kind === 'honor' && input.dataset.key === 'identitas'
+                            ? normalizeIdentity(values[input.dataset.key])
+                            : String(values[input.dataset.key] ?? '');
                     }
                     if (kind === 'beban' && input.dataset.key === 'neto') {
                         input.dataset.manualNeto = input.value.trim() ? 'true' : 'false';

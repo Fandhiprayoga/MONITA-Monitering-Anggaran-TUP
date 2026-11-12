@@ -619,6 +619,7 @@ class PencairanWorkflowTest extends TestCase
         $p = $this->draft('honor');
 
         $this->assertSame('PPH-21', $p->detailRows()[0]['kode_jenis']);
+        $this->assertSame('0000000000000098', $p->detailRows()[0]['identitas']);
         $this->assertSame('5,00', $p->detailRows()[0]['pajak']);
         $this->assertSame('95,00', $p->detailRows()[0]['neto']);
         $this->assertDatabaseHas('pengajuan_honor_details', [
@@ -662,6 +663,8 @@ class PencairanWorkflowTest extends TestCase
         $this->postJson('/_workflow', ['jenis' => 'impresfund', 'details' => [['volume' => '0']]])->assertUnprocessable();
         $this->postJson('/_workflow', ['jenis' => 'honor', 'details' => [['kode_jenis' => 'BAD']]])->assertUnprocessable()->assertJsonValidationErrors('details.0.kode_jenis');
         $this->postJson('/_workflow', ['jenis' => 'beban', 'details' => array_fill(0, 501, ['no' => '1'])])->assertUnprocessable();
+        $this->postJson('/_workflow', ['jenis' => 'honor', 'details' => [['identitas' => '12345678901234567']]])
+            ->assertUnprocessable()->assertJsonValidationErrors('details.0.identitas');
     }
 
     public function test_submit_calculation_rejects_bank_values_outside_the_active_master(): void

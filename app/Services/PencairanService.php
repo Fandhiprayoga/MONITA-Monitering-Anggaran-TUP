@@ -242,6 +242,11 @@ class PencairanService
                 if ($raw['kode_jenis'] !== '' && !array_key_exists($raw['kode_jenis'], $jenisPenghasilanByCode)) {
                     PencairanDecimal::invalid("details.$index.kode_jenis", 'Pilih Kd Jenis dari master data jenis penghasilan.');
                 }
+                $identity = trim($raw['identitas']);
+                if ($identity !== '' && ctype_digit($identity)) {
+                    if (strlen($identity) > 16) { PencairanDecimal::invalid("details.$index.identitas", 'No KTP harus tepat 16 digit.'); }
+                    $raw['identitas'] = str_pad($identity, 16, '0', STR_PAD_LEFT);
+                }
                 if ($raw['kode_jenis'] !== '' && isset($numbers['nominal'], $jenisPenghasilanByCode[$raw['kode_jenis']])) {
                     $tax = BigDecimal::of($numbers['nominal'])
                         ->multipliedBy((string) $jenisPenghasilanByCode[$raw['kode_jenis']]->tarif_pph)

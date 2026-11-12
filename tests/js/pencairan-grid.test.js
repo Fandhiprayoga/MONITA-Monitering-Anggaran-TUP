@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateHonorTax, calculateRow, formatAmount, parseAmount, parseTsv, toTsv, schemas } from '../../public/js/monita/pencairan-grid.js';
+import { calculateHonorTax, calculateRow, formatAmount, normalizeIdentity, parseAmount, parseTsv, toTsv, schemas } from '../../public/js/monita/pencairan-grid.js';
 
 test('Indonesian amounts are parsed exactly to cents; invalid formats are rejected', () => {
     assert.equal(parseAmount('1.250,50'), 125050);
@@ -185,6 +185,14 @@ test('Honor rounds calculated tax to rupiah cents and rejects codes outside the 
 test('Honor still validates recipient and identity', () => {
     assert.ok(calculateRow('honor', { ...honor, penerima: '' }, honorOptions).errors.penerima);
     assert.ok(calculateRow('honor', { ...honor, identitas: '' }, honorOptions).errors.identitas);
+    assert.ok(calculateRow('honor', { ...honor, identitas: '12345678901234567' }, honorOptions).errors.identitas);
+});
+
+test('Short numeric identities are padded to 16 digits without changing passport values', () => {
+    assert.equal(normalizeIdentity('123456'), '0000000000123456');
+    assert.equal(normalizeIdentity('0012345678901234'), '0012345678901234');
+    assert.equal(normalizeIdentity('AB123456'), 'AB123456');
+    assert.equal(normalizeIdentity(''), '');
 });
 
 test('Honor clipboard columns preserve income codes and text identifiers', () => {
