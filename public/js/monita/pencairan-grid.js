@@ -15,7 +15,7 @@ export const schemas = {
         { key: 'nominal', label: 'Nominal', numeric: true, money: true },
         { key: 'pajak', label: 'Pot Pajak', numeric: true, defaultValue: '0', money: true },
         { key: 'neto', label: 'Nominal Setelah Pajak', numeric: true, optional: true, money: true },
-        { key: 'bank', label: 'Nama Bank' },
+        { key: 'bank', label: 'Nama Bank', choiceSource: 'banks' },
         { key: 'nama', label: 'Nama Rekening' },
         { key: 'rekening', label: 'No Rekening' },
     ],
@@ -26,7 +26,7 @@ export const schemas = {
         { key: 'neto', label: 'Total Diterima', numeric: true, calculated: true, money: true },
         { key: 'penerima', label: 'Nama Penerima' },
         { key: 'nama', label: 'Nama Rekening' },
-        { key: 'bank', label: 'Nama Bank' },
+        { key: 'bank', label: 'Nama Bank', choiceSource: 'banks' },
         { key: 'rekening', label: 'Nomor Rekening' },
         { key: 'identitas', label: 'No KTP / Paspor' },
         { key: 'npwp', label: 'No NPWP', optional: true },
@@ -90,7 +90,7 @@ export function calculateRow(kind, values, optionChoices = {}) {
             const choiceValue = column.choiceSource ? value.toUpperCase() : value;
             if (choices && !choices.includes(choiceValue)) {
                 errors[column.key] = column.choiceSource
-                    ? `${column.label} harus dipilih dari master data jenis penghasilan.`
+                    ? `${column.label} harus dipilih dari master data ${column.choiceSource === 'banks' ? 'bank aktif' : 'jenis penghasilan'}.`
                     : `${column.label} harus diisi ${choices.join(' atau ')}.`;
             } else if (column.numeric) {
                 try {
@@ -179,10 +179,13 @@ export function toTsv(rows) {
     }).join('\t')).join('\r\n');
 }
 
-export function mountGrid(form, { jenisPenghasilanOptions = [] } = {}) {
+export function mountGrid(form, { jenisPenghasilanOptions = [], bankOptions = [] } = {}) {
     const kind = form.dataset.jenis;
     const columns = schemas[kind];
-    const optionChoices = { jenisPenghasilan: jenisPenghasilanOptions };
+    const optionChoices = {
+        jenisPenghasilan: jenisPenghasilanOptions,
+        banks: bankOptions.filter((option) => option.active),
+    };
     const editable = columns.filter((column) => !column.computed);
     const body = form.querySelector('[data-grid-body]');
     const table = body.closest('table');
@@ -234,12 +237,18 @@ export function mountGrid(form, { jenisPenghasilanOptions = [] } = {}) {
             if (column.choiceSource) {
                 const placeholder = document.createElement('option');
                 placeholder.value = '';
-                placeholder.textContent = jenisPenghasilanOptions.length ? '-- Pilih Jenis Penghasilan --' : 'Master jenis penghasilan belum tersedia';
+                const sourceOptions = column.choiceSource === 'banks' ? optionChoices.banks : jenisPenghasilanOptions;
+                const sourceLabel = column.choiceSource === 'banks' ? 'Bank' : 'Jenis Penghasilan';
+                placeholder.textContent = sourceOptions.length
+                    ? `-- Pilih ${sourceLabel} --`
+                    : `Master ${sourceLabel.toLowerCase()} aktif belum tersedia`;
                 cell.append(placeholder);
-                for (const option of jenisPenghasilanOptions) {
+                for (const option of (column.choiceSource === 'banks' ? bankOptions : jenisPenghasilanOptions)) {
+                    if (column.choiceSource === 'banks' && !option.value) continue;
                     const item = document.createElement('option');
                     item.value = option.value;
                     item.textContent = option.value;
+                    if (column.choiceSource === 'banks') item.disabled = !option.active;
                     cell.append(item);
                 }
             } else {
@@ -289,6 +298,35 @@ export function mountGrid(form, { jenisPenghasilanOptions = [] } = {}) {
         } catch {
             return '';
         }
+    }
+
+    function setChoiceValue(input, value, { allowAliases = false } = {}) {
+        const column = columns[position(input).col];
+        const normalized = String(value ?? '').trim().toUpperCase();
+        if (!normalized) {
+            input.value = '';
+            return;
+        }
+        const sourceOptions = column.choiceSource === 'banks' ? bankOptions : jenisPenghasilanOptions;
+        const match = sourceOptions.find((option) =>
+            String(option.value).toUpperCase() === normalized
+            || (allowAliases && (option.aliases ?? []).some((alias) => String(alias).trim().toUpperCase() === normalized)));
+        if (match) {
+            input.value = match.value;
+            return;
+        }
+
+        let invalidOption = [...input.options].find((option) =>
+            option.dataset.invalidChoice === 'true' && option.value === normalized);
+        if (!invalidOption) {
+            invalidOption = document.createElement('option');
+            invalidOption.value = normalized;
+            invalidOption.textContent = String(value).trim();
+            invalidOption.disabled = true;
+            invalidOption.dataset.invalidChoice = 'true';
+            input.append(invalidOption);
+        }
+        input.value = invalidOption.value;
     }
 
     function recalculate() {
@@ -505,7 +543,11 @@ export function mountGrid(form, { jenisPenghasilanOptions = [] } = {}) {
         recalculate();
     });
     body.addEventListener('change', (event) => {
-        if (event.target.matches('select.spreadsheet-cell')) recalculate();
+        if (!event.target.matches('select.spreadsheet-cell')) return;
+        if (event.target.selectedOptions[0]?.dataset.invalidChoice !== 'true') {
+            event.target.querySelectorAll('[data-invalid-choice="true"]').forEach((option) => option.remove());
+        }
+        recalculate();
     });
     body.addEventListener('keydown', (event) => {
         const input = event.target;
@@ -594,7 +636,8 @@ export function mountGrid(form, { jenisPenghasilanOptions = [] } = {}) {
         while (body.rows.length < start + rows.length) addRow();
         rows.forEach((row, r) => row.forEach((value, c) => {
             const input = body.rows[start + r].querySelector(`[data-key="${editable[offset + c].key}"]`);
-            input.value = value;
+            if (input.matches('select')) setChoiceValue(input, value);
+            else input.value = value;
             formatNumericCell(input);
             resetSubtotal(input);
             if (kind === 'beban' && input.dataset.key === 'neto') {
@@ -674,7 +717,11 @@ export function mountGrid(form, { jenisPenghasilanOptions = [] } = {}) {
             for (const values of rows.slice(0, MAX_ROWS)) {
                 const row = addRow();
                 row.querySelectorAll('.spreadsheet-cell').forEach((input) => {
-                    input.value = String(values[input.dataset.key] ?? '');
+                    if (input.matches('select')) {
+                        setChoiceValue(input, values[input.dataset.key], { allowAliases: true });
+                    } else {
+                        input.value = String(values[input.dataset.key] ?? '');
+                    }
                     if (kind === 'beban' && input.dataset.key === 'neto') {
                         input.dataset.manualNeto = input.value.trim() ? 'true' : 'false';
                     }

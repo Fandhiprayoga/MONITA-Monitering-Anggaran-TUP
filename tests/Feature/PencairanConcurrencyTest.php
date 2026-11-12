@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\PencairanActor;
+use App\Models\Bank;
 use App\Models\JenisPenghasilan;
 use App\Models\PencairanPengajuan;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,7 @@ class PencairanConcurrencyTest extends TestCase
             $this->artisan('migrate', ['--database' => 'sqlite', '--force' => true])->assertExitCode(0);
             JenisPenghasilan::create(['kode_jenis' => '01', 'nama_jenis_pph' => 'Honorarium', 'tarif_pph' => '5.00']);
             JenisPenghasilan::create(['kode_jenis' => 'PPH-21', 'nama_jenis_pph' => 'PPh Pasal 21', 'tarif_pph' => '5.00']);
+            Bank::create(['kode_bank' => '002', 'inisial' => 'BRI', 'nama_bank' => 'Bank Rakyat Indonesia', 'status' => 'aktif']);
             $actor = PencairanActor::create(['source_key' => 'test', 'username' => 'test', 'name' => 'test', 'role' => 'user']);
             $ids = [];
             foreach (['impresfund', 'beban', 'honor', 'beban'] as $i => $kind) {
@@ -31,7 +33,7 @@ class PencairanConcurrencyTest extends TestCase
                 if ($kind === 'impresfund') {
                     $raw = ['uraian' => 'Test', 'volume' => '1', 'tarif' => '100', 'subtotal' => ''];
                 } else {
-                    $raw = ['nominal' => '100', 'pajak' => '0', 'neto' => '100', 'bank' => 'Bank', 'nama' => 'Name', 'rekening' => '0001'];
+                    $raw = ['nominal' => '100', 'pajak' => '0', 'neto' => '100', 'bank' => 'BRI', 'nama' => 'Name', 'rekening' => '0001'];
                     if ($kind === 'honor') { $raw += ['kode_jenis' => 'PPH-21', 'penerima' => 'Person', 'identitas' => '0002']; }
                 }
                 $p->details()->create(['urutan' => 1, 'raw_data' => $raw]); $ids[] = $p->id;

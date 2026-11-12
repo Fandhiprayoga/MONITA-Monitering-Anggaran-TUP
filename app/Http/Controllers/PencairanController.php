@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Session;
 use App\Services\GoogleSheetService;
 use App\Services\PencairanService;
+use App\Models\Bank;
 use App\Models\JenisPenghasilan;
 use App\Models\PencairanPengajuan;
 use Illuminate\Http\Request;
@@ -46,6 +47,7 @@ class PencairanController extends Controller
             'jenis'     => $jenis,
             'jenisNama' => ucfirst($jenis),
             'jenisPenghasilanOptions' => $this->jenisPenghasilanOptions($jenis),
+            'bankOptions' => $this->bankOptions($jenis),
             'activeTw' => $activeTw,
             'drkOptions' => $drkOptions,
             'drkError' => $drkError,
@@ -201,6 +203,7 @@ class PencairanController extends Controller
         catch (\Throwable $e) { report($e); $error = 'Gagal memuat DRK dan saldo. Draft tetap dapat disimpan; submit memerlukan data sumber terkini.'; }
         return view('main.pencairan.form', ['jenis' => $pengajuan->jenis, 'jenisNama' => ucfirst($pengajuan->jenis),
             'jenisPenghasilanOptions' => $this->jenisPenghasilanOptions($pengajuan->jenis),
+            'bankOptions' => $this->bankOptions($pengajuan->jenis),
             'activeTw' => $pengajuan->triwulan, 'drkOptions' => $options, 'drkError' => $error, 'pengajuan' => $pengajuan,
             'selectedUnit' => $pengajuan->kode_pp, 'selectedUnitName' => $pengajuan->nama_pp]
             + $this->detailNavigation($request, $pengajuan));
@@ -217,6 +220,23 @@ class PencairanController extends Controller
                 'value' => $jenisPenghasilan->kode_jenis,
                 'description' => $jenisPenghasilan->nama_jenis_pph,
                 'rate' => $jenisPenghasilan->tarif_pph,
+            ])->all();
+    }
+
+    private function bankOptions(string $jenis): array
+    {
+        if (!in_array($jenis, ['beban', 'honor'], true)) {
+            return [];
+        }
+
+        return Bank::query()->orderBy('kode_bank')->get(['kode_bank', 'inisial', 'nama_bank', 'status'])
+            ->map(fn (Bank $bank) => [
+                'value' => strtoupper(trim((string) $bank->inisial)),
+                'code' => $bank->kode_bank,
+                'description' => $bank->nama_bank,
+                'status' => $bank->status,
+                'active' => $bank->status === 'aktif' && trim((string) $bank->inisial) !== '',
+                'aliases' => array_values(array_filter([$bank->kode_bank, $bank->nama_bank])),
             ])->all();
     }
 

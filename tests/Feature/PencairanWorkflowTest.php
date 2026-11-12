@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\PencairanWorkflowController;
+use App\Models\Bank;
 use App\Models\PencairanAttachment;
 use App\Models\JenisPenghasilan;
 use App\Models\PencairanHistory;
@@ -15,6 +16,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -30,6 +32,7 @@ class PencairanWorkflowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Bank::create(['kode_bank' => '002', 'inisial' => 'BRI', 'nama_bank' => 'Bank Rakyat Indonesia', 'status' => 'aktif']);
         JenisPenghasilan::create(['kode_jenis' => '01', 'nama_jenis_pph' => 'Honorarium', 'tarif_pph' => '5.00']);
         JenisPenghasilan::create(['kode_jenis' => 'PPH-21', 'nama_jenis_pph' => 'PPh Pasal 21', 'tarif_pph' => '5.00']);
         $this->travelTo(now()->setDate(2026, 10, 31)->setTime(10, 0));
@@ -69,8 +72,8 @@ class PencairanWorkflowTest extends TestCase
     {
         return match ($jenis) {
             'impresfund' => ['no' => '001', 'uraian' => 'Belanja', 'volume' => '2', 'tarif' => '50', 'subtotal' => ''],
-            'beban' => ['no' => '001', 'nominal' => '100', 'pajak' => '10', 'neto' => '77', 'bank' => 'Bank', 'nama' => 'Nama', 'rekening' => '000123'],
-            'honor' => ['no' => '001', 'nominal' => '100', 'pajak' => '10', 'neto' => '77', 'bank' => 'Bank', 'nama' => 'Nama', 'rekening' => '000123', 'kode_jenis' => 'PPH-21', 'penerima' => 'Penerima', 'identitas' => '000098', 'npwp' => '000012'],
+            'beban' => ['no' => '001', 'nominal' => '100', 'pajak' => '10', 'neto' => '77', 'bank' => 'BRI', 'nama' => 'Nama', 'rekening' => '000123'],
+            'honor' => ['no' => '001', 'nominal' => '100', 'pajak' => '10', 'neto' => '77', 'bank' => 'BRI', 'nama' => 'Nama', 'rekening' => '000123', 'kode_jenis' => 'PPH-21', 'penerima' => 'Penerima', 'identitas' => '000098', 'npwp' => '000012'],
         };
     }
 
@@ -619,6 +622,23 @@ class PencairanWorkflowTest extends TestCase
         $this->postJson('/_workflow', ['jenis' => 'impresfund', 'details' => [['volume' => '0']]])->assertUnprocessable();
         $this->postJson('/_workflow', ['jenis' => 'honor', 'details' => [['kode_jenis' => 'BAD']]])->assertUnprocessable()->assertJsonValidationErrors('details.0.kode_jenis');
         $this->postJson('/_workflow', ['jenis' => 'beban', 'details' => array_fill(0, 501, ['no' => '1'])])->assertUnprocessable();
+    }
+
+    public function test_submit_calculation_rejects_bank_values_outside_the_active_master(): void
+    {
+        try {
+            app(PencairanService::class)->calculate('beban', [[
+                'nominal' => '100',
+                'pajak' => '0',
+                'neto' => '100',
+                'bank' => 'BANK TIDAK TERDAFTAR',
+                'nama' => 'Nama',
+                'rekening' => '001',
+            ]], true);
+            $this->fail('Expected bank validation to reject a non-master value.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('details.0.bank', $exception->errors());
+        }
     }
 
     public function test_maximum_rows_values_and_total_are_exact_and_zero_rows_can_accompany_positive_total(): void

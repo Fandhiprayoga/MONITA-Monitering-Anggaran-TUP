@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Bank;
 use App\Models\JenisPenghasilan;
 use App\Models\PencairanActor;
 use App\Models\PencairanPengajuan;
@@ -201,6 +202,10 @@ class PencairanService
                 ->keyBy(fn (JenisPenghasilan $jenisPenghasilan) => strtoupper($jenisPenghasilan->kode_jenis))
                 ->all()
             : [];
+        $activeBankInitials = $complete && in_array($jenis, ['beban', 'honor'], true)
+            ? Bank::query()->where('status', 'aktif')->whereNotNull('inisial')->pluck('inisial')
+                ->map(fn ($inisial) => strtoupper(trim((string) $inisial)))->all()
+            : [];
         $numeric = $jenis === 'impresfund' ? ['volume', 'tarif', 'subtotal'] : ['nominal', 'pajak', 'neto'];
         $totals = ['total_bruto' => BigDecimal::zero(), 'total_pajak' => BigDecimal::zero(), 'total_neto' => BigDecimal::zero()];
         $records = [];
@@ -224,6 +229,12 @@ class PencairanService
                     if ($value !== null && !is_string($value)) { PencairanDecimal::invalid($field, 'Harus berupa teks (nol awal dipertahankan).'); }
                     if (mb_strlen($value ?? '') > ($key === 'uraian' ? 2000 : 255)) { PencairanDecimal::invalid($field, 'Teks terlalu panjang.'); }
                     $raw[$key] = $value ?? '';
+                }
+            }
+            if (in_array($jenis, ['beban', 'honor'], true)) {
+                $raw['bank'] = strtoupper(trim($raw['bank']));
+                if ($complete && $raw['bank'] !== '' && !in_array($raw['bank'], $activeBankInitials, true)) {
+                    PencairanDecimal::invalid("details.$index.bank", 'Pilih Nama Bank dari master data bank yang aktif.');
                 }
             }
             if ($jenis === 'honor') {

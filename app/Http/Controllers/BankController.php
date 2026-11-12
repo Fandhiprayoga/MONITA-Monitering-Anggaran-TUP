@@ -54,13 +54,15 @@ class BankController extends Controller
         ]);
 
         $uniqueCode = Rule::unique('banks', 'kode_bank');
+        $uniqueInitial = Rule::unique('banks', 'inisial');
         if ($bank) {
             $uniqueCode->ignore($bank->id);
+            $uniqueInitial->ignore($bank->id);
         }
 
         return $request->validate([
             'kode_bank' => ['required', 'string', 'max:30', $uniqueCode],
-            'inisial' => ['required', 'string', 'max:30'],
+            'inisial' => ['required', 'string', 'max:30', $uniqueInitial],
             'nama_bank' => ['required', 'string', 'max:255'],
             'status' => ['required', Rule::in(['aktif', 'nonaktif'])],
         ]);

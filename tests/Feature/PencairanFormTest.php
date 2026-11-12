@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use App\Models\Bank;
 use App\Models\JenisPenghasilan;
 use App\Services\GoogleSheetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -90,6 +91,8 @@ class PencairanFormTest extends TestCase
     {
         JenisPenghasilan::create(['kode_jenis' => '01', 'nama_jenis_pph' => 'Honorarium', 'tarif_pph' => '5.00']);
         JenisPenghasilan::create(['kode_jenis' => '02', 'nama_jenis_pph' => 'Pegawai Tidak Tetap', 'tarif_pph' => '2.50']);
+        Bank::create(['kode_bank' => '002', 'inisial' => 'BRI', 'nama_bank' => 'Bank Rakyat Indonesia', 'status' => 'aktif']);
+        Bank::create(['kode_bank' => '008', 'inisial' => 'MANDIRI', 'nama_bank' => 'Bank Mandiri', 'status' => 'nonaktif']);
         $this->withSession(['user_authenticated' => true])
             ->get(route('pencairan.form', 'honor'))
             ->assertOk()
@@ -108,6 +111,11 @@ class PencairanFormTest extends TestCase
             ->assertSee('Nama Penerima')
             ->assertSee('Nama Rekening')
             ->assertSee('Nama Bank')
+            ->assertSee('data-bs-target="#bank-help-modal"', false)
+            ->assertSee('Daftar Bank')
+            ->assertDontSee('<th scope="col">Status</th>', false)
+            ->assertSee('Bank Rakyat Indonesia')
+            ->assertSee('Hanya bank berstatus Aktif yang dapat dipilih.')
             ->assertSee('Nomor Rekening')
             ->assertSee('No KTP / Paspor')
             ->assertSee('No NPWP')

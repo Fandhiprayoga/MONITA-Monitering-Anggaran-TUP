@@ -124,6 +124,16 @@ test('Blank rows are ignored, incomplete rows are invalid, zero tax is allowed',
 test('Beban clipboard includes editable after-tax amount in table order', () => {
     assert.deepEqual(schemas.beban.filter((column) => !column.computed).map((column) => column.key),
         ['nominal', 'pajak', 'neto', 'bank', 'nama', 'rekening']);
+    assert.equal(schemas.beban.find((column) => column.key === 'bank').choiceSource, 'banks');
+});
+
+test('Bank initials are validated against active master options', () => {
+    const bankOptions = [{ value: 'BRI', active: true }, { value: 'BNI', active: true }];
+    const row = { nominal: '100', pajak: '0', neto: '100', bank: 'bri', nama: 'N', rekening: '001' };
+    assert.equal(calculateRow('beban', row, { banks: bankOptions }).errors, undefined);
+    assert.match(calculateRow('beban', { ...row, bank: 'Bank Rakyat Indonesia' }, { banks: bankOptions }).errors.bank,
+        /master data bank aktif/);
+    assert.equal(schemas.honor.find((column) => column.key === 'bank').choiceSource, 'banks');
 });
 
 test('Tax defaults to zero without activating unused Honor and Beban rows', () => {

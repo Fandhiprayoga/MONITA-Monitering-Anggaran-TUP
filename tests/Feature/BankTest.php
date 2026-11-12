@@ -63,17 +63,17 @@ class BankTest extends TestCase
 
     public function test_bank_code_must_be_unique_and_status_must_be_valid(): void
     {
-        Bank::create(['kode_bank' => 'BNI', 'nama_bank' => 'BNI', 'status' => 'aktif']);
+        Bank::create(['kode_bank' => 'BNI', 'inisial' => 'BNI', 'nama_bank' => 'BNI', 'status' => 'aktif']);
 
         $this->from(route('bank.index'))
             ->post(route('bank.store'), [
                 'kode_bank' => 'bni',
-                'inisial' => 'BNI',
+                'inisial' => 'bni',
                 'nama_bank' => 'Duplikat',
                 'status' => 'invalid',
             ])
             ->assertRedirect(route('bank.index'))
-            ->assertSessionHasErrors(['kode_bank', 'status']);
+            ->assertSessionHasErrors(['kode_bank', 'inisial', 'status']);
 
         $this->assertDatabaseCount('banks', 1);
     }

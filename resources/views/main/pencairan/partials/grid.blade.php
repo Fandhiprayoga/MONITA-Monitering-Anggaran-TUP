@@ -33,6 +33,13 @@
                                         <i class="bi bi-question-circle" aria-hidden="true"></i>
                                     </button>
                                 @endif
+                                @if ($column === 'Nama Bank' && isset($bankOptions))
+                                    <button type="button" class="spreadsheet-header-help" data-bs-toggle="modal"
+                                        data-bs-target="#bank-help-modal" aria-controls="bank-help-modal"
+                                        aria-label="Lihat daftar bank" title="Daftar bank">
+                                        <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                    </button>
+                                @endif
                             </div>
                         </th>
                     @endforeach
@@ -82,6 +89,49 @@
             </div>
         </div>
     @endisset
+    @if (in_array('Nama Bank', $columns, true) && isset($bankOptions))
+        <div class="modal fade" id="bank-help-modal" tabindex="-1"
+            aria-labelledby="bank-help-title" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="bank-help-title">Daftar Bank</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (count($bankOptions))
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Kode Bank</th>
+                                            <th scope="col">Inisial</th>
+                                            <th scope="col">Nama Bank</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($bankOptions as $option)
+                                            <tr>
+                                                <td>{{ $option['code'] }}</td>
+                                                <td>{{ $option['value'] ?: '-' }}</td>
+                                                <td>{{ $option['description'] }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="form-text mb-0 mt-2">Hanya bank berstatus Aktif yang dapat dipilih.</p>
+                        @else
+                            <p class="mb-0">Belum ada data master bank.</p>
+                        @endif
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
     <div class="modal fade" id="grid-help-modal" tabindex="-1" aria-labelledby="grid-help-title" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
