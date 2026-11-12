@@ -178,10 +178,10 @@ class PencairanController extends Controller
         if ($kodePpSheet !== '') {
             $headerSnapshot = ['kode_pp' => $kodePpSheet] + $headerSnapshot;
         }
-        $simkugData = $pengajuan->simkug_data ?? [
+        $simkugData = [
             'kode_akun' => $headerSnapshot['kode_akun'] ?? '',
             'nama_akun' => $headerSnapshot['nama_akun'] ?? '',
-            'dc' => '',
+            'dc' => $pengajuan->simkug_data['dc'] ?? '',
             'keterangan' => $pengajuan->uraian_pengajuan ?? '',
             'nilai' => \App\Services\PencairanDecimal::format($pengajuan->total_bruto),
             'kode_pp' => $headerSnapshot['kode_pp'] ?? '',

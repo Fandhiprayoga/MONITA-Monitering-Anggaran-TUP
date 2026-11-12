@@ -161,16 +161,8 @@ class PencairanService
                     }]],
             'submit' => ['confirmed' => 'sometimes|accepted'],
             'simkug' => [
-                'simkug' => 'required|array:kode_akun,nama_akun,dc,keterangan,nilai,kode_pp,nama_pp,kode_drk,nama_drk',
-                'simkug.kode_akun' => 'required|string|max:100',
-                'simkug.nama_akun' => 'required|string|max:255',
+                'simkug' => 'required|array:dc',
                 'simkug.dc' => 'required|in:D,C',
-                'simkug.keterangan' => 'required|string|max:5000',
-                'simkug.nilai' => 'required|string|max:64',
-                'simkug.kode_pp' => 'required|string|max:100',
-                'simkug.nama_pp' => 'required|string|max:255',
-                'simkug.kode_drk' => 'required|string|max:100',
-                'simkug.nama_drk' => 'required|string|max:5000',
             ],
         };
         if ($operation !== 'store') { $rules['lock_version'] = 'required|integer|min:0'; }
@@ -438,15 +430,7 @@ class PencairanService
         abort_unless($p->lock_version === (int) $data['lock_version'], 409, 'Pengajuan telah berubah. Muat ulang sebelum mencoba lagi.');
         $records = null; $totals = null; $drk = null;
         if ($operation === 'simkug') {
-            $nilai = PencairanDecimal::raw($data['simkug']['nilai'], 'simkug.nilai', false, false);
-            if ($nilai === null || BigDecimal::of($nilai)->isGreaterThan(config('pencairan.max_total'))) {
-                PencairanDecimal::invalid('simkug.nilai', 'Nilai wajib diisi dan maksimal 5 triliun.');
-            }
-            $data['simkug'] = array_map(fn ($value) => trim($value), $data['simkug']);
-            foreach ($data['simkug'] as $field => $value) {
-                if ($value === '') { PencairanDecimal::invalid('simkug.'.$field, 'Kolom SIMKUG wajib diisi.'); }
-            }
-            $data['simkug']['nilai'] = PencairanDecimal::format($nilai);
+            $data['simkug']['dc'] = trim($data['simkug']['dc']);
         }
         if ($operation === 'update') {
             if (isset($data['unit_kode_pp']) && strtoupper(trim($data['unit_kode_pp'])) !== $p->kode_pp) {
@@ -514,7 +498,7 @@ class PencairanService
                 }
                 switch ($operation) {
                     case 'simkug':
-                        $current->simkug_data = $data['simkug'];
+                        $current->simkug_data = ['dc' => $data['simkug']['dc']];
                         break;
                     case 'submit':
                         $current->simkug_data = null;

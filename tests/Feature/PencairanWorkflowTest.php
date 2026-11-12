@@ -195,14 +195,10 @@ class PencairanWorkflowTest extends TestCase
 
     private function simkugPayload(): array
     {
-        return [
-            'kode_akun' => '000123', 'nama_akun' => 'Akun SIMKUG', 'dc' => 'C',
-            'keterangan' => "Narasi \"SIMKUG\" & <uji>\nBaris kedua", 'nilai' => '1.234,56',
-            'kode_pp' => '0099', 'nama_pp' => 'PP SIMKUG', 'kode_drk' => '000DRK', 'nama_drk' => 'DRK SIMKUG',
-        ];
+        return ['dc' => 'C'];
     }
 
-    public function test_impresfund_simkug_initializes_one_total_row_and_saves_all_columns_without_changing_submission(): void
+    public function test_impresfund_simkug_uses_submission_values_and_saves_only_dc(): void
     {
         $p = $this->verified('impresfund');
         $before = $p->only(['total_bruto', 'total_pajak', 'total_neto', 'header_snapshot', 'uraian_pengajuan', 'kode_pp', 'revision_no']);
@@ -210,7 +206,7 @@ class PencairanWorkflowTest extends TestCase
         $response = $this->get(route('pencairan.show', $p))->assertOk()->assertSee('Simpan Data SIMKUG')
             ->assertDontSee('Salin baris ke SIMKUG')->assertDontSee('data-simkug-row', false)
             ->assertSee('data-editable="true"', false)
-            ->assertSee('data-simkug-field readonly required', false);
+            ->assertSee('Kolom selain D/C berasal dari data pengajuan', false);
         $document = new \DOMDocument();
         $previous = libxml_use_internal_errors(true);
         try { $document->loadHTML($response->getContent()); }
@@ -220,6 +216,8 @@ class PencairanWorkflowTest extends TestCase
         $this->assertSame(1, $xpath->query($grid.'[@role="grid"]')->length);
         $this->assertSame(1, $xpath->query($grid.'//tr[@data-grid-row]')->length);
         $this->assertSame(9, $xpath->query($grid.'//td[@data-grid-cell]')->length);
+        $this->assertSame(8, $xpath->query($grid.'//td[@aria-readonly="true"]//*[self::input or self::textarea][@disabled]')->length);
+        $this->assertSame(1, $xpath->query($grid.'//td[@aria-readonly="false"]//select[not(@disabled)]')->length);
         $this->assertSame(9, $xpath->query($grid.'//button[@data-grid-select-column]')->length);
         $this->assertSame(1, $xpath->query($grid.'//button[@data-grid-select-all]')->length);
         $this->assertSame(1, $xpath->query($grid.'//button[@data-grid-select-row]')->length);
@@ -237,32 +235,32 @@ class PencairanWorkflowTest extends TestCase
         $this->patchJson($url, ['lock_version' => $p->lock_version, 'simkug' => $this->simkugPayload()])
             ->assertOk()->assertJsonPath('lock_version', $p->lock_version + 1);
         $saved = $p->fresh();
-        $this->assertSame(array_replace($this->simkugPayload(), ['nilai' => '1234,56']), $saved->simkug_data);
-        $this->assertSame('1234,56', $saved->simkug_data['nilai']);
+        $this->assertSame($this->simkugPayload(), $saved->simkug_data);
         $this->assertSame($before, $saved->only(array_keys($before)));
         $this->assertSame($details, $saved->detailRows());
         $history = $saved->histories()->where('action', 'simkug')->firstOrFail();
         $this->assertSame('admin', $history->actor_role);
         $this->assertSame($saved->simkug_data, json_decode($history->remark, true)['sesudah']);
         $this->get(route('pencairan.show', ['pengajuan' => $p, 'menu' => 'transaksi', 'tab' => 'simkug']))
-            ->assertOk()->assertViewHas('simkugData', $saved->simkug_data)
-            ->assertSee('value="000123"', false)->assertDontSee('<uji>', false);
+            ->assertOk()->assertViewHas('simkugData', fn ($data) => $data['dc'] === 'C'
+                && $data['kode_akun'] === '001' && $data['nilai'] === '100,00')
+            ->assertSee('value="001"', false);
         $this->patchJson($url, ['lock_version' => $p->lock_version, 'simkug' => $this->simkugPayload()])
             ->assertStatus(409);
     }
 
-    public function test_simkug_rejects_invalid_fields_numbers_and_unknown_columns(): void
+    public function test_simkug_rejects_invalid_dc_and_source_columns(): void
     {
         $p = $this->verified('impresfund');
         foreach ([
-            ['dc' => 'X'], ['dc' => ''], ['nilai' => '-1'], ['nilai' => '1.2345'],
-            ['nilai' => '5.000.000.000.000,01'], ['kode_akun' => '   '],
-            ['nama_akun' => str_repeat('a', 256)], ['kode_pp' => ['invalid']],
+            ['dc' => 'X'], ['dc' => ''], ['kode_akun' => '   '],
+            ['kode_akun' => ['invalid']],
             ['extra' => 'not allowed'],
         ] as $invalid) {
+            $hasExtraField = array_key_first($invalid) !== 'dc';
             $this->patchJson(route('pencairan.simkug.save', $p), [
                 'lock_version' => $p->lock_version, 'simkug' => array_replace($this->simkugPayload(), $invalid),
-            ])->assertUnprocessable()->assertJsonValidationErrors(isset($invalid['extra']) ? 'simkug' : 'simkug.'.array_key_first($invalid));
+            ])->assertUnprocessable()->assertJsonValidationErrors($hasExtraField ? 'simkug' : 'simkug.dc');
         }
         $this->assertNull($p->fresh()->simkug_data);
         $this->assertSame($p->lock_version, $p->fresh()->lock_version);
@@ -270,7 +268,7 @@ class PencairanWorkflowTest extends TestCase
             $current = $p->fresh();
             $this->patchJson(route('pencairan.simkug.save', $p), [
                 'lock_version' => $current->lock_version,
-                'simkug' => array_replace($this->simkugPayload(), ['dc' => $dc, 'nilai' => '5.000.000.000.000,00']),
+                'simkug' => ['dc' => $dc],
             ])->assertOk();
             $this->assertSame($dc, $p->fresh()->simkug_data['dc']);
         }
@@ -290,7 +288,7 @@ class PencairanWorkflowTest extends TestCase
         $this->patchJson($url, $payload)->assertOk();
         $this->action($p, 'complete', ['completion_date' => now()->toDateString()])->assertOk();
         $this->get(route('pencairan.show', $p))->assertOk()->assertSee('>SIMKUG</button>', false)
-            ->assertSee('value="000123"', false)->assertDontSee('Simpan Data SIMKUG');
+            ->assertSee('value="001"', false)->assertDontSee('Simpan Data SIMKUG');
         $this->patchJson($url, array_replace($payload, ['lock_version' => $p->fresh()->lock_version]))->assertStatus(409);
         foreach (['draft', 'submitted', 'returned', 'cancelled'] as $status) {
             $p->status = $status; $p->save();
@@ -316,7 +314,7 @@ class PencairanWorkflowTest extends TestCase
         $this->from($detailUrl)->patch($url, [
             'lock_version' => $p->fresh()->lock_version,
             'simkug' => array_replace($this->simkugPayload(), ['dc' => '']),
-        ])->assertRedirect($detailUrl)->assertSessionHasErrors('simkug.dc')->assertSessionHasInput('simkug.kode_akun', '000123');
+        ])->assertRedirect($detailUrl)->assertSessionHasErrors('simkug.dc');
         $this->action($p, 'returnToUser', ['remark' => 'Perbaiki'])->assertOk();
         $this->login();
         $this->action($p, 'submit')->assertOk();

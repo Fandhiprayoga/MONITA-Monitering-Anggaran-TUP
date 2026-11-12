@@ -7,7 +7,7 @@
     $canEditSimkug = $actor['role'] === 'admin' && $pengajuan->status === 'verified';
 @endphp
 <div data-simkug-impresfund>
-    <p class="text-muted">Satu baris berdasarkan total pengajuan. Perubahan SIMKUG tidak mengubah data pengajuan asli.</p>
+    <p class="text-muted">Satu baris berdasarkan total pengajuan. Kolom selain D/C berasal dari data pengajuan dan hanya dapat diubah dari pengajuan.</p>
     @if($pengajuan->simkug_data === null)
         <p class="small text-warning">Data awal dari pengajuan; belum pernah disimpan sebagai data SIMKUG. Pilih D (Debit) atau C (Credit) sebelum menyimpan.</p>
     @endif
@@ -28,10 +28,10 @@
                     <th scope="row" class="spreadsheet-row-header"><button type="button" class="spreadsheet-selector" data-grid-select-row aria-label="Pilih baris 1">1</button></th>
                     @foreach($simkugColumns as $key => $label)
                         @php
-                            $value = $canEditSimkug ? old('simkug.'.$key, $simkugData[$key]) : $simkugData[$key];
+                            $value = $key === 'dc' && $canEditSimkug ? old('simkug.dc', $simkugData[$key]) : $simkugData[$key];
                             $fieldId = 'simkug-impresfund-'.$pengajuan->id.'-'.$key;
                         @endphp
-                        <td role="gridcell" aria-selected="false" aria-readonly="{{ $canEditSimkug ? 'false' : 'true' }}" data-grid-cell style="min-width: {{ $key === 'dc' ? '145' : '200' }}px;">
+                        <td role="gridcell" aria-selected="false" aria-readonly="{{ $key === 'dc' && $canEditSimkug ? 'false' : 'true' }}" data-grid-cell style="min-width: {{ $key === 'dc' ? '145' : '200' }}px;">
                             @if($key === 'dc')
                                 <select id="{{ $fieldId }}" name="simkug[{{ $key }}]" class="spreadsheet-cell" aria-label="{{ $label }}" data-simkug-field @disabled(!$canEditSimkug) required>
                                     <option value="">Pilih D/C</option>
@@ -39,9 +39,9 @@
                                     <option value="C" @selected($value === 'C')>C (Credit)</option>
                                 </select>
                             @elseif(in_array($key, ['keterangan', 'nama_drk'], true))
-                                <textarea id="{{ $fieldId }}" name="simkug[{{ $key }}]" class="spreadsheet-cell" aria-label="{{ $label }}" rows="1" maxlength="5000" data-simkug-field readonly required>{{ $value }}</textarea>
+                                <textarea id="{{ $fieldId }}" name="simkug[{{ $key }}]" class="spreadsheet-cell" aria-label="{{ $label }}" rows="1" maxlength="5000" data-simkug-field disabled required>{{ $value }}</textarea>
                             @else
-                                <input id="{{ $fieldId }}" name="simkug[{{ $key }}]" type="text" class="spreadsheet-cell{{ $key === 'nilai' ? ' spreadsheet-numeric' : '' }}" aria-label="{{ $label }}" value="{{ $value }}" maxlength="{{ $key === 'nilai' ? 64 : (str_starts_with($key, 'kode_') ? 100 : 255) }}" data-simkug-field readonly required>
+                                <input id="{{ $fieldId }}" name="simkug[{{ $key }}]" type="text" class="spreadsheet-cell{{ $key === 'nilai' ? ' spreadsheet-numeric' : '' }}" aria-label="{{ $label }}" value="{{ $value }}" maxlength="{{ $key === 'nilai' ? 64 : (str_starts_with($key, 'kode_') ? 100 : 255) }}" data-simkug-field disabled required>
                             @endif
                             @error('simkug.'.$key)<small class="text-danger">{{ $message }}</small>@enderror
                         </td>
