@@ -6,9 +6,9 @@
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="mb-0">Master Data Bank</h5>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalBank">
+            <a href="{{ route('bank.create') }}" class="btn btn-primary">
                 <i class="ti ti-plus me-1" aria-hidden="true"></i>Tambah Bank
-            </button>
+            </a>
         </div>
 
         <div class="card-body">
@@ -54,7 +54,7 @@
                                     </span>
                                 </td>
                                 <td class="text-center text-nowrap">
-                                    <a href="{{ route('bank.index', ['edit' => $bank->id]) }}"
+                                    <a href="{{ route('bank.edit', $bank) }}"
                                         class="btn btn-sm btn-icon btn-light-warning"
                                         aria-label="Ubah {{ $bank->nama_bank }}" title="Ubah">
                                         <i class="ti ti-pencil" aria-hidden="true"></i>
@@ -77,62 +77,4 @@
         </div>
     </div>
 
-    <div class="modal fade" id="modalBank" tabindex="-1" aria-labelledby="modalBankTitle" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <form method="POST" action="{{ $editingBank->exists
-                ? route('bank.update', $editingBank)
-                : route('bank.store') }}" class="modal-content">
-                @csrf
-                @if ($editingBank->exists)
-                    @method('PATCH')
-                @endif
-                <div class="modal-header bg-secondary">
-                    <h5 class="modal-title text-white" id="modalBankTitle">
-                        {{ $editingBank->exists ? 'Ubah Bank' : 'Tambah Bank' }}
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="kode-bank" class="form-label">Kode Bank</label>
-                        <input id="kode-bank" name="kode_bank" class="form-control" maxlength="30"
-                            value="{{ old('kode_bank', $editingBank->kode_bank) }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="inisial-bank" class="form-label">Inisial</label>
-                        <input id="inisial-bank" name="inisial" class="form-control" maxlength="30"
-                            value="{{ old('inisial', $editingBank->inisial) }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="nama-bank" class="form-label">Nama Bank</label>
-                        <input id="nama-bank" name="nama_bank" class="form-control" maxlength="255"
-                            value="{{ old('nama_bank', $editingBank->nama_bank) }}" required>
-                    </div>
-                    <div>
-                        <label for="status-bank" class="form-label">Status</label>
-                        <select id="status-bank" name="status" class="form-select" required>
-                            <option value="aktif" @selected(old('status', $editingBank->status) === 'aktif')>Aktif</option>
-                            <option value="nonaktif" @selected(old('status', $editingBank->status) === 'nonaktif')>Nonaktif</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        {{ $editingBank->exists ? 'Simpan Perubahan' : 'Tambah' }}
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    @if ($editingBank->exists || $errors->any())
-        @push('scripts')
-            <script>
-                document.addEventListener('DOMContentLoaded', function () {
-                    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalBank')).show();
-                });
-            </script>
-        @endpush
-    @endif
 @endsection

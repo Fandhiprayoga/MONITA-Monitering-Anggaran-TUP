@@ -98,6 +98,8 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
     Route::delete('/jenis-penghasilan/{jenisPenghasilan}', [JenisPenghasilanController::class, 'destroy'])->name('jenis-penghasilan.destroy');
 
     Route::get('/bank', [BankController::class, 'index'])->name('bank.index');
+    Route::get('/bank/create', [BankController::class, 'create'])->name('bank.create');
+    Route::get('/bank/{bank}/edit', [BankController::class, 'edit'])->name('bank.edit');
     Route::post('/bank', [BankController::class, 'store'])->name('bank.store');
     Route::patch('/bank/{bank}', [BankController::class, 'update'])->name('bank.update');
 

@@ -14,10 +14,23 @@ class BankController extends Controller
 
         return view('main.bank', [
             'banks' => Bank::query()->orderBy('kode_bank')->get(),
-            'editingBank' => $request->filled('edit')
-                ? Bank::findOrFail($request->integer('edit'))
-                : new Bank(['status' => 'aktif']),
         ]);
+    }
+
+    public function create()
+    {
+        $this->ensureAdmin();
+
+        return view('main.bank-form', [
+            'bank' => new Bank(['status' => 'aktif']),
+        ]);
+    }
+
+    public function edit(Bank $bank)
+    {
+        $this->ensureAdmin();
+
+        return view('main.bank-form', compact('bank'));
     }
 
     public function store(Request $request)
