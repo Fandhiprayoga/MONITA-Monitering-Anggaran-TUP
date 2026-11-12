@@ -1,7 +1,7 @@
 @php
     $pencairanMenu = $activeMenu ?? (request()->routeIs('pencairan.transaksi') ? 'transaksi'
-        : (request()->routeIs('pencairan.verifikasi') ? 'verifikasi'
-            : (request()->routeIs('pencairan.pengajuan', 'pencairan.form', 'pencairan.show', 'pencairan.edit') ? 'pengajuan' : null)));
+        : (request()->routeIs('pencairan.history') ? 'history' : (request()->routeIs('pencairan.verifikasi') ? 'verifikasi'
+            : (request()->routeIs('pencairan.pengajuan', 'pencairan.form', 'pencairan.show', 'pencairan.edit') ? 'pengajuan' : null))));
     $pencairanJenis = $activeJenis ?? request()->route('jenis');
 @endphp
 <nav class="pc-sidebar">
@@ -201,6 +201,13 @@
                                 </a>
                             </li>
                         </ul>
+                    </li>
+                    <li class="pc-item">
+                        <a class="pc-link {{ $pencairanMenu === 'history' ? 'active' : '' }}"
+                            href="{{ route('pencairan.history') }}">
+                            <span class="pc-micon"><i class="ti ti-history"></i></span>
+                            <span class="pc-mtext">History</span>
+                        </a>
                     </li>
                 @endif
 

@@ -5,6 +5,11 @@ class PencairanHistory extends PencairanAudit
     protected $table = 'pengajuan_histories';
     protected $casts = ['created_at' => 'datetime'];
 
+    public function pengajuan()
+    {
+        return $this->belongsTo(PencairanPengajuan::class, 'pengajuan_id');
+    }
+
     public function getDisplayRemarkAttribute(): ?string
     {
         if (!$this->remark || $this->action !== 'simkug') {

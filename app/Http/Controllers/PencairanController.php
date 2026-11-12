@@ -7,7 +7,9 @@ use App\Services\GoogleSheetService;
 use App\Services\PencairanService;
 use App\Models\Bank;
 use App\Models\JenisPenghasilan;
+use App\Models\PencairanHistory;
 use App\Models\PencairanPengajuan;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 
 class PencairanController extends Controller
@@ -90,6 +92,56 @@ class PencairanController extends Controller
         return $this->listing($request, 'Transaksi '.ucfirst($jenis), 'transaksi', $jenis);
     }
 
+    public function history(Request $request)
+    {
+        $this->requireAdmin();
+        $filters = $request->validate([
+            'start_date' => ['nullable', 'date_format:Y-m-d'],
+            'end_date' => ['nullable', 'date_format:Y-m-d', ...($request->filled('start_date') ? ['after_or_equal:start_date'] : [])],
+            'action' => ['nullable', 'in:verify,complete'],
+            'jenis' => ['nullable', 'in:impresfund,beban,honor'],
+            'pp' => ['nullable', 'string', 'max:100'],
+            'q' => ['nullable', 'string', 'max:100'],
+        ]);
+        $query = PencairanHistory::query()->with(['pengajuan.completion'])
+            ->whereIn('action', ['verify', 'complete']);
+        if (!empty($filters['start_date'])) {
+            $query->where('created_at', '>=', CarbonImmutable::parse($filters['start_date'])->startOfDay());
+        }
+        if (!empty($filters['end_date'])) {
+            $query->where('created_at', '<', CarbonImmutable::parse($filters['end_date'])->startOfDay()->addDay());
+        }
+        if (!empty($filters['action'])) {
+            $query->where('action', $filters['action']);
+        }
+        $query->whereHas('pengajuan', function ($pengajuan) use ($filters) {
+            if (!empty($filters['jenis'])) {
+                $pengajuan->where('jenis', $filters['jenis']);
+            }
+            if (!empty($filters['pp'])) {
+                $pengajuan->where('kode_pp', strtoupper(trim($filters['pp'])));
+            }
+            if (isset($filters['q']) && trim($filters['q']) !== '') {
+                $term = '%'.trim($filters['q']).'%';
+                $pengajuan->where(fn ($q) => $q->where('nomor_pengajuan', 'like', $term)
+                    ->orWhere('uraian_pengajuan', 'like', $term));
+            }
+        });
+        $query->orderByDesc('created_at')->orderByDesc('id');
+        $perPage = $this->listingPageSize($request);
+        $items = $perPage === 'all'
+            ? $query->paginate(max(1, (clone $query)->count()), ['*'], 'page', 1)
+            : $query->paginate((int) $perPage);
+        $unitOptions = PencairanPengajuan::query()
+            ->whereHas('histories', fn ($history) => $history->whereIn('action', ['verify', 'complete']))
+            ->select('kode_pp', 'nama_pp')->distinct()->orderBy('kode_pp')->pluck('nama_pp', 'kode_pp');
+
+        return view('main.pencairan.history', [
+            'items' => $items->withQueryString(), 'perPage' => $perPage,
+            'filters' => $filters, 'unitOptions' => $unitOptions, 'activeMenu' => 'history',
+        ]);
+    }
+
     private function listing(Request $request, string $title, string $mode, ?string $jenis = null)
     {
         $actor = app(PencairanService::class)->actor($request);
@@ -121,6 +173,18 @@ class PencairanController extends Controller
         if ($actor['role'] === 'admin' && $request->filled('pp')) { $query->where('kode_pp', strtoupper(trim((string) $request->pp))); }
         $mode === 'verifikasi' ? $query->orderBy('last_submitted_at') : $query->latest('updated_at');
         $view = $mode === 'transaksi' ? 'main.pencairan.transaksi.'.$jenis : 'main.pencairan.pengajuan';
+        $perPage = $this->listingPageSize($request);
+        $items = $perPage === 'all'
+            ? $query->paginate(max(1, (clone $query)->count()), ['*'], 'page', 1)
+            : $query->paginate((int) $perPage);
+
+        return view($view, ['items' => $items->withQueryString(), 'perPage' => $perPage,
+            'title' => $title, 'mode' => $mode, 'tab' => $tab,
+            'statusFilter' => $status, 'allowedStatuses' => $allowedStatuses]);
+    }
+
+    private function listingPageSize(Request $request): string
+    {
         if ($request->query->has('per_page')) {
             $data = $request->validate([
                 'per_page' => ['required', 'string', \Illuminate\Validation\Rule::in(['10', '50', '100', 'all'])],
@@ -131,13 +195,8 @@ class PencairanController extends Controller
             'pencairan.per_page', $request->session()->pull('pencairan.pengajuan.per_page', '10')
         );
         $request->session()->put('pencairan.per_page', $perPage);
-        $items = $perPage === 'all'
-            ? $query->paginate(max(1, (clone $query)->count()), ['*'], 'page', 1)
-            : $query->paginate((int) $perPage);
 
-        return view($view, ['items' => $items->withQueryString(), 'perPage' => $perPage,
-            'title' => $title, 'mode' => $mode, 'tab' => $tab,
-            'statusFilter' => $status, 'allowedStatuses' => $allowedStatuses]);
+        return $perPage;
     }
 
     public function show(Request $request, PencairanPengajuan $pengajuan)
@@ -255,13 +314,14 @@ class PencairanController extends Controller
     private function detailNavigation(Request $request, PencairanPengajuan $pengajuan): array
     {
         $activeMenu = 'pengajuan';
-        if (Session::get('user_role') === 'admin' && in_array($request->query('menu'), ['transaksi', 'verifikasi'], true)) {
+        if (Session::get('user_role') === 'admin' && in_array($request->query('menu'), ['transaksi', 'verifikasi', 'history'], true)) {
             $activeMenu = $request->query('menu');
         }
         $activeJenis = $pengajuan->jenis;
         $backUrl = match ($activeMenu) {
             'transaksi' => route('pencairan.transaksi', $activeJenis),
             'verifikasi' => route('pencairan.verifikasi'),
+            'history' => route('pencairan.history'),
             default => route('pencairan.pengajuan', [
                 'jenis' => $activeJenis,
                 'tab' => in_array($pengajuan->status, PencairanPengajuan::STATUS_NONAKTIF, true) ? 'nonaktif' : 'aktif',

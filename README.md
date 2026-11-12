@@ -32,6 +32,25 @@ Tujuan utama sistem MONITA adalah mencapai efisiensi, akurasi, dan transparansi 
 - **Keamanan Login**: Implementasi CAPTCHA untuk mencegah akses tidak sah
 - **Pengaturan Tahun Anggaran**: Mengelola koneksi ke Google Sheets ID untuk tahun anggaran yang berbeda-beda
 
+### History pencairan (admin)
+
+Menu **Pencairan Anggaran > History** (`/pencairan/history`) hanya dapat diakses
+admin. Setiap aktivitas verifikasi dan transaksi selesai tampil sebagai baris
+terpisah, diurutkan berdasarkan waktu aktivitas terbaru, lalu ID riwayat terbaru
+jika waktunya sama. Riwayat verifikasi tetap tampil meskipun status pengajuan
+kemudian berubah.
+
+Filter tersedia untuk tanggal mulai/akhir, aktivitas, jenis pengajuan, unit, serta
+nomor atau uraian pengajuan. Rentang tanggal menggunakan waktu aktivitas tercatat
+dalam zona Asia/Jakarta, termasuk seluruh tanggal akhir; salah satu batas boleh
+dikosongkan. Tanggal proses transaksi ditampilkan terpisah dan tidak digunakan
+untuk pengurutan/filter waktu. Nama pelaku menggunakan nama yang tersimpan saat
+aktivitas dilakukan. Data pengajuan dan tanggal proses menampilkan data terkini.
+Tombol **Lihat Detail** membuka pengajuan dengan navigasi kembali ke History.
+Pilihan jumlah baris 10/50/100/semua dibagikan dengan daftar pencairan lainnya.
+
+Validasi: `php artisan test --filter="PencairanHistoryTest|PencairanNavigationTest|PencairanPaginationTest"`.
+
 ### Pratinjau form pencairan
 
 Form Impresfund, Beban, dan Honor menggunakan header bersama dan rincian sesuai jenis.
