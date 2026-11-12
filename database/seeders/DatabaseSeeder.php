@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'),
         ]);
 
+        $this->call(BankSeeder::class);
+
         if (app()->environment(['local', 'testing'])) {
             $this->call(PencairanPengajuanSeeder::class);
         }

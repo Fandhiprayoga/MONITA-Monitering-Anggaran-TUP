@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Bank;
 use App\Services\GoogleSheetService;
+use Database\Seeders\BankSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
 use Tests\TestCase;
@@ -75,6 +76,34 @@ class BankTest extends TestCase
             ->assertSessionHasErrors(['kode_bank', 'status']);
 
         $this->assertDatabaseCount('banks', 1);
+    }
+
+    public function test_bank_seeder_inserts_all_banks_without_overwriting_existing_status(): void
+    {
+        $existingBank = Bank::create([
+            'kode_bank' => '002',
+            'inisial' => 'BRI',
+            'nama_bank' => 'Bank Rakyat Indonesia',
+            'status' => 'nonaktif',
+        ]);
+
+        $this->seed(BankSeeder::class);
+        $this->seed(BankSeeder::class);
+
+        $this->assertDatabaseCount('banks', 33);
+        $this->assertDatabaseHas('banks', [
+            'id' => $existingBank->id,
+            'kode_bank' => '002',
+            'inisial' => 'BRI',
+            'nama_bank' => 'Bank Rakyat Indonesia',
+            'status' => 'nonaktif',
+        ]);
+        $this->assertDatabaseHas('banks', [
+            'kode_bank' => '111',
+            'inisial' => 'DKI / JAKARTA',
+            'nama_bank' => 'Bank DKI / Bank Jakarta',
+            'status' => 'aktif',
+        ]);
     }
 
     public function test_non_admin_cannot_manage_banks(): void
