@@ -29,7 +29,7 @@ export const schemas = {
         { key: 'bank', label: 'Nama Bank', choiceSource: 'banks' },
         { key: 'rekening', label: 'Nomor Rekening' },
         { key: 'identitas', label: 'No KTP / Paspor' },
-        { key: 'npwp', label: 'No NPWP', optional: true },
+        { key: 'npwp', label: 'No NPWP', optional: true, defaultValue: '00.000.000.0-000.000' },
     ],
 };
 

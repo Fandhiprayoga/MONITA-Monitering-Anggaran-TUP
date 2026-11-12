@@ -139,7 +139,9 @@ test('Bank initials are validated against active master options', () => {
 test('Tax defaults to zero without activating unused Honor and Beban rows', () => {
     assert.equal(schemas.beban.find((column) => column.key === 'pajak').defaultValue, '0');
     assert.equal(schemas.honor.find((column) => column.key === 'pajak').calculated, true);
+    assert.equal(schemas.honor.find((column) => column.key === 'npwp').defaultValue, '00.000.000.0-000.000');
     assert.deepEqual(calculateRow('honor', { pajak: '0' }), { empty: true, gross: 0, tax: 0, net: 0 });
+    assert.deepEqual(calculateRow('honor', { npwp: '00.000.000.0-000.000' }), { empty: true, gross: 0, tax: 0, net: 0 });
     assert.deepEqual(calculateRow('honor', { pajak: '1' }), { empty: true, gross: 0, tax: 0, net: 0 });
     assert.deepEqual(calculateRow('beban', { pajak: '0' }), { empty: true, gross: 0, tax: 0, net: 0 });
     assert.ok(calculateRow('beban', { pajak: '1' }).errors.nominal);
