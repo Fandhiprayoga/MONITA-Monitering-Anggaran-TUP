@@ -5,6 +5,35 @@
     $showSimkug = $pengajuan->status === 'verified'
         || ($pengajuan->jenis === 'impresfund' && $pengajuan->status === 'completed');
     $simkugActive = $showSimkug && (request('tab') === 'simkug' || session()->hasOldInput('simkug'));
+    $headerFieldOrder = ['kode_akun', 'nama_akun', 'kode_pp', 'nama_pp', 'kode_drk', 'uraian_drk', 'saldo_awal', 'anggaran_terpakai', 'saldo_terkini', 'tipe', 'drk_tup'];
+    $orderedHeaderSnapshot = array_replace(array_fill_keys($headerFieldOrder, null), $headerSnapshot);
+    $visibleHeader = array_filter($orderedHeaderSnapshot, fn ($value, $key) => is_scalar($value) && !in_array($key, ['id', 'checked_at']) && !str_ends_with($key, '_decimal'), ARRAY_FILTER_USE_BOTH);
+    $formatNominal = static function ($value) {
+        if (!is_scalar($value) || trim((string) $value) === '') {
+            return $value;
+        }
+
+        $value = trim((string) $value);
+        if (preg_match('/^-?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/D', $value)) {
+            $normalized = str_replace([ '.', ',' ], [ '', '.' ], $value);
+        } elseif (preg_match('/^-?\d+(?:,\d{1,2})?$/D', $value)) {
+            $normalized = str_replace(',', '.', $value);
+        } elseif (is_numeric($value)) {
+            $normalized = $value;
+        } else {
+            return $value;
+        }
+
+        $formatted = number_format((float) $normalized, 2, ',', '.');
+        [$integer, $fraction] = explode(',', $formatted);
+
+        return $fraction === '00' ? $integer : $formatted;
+    };
+    foreach (['saldo_awal', 'anggaran_terpakai', 'saldo_terkini'] as $nominalField) {
+        if (isset($visibleHeader[$nominalField])) {
+            $visibleHeader[$nominalField] = $formatNominal($visibleHeader[$nominalField]);
+        }
+    }
 @endphp
 <link rel="stylesheet" href="{{ asset('css/monita/pencairan-grid.css') }}">
 <link rel="stylesheet" href="{{ asset('css/monita/pencairan-timeline.css') }}">
@@ -26,6 +55,7 @@
     </ul>
     <div class="tab-content" id="pengajuan-tab-content-{{ $pengajuan->id }}">
     <section class="tab-pane fade {{ $simkugActive ? '' : 'show active' }}" id="pengajuan-detail-{{ $pengajuan->id }}" role="tabpanel" aria-labelledby="pengajuan-detail-tab-{{ $pengajuan->id }}" tabindex="0">
+    @include('main.pencairan.partials.detail-header')
     @include('main.pencairan.partials.detail-data', ['simkug' => false])
     @if($pengajuan->histories->where('action','return')->last())<div class="alert alert-info">Remark pengembalian terakhir: {{ $pengajuan->histories->where('action','return')->last()->remark }}</div>@endif
     @php
@@ -45,9 +75,11 @@
     </section>
     @if($showSimkug)
         <section class="tab-pane fade {{ $simkugActive ? 'show active' : '' }}" id="pengajuan-simkug-{{ $pengajuan->id }}" role="tabpanel" aria-labelledby="pengajuan-simkug-tab-{{ $pengajuan->id }}" tabindex="0" data-simkug-panel>
+            @include('main.pencairan.partials.detail-header')
             @if($pengajuan->jenis === 'impresfund')
                 @include('main.pencairan.partials.simkug-impresfund')
             @else
+                @include('main.pencairan.partials.simkug-header-copy')
                 @include('main.pencairan.partials.detail-data', ['simkug' => true])
             @endif
         </section>
