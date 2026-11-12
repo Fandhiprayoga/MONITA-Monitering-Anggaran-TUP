@@ -552,6 +552,38 @@ class PencairanWorkflowTest extends TestCase
     }
 
     #[DataProvider('kinds')]
+    public function test_admin_can_edit_verified_pengajuan_without_changing_its_status(string $jenis): void
+    {
+        $p = $this->verified($jenis);
+        $this->get(route('pencairan.show', ['pengajuan' => $p, 'menu' => 'transaksi']))
+            ->assertOk()->assertSee('Edit Data Pengajuan');
+        $this->get(route('pencairan.edit', ['pengajuan' => $p, 'menu' => 'transaksi']))
+            ->assertOk()->assertSee('Simpan Perubahan')->assertDontSee('Submit Pengajuan')
+            ->assertSee('Perubahan tersimpan tanpa mengubah status menunggu transaksi.')
+            ->assertSee('data-menu="transaksi"', false);
+
+        $row = $this->row($jenis);
+        if ($jenis === 'impresfund') {
+            $row['uraian'] = 'Rincian diperbarui admin';
+        } else {
+            $row['nominal'] = '200';
+        }
+        $this->patchJson(route('pencairan.update', $p), [
+            'lock_version' => $p->lock_version,
+            'drk_id' => str_repeat('a', 64),
+            'uraian_pengajuan' => 'Narasi diperbarui admin',
+            'details' => [$row],
+        ])->assertOk();
+
+        $saved = $p->fresh();
+        $this->assertSame('verified', $saved->status);
+        $this->assertSame('Narasi diperbarui admin', $saved->uraian_pengajuan);
+        $this->assertSame(1, $saved->revisions()->count());
+        $this->assertSame(1, $saved->histories()->where('action', 'save')->count());
+        $this->assertSame('admin', $saved->histories()->where('action', 'save')->firstOrFail()->actor_role);
+    }
+
+    #[DataProvider('kinds')]
     public function test_all_forms_save_incomplete_drafts_and_roundtrip_manual_values(string $jenis): void
     {
         $row = $this->row($jenis);

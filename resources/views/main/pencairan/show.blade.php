@@ -110,7 +110,7 @@
         @if($ownPp && in_array($pengajuan->status,['draft','returned']))
             <a href="{{ route('pencairan.edit', ['pengajuan' => $pengajuan, 'menu' => $activeMenu]) }}" class="btn btn-primary">Edit / Submit</a>
         @endif
-        @if($actor['role'] === 'admin' && $pengajuan->status === 'submitted')
+        @if($actor['role'] === 'admin' && in_array($pengajuan->status, ['submitted', 'verified'], true))
             <a href="{{ route('pencairan.edit', ['pengajuan' => $pengajuan, 'menu' => $activeMenu]) }}" class="btn btn-primary">Edit Data Pengajuan</a>
         @endif
         @foreach($actions as $action => $label)

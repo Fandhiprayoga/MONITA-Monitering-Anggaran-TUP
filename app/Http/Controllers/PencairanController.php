@@ -197,8 +197,8 @@ class PencairanController extends Controller
     {
         $service = app(PencairanService::class);
         $actor = $service->authorize($request, $pengajuan);
-        $adminPendingEdit = $actor['role'] === 'admin' && $pengajuan->status === 'submitted';
-        $canEdit = $adminPendingEdit
+        $adminStatusEdit = $actor['role'] === 'admin' && in_array($pengajuan->status, ['submitted', 'verified'], true);
+        $canEdit = $adminStatusEdit
             || (in_array($pengajuan->status, ['draft', 'returned'], true)
                 && ($actor['role'] === 'admin' || ($actor['kode_pp'] !== '' && $pengajuan->kode_pp === $actor['kode_pp'])));
         abort_unless($canEdit, 403);
@@ -209,7 +209,7 @@ class PencairanController extends Controller
             'jenisPenghasilanOptions' => $this->jenisPenghasilanOptions($pengajuan->jenis),
             'bankOptions' => $this->bankOptions($pengajuan->jenis),
             'activeTw' => $pengajuan->triwulan, 'drkOptions' => $options, 'drkError' => $error, 'pengajuan' => $pengajuan,
-            'adminPendingEdit' => $adminPendingEdit,
+            'adminStatusEdit' => $adminStatusEdit,
             'selectedUnit' => $pengajuan->kode_pp, 'selectedUnitName' => $pengajuan->nama_pp]
             + $this->detailNavigation($request, $pengajuan));
     }
