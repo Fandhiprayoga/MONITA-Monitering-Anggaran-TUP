@@ -367,6 +367,49 @@ class PencairanWorkflowTest extends TestCase
         }
     }
 
+    #[DataProvider('kinds')]
+    public function test_completed_simkug_is_visible_to_admin_and_remains_readonly(string $jenis): void
+    {
+        $p = $this->verified($jenis);
+        if ($jenis === 'impresfund') {
+            $this->patchJson(route('pencairan.simkug.save', $p), [
+                'lock_version' => $p->lock_version, 'simkug' => ['dc' => 'C'],
+            ])->assertOk();
+        }
+        $this->action($p, 'complete', ['completion_date' => now()->toDateString()])->assertOk();
+        $p->refresh();
+
+        $response = $this->get(route('pencairan.show', ['pengajuan' => $p, 'menu' => 'transaksi', 'tab' => 'simkug']))
+            ->assertOk()->assertSee('>SIMKUG</button>', false)
+            ->assertSee('id="pengajuan-simkug-'.$p->id.'"', false)
+            ->assertDontSee('Simpan Data SIMKUG');
+        if ($jenis === 'impresfund') {
+            $response->assertSee('data-editable="false"', false)
+                ->assertSee('<option value="C" selected>', false);
+            $this->patchJson(route('pencairan.simkug.save', $p), [
+                'lock_version' => $p->lock_version, 'simkug' => ['dc' => 'D'],
+            ])->assertConflict();
+            $this->assertSame('C', $p->fresh()->simkug_data['dc']);
+        } else {
+            $response->assertSee('Salin data header')
+                ->assertSee('aria-label="Rincian pengajuan SIMKUG"', false);
+            if ($jenis === 'honor') {
+                $response->assertSee('PPh Pasal 21')
+                    ->assertDontSee('Tidak ditemukan di data jenis penghasilan');
+            }
+        }
+
+        $this->login();
+        $response = $this->get(route('pencairan.show', $p))->assertOk();
+        if ($jenis === 'impresfund') {
+            $response->assertSee('>SIMKUG</button>', false)->assertSee('data-editable="false"', false);
+        } else {
+            $response->assertDontSee('>SIMKUG</button>', false);
+        }
+        $this->login('user', 'OTHER');
+        $this->get(route('pencairan.show', $p))->assertForbidden();
+    }
+
     public function test_simkug_native_save_keeps_menu_tab_and_validation_inputs_and_resets_on_resubmission(): void
     {
         $p = $this->verified('impresfund');

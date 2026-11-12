@@ -3,7 +3,7 @@
 @section('content')
 @php
     $showSimkug = $pengajuan->status === 'verified'
-        || ($pengajuan->jenis === 'impresfund' && $pengajuan->status === 'completed');
+        || ($pengajuan->status === 'completed' && ($actor['role'] === 'admin' || $pengajuan->jenis === 'impresfund'));
     $simkugActive = $showSimkug && (request('tab') === 'simkug' || session()->hasOldInput('simkug'));
     $headerFieldOrder = ['kode_akun', 'nama_akun', 'kode_pp', 'nama_pp', 'kode_drk', 'uraian_drk', 'saldo_awal', 'anggaran_terpakai', 'saldo_terkini', 'tipe', 'drk_tup'];
     $orderedHeaderSnapshot = array_replace(array_fill_keys($headerFieldOrder, null), $headerSnapshot);

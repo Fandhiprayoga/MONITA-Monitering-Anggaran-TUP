@@ -157,7 +157,8 @@ class PencairanController extends Controller
             })->all();
         }
         $jenisPphByCode = [];
-        if ($pengajuan->jenis === 'honor' && $pengajuan->status === 'verified') {
+        if ($pengajuan->jenis === 'honor' && ($pengajuan->status === 'verified'
+            || ($pengajuan->status === 'completed' && $actor['role'] === 'admin'))) {
             $jenisPphByCode = JenisPenghasilan::query()->get(['kode_jenis', 'nama_jenis_pph'])
                 ->mapWithKeys(fn (JenisPenghasilan $jenis) => [strtoupper(trim($jenis->kode_jenis)) => $jenis->nama_jenis_pph])
                 ->all();
