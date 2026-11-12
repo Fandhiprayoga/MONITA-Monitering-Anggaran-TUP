@@ -14,10 +14,23 @@ class JenisPenghasilanController extends Controller
 
         return view('main.jenis-penghasilan', [
             'jenisPenghasilans' => JenisPenghasilan::query()->orderBy('kode_jenis')->get(),
-            'editingJenisPenghasilan' => $request->filled('edit')
-                ? JenisPenghasilan::findOrFail($request->integer('edit'))
-                : new JenisPenghasilan(),
         ]);
+    }
+
+    public function create()
+    {
+        $this->ensureAdmin();
+
+        return view('main.jenis-penghasilan-form', [
+            'jenisPenghasilan' => new JenisPenghasilan(),
+        ]);
+    }
+
+    public function edit(JenisPenghasilan $jenisPenghasilan)
+    {
+        $this->ensureAdmin();
+
+        return view('main.jenis-penghasilan-form', compact('jenisPenghasilan'));
     }
 
     public function store(Request $request)

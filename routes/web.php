@@ -91,6 +91,8 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
     Route::delete('/management/delete/{row}', [ManagementController::class, 'destroy'])->name('management.destroy');
 
     Route::get('/jenis-penghasilan', [JenisPenghasilanController::class, 'index'])->name('jenis-penghasilan.index');
+    Route::get('/jenis-penghasilan/create', [JenisPenghasilanController::class, 'create'])->name('jenis-penghasilan.create');
+    Route::get('/jenis-penghasilan/{jenisPenghasilan}/edit', [JenisPenghasilanController::class, 'edit'])->name('jenis-penghasilan.edit');
     Route::post('/jenis-penghasilan', [JenisPenghasilanController::class, 'store'])->name('jenis-penghasilan.store');
     Route::patch('/jenis-penghasilan/{jenisPenghasilan}', [JenisPenghasilanController::class, 'update'])->name('jenis-penghasilan.update');
     Route::delete('/jenis-penghasilan/{jenisPenghasilan}', [JenisPenghasilanController::class, 'destroy'])->name('jenis-penghasilan.destroy');
