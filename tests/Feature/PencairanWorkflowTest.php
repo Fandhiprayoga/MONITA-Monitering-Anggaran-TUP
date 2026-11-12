@@ -187,8 +187,18 @@ class PencairanWorkflowTest extends TestCase
         $detailCells = $xpath->query('//section[@id="pengajuan-detail-'.$p->id.'"]//td[@data-grid-cell]');
         $simkugCells = $xpath->query($panel.'//td[@data-grid-cell]');
         $cellValues = fn ($cells) => array_map(fn ($cell) => trim($cell->textContent), iterator_to_array($cells));
-        $this->assertNotEmpty($cellValues($detailCells));
-        $this->assertSame($cellValues($detailCells), $cellValues($simkugCells));
+        $expectedCells = $cellValues($detailCells);
+        $this->assertNotEmpty($expectedCells);
+        if ($jenis === 'honor') {
+            $detailHeaders = $xpath->query('//section[@id="pengajuan-detail-'.$p->id.'"]//button[@data-grid-select-column]');
+            $simkugHeaders = $xpath->query($panel.'//button[@data-grid-select-column]');
+            $this->assertSame(['No KTP / Paspor', 'No NPWP'], array_slice($cellValues($detailHeaders), -2));
+            $this->assertSame(['No NPWP', 'No KTP / Paspor'], array_slice($cellValues($simkugHeaders), -2));
+            $this->assertSame(['0000000000000098', '000012'], array_slice($expectedCells, -2));
+            $last = count($expectedCells) - 1;
+            [$expectedCells[$last - 1], $expectedCells[$last]] = [$expectedCells[$last], $expectedCells[$last - 1]];
+        }
+        $this->assertSame($expectedCells, $cellValues($simkugCells));
         $this->assertSame(1, $xpath->query($panel.'//*[@data-simkug-copy-status][@role="status"]')->length);
         $this->assertSame(0, $xpath->query($panel.'//form')->length);
     }

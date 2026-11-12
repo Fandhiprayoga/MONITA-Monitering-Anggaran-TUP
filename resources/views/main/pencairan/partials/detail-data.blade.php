@@ -75,6 +75,13 @@
         'penerima' => 'Nama Penerima', 'identitas' => 'No KTP / Paspor', 'npwp' => 'No NPWP',
     ];
     $columns = array_values(array_filter(array_keys($rows[0] ?? []), fn ($column) => $column !== 'no'));
+    if ($simkug && $pengajuan->jenis === 'honor') {
+        $identityIndex = array_search('identitas', $columns, true);
+        $npwpIndex = array_search('npwp', $columns, true);
+        if ($identityIndex !== false && $npwpIndex !== false && $npwpIndex > $identityIndex) {
+            [$columns[$identityIndex], $columns[$npwpIndex]] = [$columns[$npwpIndex], $columns[$identityIndex]];
+        }
+    }
     $numericColumns = ['volume', 'tarif', 'subtotal', 'nominal', 'pajak', 'neto'];
     $nominalColumns = ['tarif', 'subtotal', 'nominal', 'pajak', 'neto'];
 @endphp
