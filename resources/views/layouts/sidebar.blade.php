@@ -218,6 +218,14 @@
                         </a>
                     </li>
 
+                    <li class="pc-item">
+                        <a class="pc-link {{ request()->routeIs('bank.*') ? 'active' : '' }}"
+                            href="{{ route('bank.index') }}">
+                            <span class="pc-micon"><i class="ti ti-building-bank"></i></span>
+                            <span class="pc-mtext">Bank</span>
+                        </a>
+                    </li>
+
                     <li class="pc-item pc-caption">
                         <label>Settings</label>
                         <i class="ti ti-settings"></i>

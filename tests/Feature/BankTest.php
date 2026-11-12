@@ -1,0 +1,90 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Bank;
+use App\Services\GoogleSheetService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery\MockInterface;
+use Tests\TestCase;
+
+class BankTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->mock(GoogleSheetService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('getUnitsFromSheet')->andReturn(['TEST' => 'Unit Test']);
+        });
+        $this->withSession(['user_authenticated' => true, 'user_role' => 'admin']);
+    }
+
+    public function test_admin_can_create_update_and_change_bank_status(): void
+    {
+        $this->get(route('bank.index'))
+            ->assertOk()
+            ->assertSee('Master Data Bank')
+            ->assertSee('Kode Bank')
+            ->assertSee('Nama Bank')
+            ->assertSee('Status');
+
+        $this->post(route('bank.store'), [
+            'kode_bank' => ' bni ',
+            'nama_bank' => 'Bank Negara Indonesia',
+            'status' => 'aktif',
+        ])->assertRedirect(route('bank.index'));
+
+        $bank = Bank::firstOrFail();
+        $this->assertSame('BNI', $bank->kode_bank);
+        $this->assertSame('aktif', $bank->status);
+
+        $this->patch(route('bank.update', $bank), [
+            'kode_bank' => 'BNI',
+            'nama_bank' => 'BNI',
+            'status' => 'nonaktif',
+        ])->assertRedirect(route('bank.index'));
+
+        $this->assertDatabaseHas('banks', [
+            'id' => $bank->id,
+            'kode_bank' => 'BNI',
+            'nama_bank' => 'BNI',
+            'status' => 'nonaktif',
+        ]);
+    }
+
+    public function test_bank_code_must_be_unique_and_status_must_be_valid(): void
+    {
+        Bank::create(['kode_bank' => 'BNI', 'nama_bank' => 'BNI', 'status' => 'aktif']);
+
+        $this->from(route('bank.index'))
+            ->post(route('bank.store'), [
+                'kode_bank' => 'bni',
+                'nama_bank' => 'Duplikat',
+                'status' => 'invalid',
+            ])
+            ->assertRedirect(route('bank.index'))
+            ->assertSessionHasErrors(['kode_bank', 'status']);
+
+        $this->assertDatabaseCount('banks', 1);
+    }
+
+    public function test_non_admin_cannot_manage_banks(): void
+    {
+        $this->withSession(['user_role' => 'user'])
+            ->get(route('bank.index'))
+            ->assertForbidden();
+
+        $this->withSession(['user_role' => 'user'])
+            ->post(route('bank.store'), [
+                'kode_bank' => 'BNI',
+                'nama_bank' => 'BNI',
+                'status' => 'aktif',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('banks', 0);
+    }
+}
