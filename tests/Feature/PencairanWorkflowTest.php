@@ -130,6 +130,8 @@ class PencairanWorkflowTest extends TestCase
             ->assertSee('pencairan-detail-grid.js');
         $response->assertSee('workflow-timeline', false)
             ->assertSee('Pengajuan dibuat')->assertSee('Draft')->assertSee('Terbaru');
+        $response->assertSee('Uraian Pengajuan')
+            ->assertSee('Narasi');
         $response->assertSee('Nominal: Rp')->assertDontSee('Pajak: Rp')->assertDontSee('Neto: Rp');
         $response->assertSee('<div>36.135.000</div>', false)->assertSee('<div>0</div>', false);
         $document = new \DOMDocument();
