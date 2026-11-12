@@ -21,10 +21,19 @@
                     </th>
                     @foreach ($columns as $column)
                         <th scope="col">
-                            <button type="button" class="spreadsheet-selector" data-grid-select-column="{{ $loop->index }}"
-                                aria-label="Pilih kolom {{ $column }}">
-                                {{ $column }}
-                            </button>
+                            <div class="spreadsheet-header-tools">
+                                <button type="button" class="spreadsheet-selector" data-grid-select-column="{{ $loop->index }}"
+                                    aria-label="Pilih kolom {{ $column }}">
+                                    {{ $column }}
+                                </button>
+                                @if ($column === 'Kd Jenis' && isset($jenisPenghasilanOptions))
+                                    <button type="button" class="spreadsheet-header-help" data-bs-toggle="modal"
+                                        data-bs-target="#jenis-penghasilan-help-modal" aria-controls="jenis-penghasilan-help-modal"
+                                        aria-label="Lihat keterangan kode jenis penghasilan" title="Keterangan kode jenis penghasilan">
+                                        <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                    </button>
+                                @endif
+                            </div>
                         </th>
                     @endforeach
                 </tr>
@@ -36,6 +45,43 @@
 </section>
 
 @push('scripts')
+    @isset($jenisPenghasilanOptions)
+        <div class="modal fade" id="jenis-penghasilan-help-modal" tabindex="-1"
+            aria-labelledby="jenis-penghasilan-help-title" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="jenis-penghasilan-help-title">Keterangan Kode Jenis Penghasilan</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (count($jenisPenghasilanOptions))
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead>
+                                        <tr><th scope="col">Kode</th><th scope="col">Keterangan</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($jenisPenghasilanOptions as $option)
+                                            <tr>
+                                                <td>{{ $option['value'] }}</td>
+                                                <td>{{ $option['description'] }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <p class="mb-0">Belum ada data master jenis penghasilan.</p>
+                        @endif
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endisset
     <div class="modal fade" id="grid-help-modal" tabindex="-1" aria-labelledby="grid-help-title" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">

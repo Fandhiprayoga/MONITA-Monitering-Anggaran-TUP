@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\JenisPenghasilan;
 use App\Models\PencairanActor;
 use App\Models\PencairanPengajuan;
 use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -192,14 +194,26 @@ class PencairanService
         $keys = match ($jenis) {
             'impresfund' => ['no', 'uraian', 'volume', 'tarif', 'subtotal'],
             'beban' => ['no', 'nominal', 'pajak', 'neto', 'bank', 'nama', 'rekening'],
-            'honor' => ['no', 'kewarganegaraan', 'nominal', 'pajak', 'neto', 'penerima', 'nama', 'bank', 'rekening', 'identitas', 'npwp'],
+            'honor' => ['no', 'kode_jenis', 'nominal', 'pajak', 'neto', 'penerima', 'nama', 'bank', 'rekening', 'identitas', 'npwp'],
         };
+        $jenisPenghasilanByCode = $jenis === 'honor'
+            ? JenisPenghasilan::query()->get(['kode_jenis', 'tarif_pph'])
+                ->keyBy(fn (JenisPenghasilan $jenisPenghasilan) => strtoupper($jenisPenghasilan->kode_jenis))
+                ->all()
+            : [];
         $numeric = $jenis === 'impresfund' ? ['volume', 'tarif', 'subtotal'] : ['nominal', 'pajak', 'neto'];
         $totals = ['total_bruto' => BigDecimal::zero(), 'total_pajak' => BigDecimal::zero(), 'total_neto' => BigDecimal::zero()];
         $records = [];
         foreach (array_values($rows) as $index => $row) {
             if (!is_array($row)) { PencairanDecimal::invalid("details.$index", 'Baris harus berupa objek.'); }
             $raw = []; $numbers = [];
+            if ($jenis === 'honor' && !array_key_exists('kode_jenis', $row)) {
+                $row['kode_jenis'] = $row['kewarganegaraan'] ?? null;
+            }
+            if ($jenis === 'honor') {
+                $row['pajak'] = null;
+                $row['neto'] = null;
+            }
             foreach ($keys as $key) {
                 $value = $row[$key] ?? null;
                 $field = "details.$index.$key";
@@ -213,8 +227,20 @@ class PencairanService
                 }
             }
             if ($jenis === 'honor') {
-                $raw['kewarganegaraan'] = strtoupper(trim($raw['kewarganegaraan']));
-                if ($raw['kewarganegaraan'] !== '' && !in_array($raw['kewarganegaraan'], ['WNI', 'WNA'], true)) { PencairanDecimal::invalid("details.$index.kewarganegaraan", 'Pilih WNI atau WNA.'); }
+                $raw['kode_jenis'] = strtoupper(trim($raw['kode_jenis']));
+                if ($raw['kode_jenis'] !== '' && !array_key_exists($raw['kode_jenis'], $jenisPenghasilanByCode)) {
+                    PencairanDecimal::invalid("details.$index.kode_jenis", 'Pilih Kd Jenis dari master data jenis penghasilan.');
+                }
+                if ($raw['kode_jenis'] !== '' && isset($numbers['nominal'], $jenisPenghasilanByCode[$raw['kode_jenis']])) {
+                    $tax = BigDecimal::of($numbers['nominal'])
+                        ->multipliedBy((string) $jenisPenghasilanByCode[$raw['kode_jenis']]->tarif_pph)
+                        ->dividedBy('100', 2, RoundingMode::HALF_UP);
+                    $numbers['pajak'] = (string) $tax;
+                    $raw['pajak'] = PencairanDecimal::format((string) $tax);
+                    $net = BigDecimal::of($numbers['nominal'])->minus($tax)->toScale(2);
+                    $numbers['neto'] = (string) $net;
+                    $raw['neto'] = PencairanDecimal::format((string) $net);
+                }
             }
             $active = false;
             foreach ($raw as $key => $value) {
@@ -225,7 +251,7 @@ class PencairanService
             if (!$active) { continue; }
             if ($complete) {
                 $required = $jenis === 'impresfund' ? ['uraian', 'volume', 'tarif'] : ['nominal', 'pajak', 'neto', 'bank', 'nama', 'rekening'];
-                if ($jenis === 'honor') { $required = array_merge($required, ['kewarganegaraan', 'penerima', 'identitas']); }
+                if ($jenis === 'honor') { $required = array_merge($required, ['kode_jenis', 'penerima', 'identitas']); }
                 foreach ($required as $key) {
                     if (trim($raw[$key]) === '') { PencairanDecimal::invalid("details.$index.$key", 'Rincian ini wajib diisi sebelum submit.'); }
                 }
@@ -240,7 +266,7 @@ class PencairanService
                 $bruto = $numbers['nominal'] ?? '0'; $tax = $numbers['pajak'] ?? '0'; $net = $numbers['neto'] ?? '0';
                 if ($numbers['nominal'] !== null && BigDecimal::of($tax)->isGreaterThan($bruto)) { PencairanDecimal::invalid("details.$index.pajak", 'Pajak tidak boleh melebihi bruto.'); }
                 $record += ['nominal' => $numbers['nominal'], 'pajak' => $numbers['pajak'], 'neto' => $numbers['neto'], 'bank' => $raw['bank'] ?: null, 'nama_rekening' => $raw['nama'] ?: null, 'nomor_rekening' => $raw['rekening'] === '' ? null : $raw['rekening']];
-                if ($jenis === 'honor') { $record += ['kewarganegaraan' => $raw['kewarganegaraan'] ?: null, 'nama_penerima' => $raw['penerima'] ?: null, 'nomor_identitas' => $raw['identitas'] === '' ? null : $raw['identitas'], 'npwp' => $raw['npwp'] === '' ? null : $raw['npwp']]; }
+                if ($jenis === 'honor') { $record += ['kode_jenis' => $raw['kode_jenis'] ?: null, 'nama_penerima' => $raw['penerima'] ?: null, 'nomor_identitas' => $raw['identitas'] === '' ? null : $raw['identitas'], 'npwp' => $raw['npwp'] === '' ? null : $raw['npwp']]; }
             }
             foreach (['total_bruto' => $bruto, 'total_pajak' => $tax, 'total_neto' => $net] as $key => $value) { $totals[$key] = $totals[$key]->plus($value); }
             $records[] = $record;

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\JenisPenghasilan;
 use App\Enums\PencairanStatus;
 use App\Models\PencairanActor;
 use App\Models\PencairanPengajuan;
@@ -173,6 +174,9 @@ class PencairanPengajuanSeeder extends Seeder
         }
 
         $rows = [];
+        $kodeJenis = $jenis === 'honor'
+            ? JenisPenghasilan::query()->orderBy('kode_jenis')->value('kode_jenis')
+            : null;
         foreach (['Andi Dummy', 'Budi Dummy', 'Citra Dummy'] as $index => $name) {
             $row = [
                 'no' => sprintf('%03d', $index + 1), 'nominal' => '1.000.000', 'pajak' => '50.000',
@@ -180,7 +184,7 @@ class PencairanPengajuanSeeder extends Seeder
                 'rekening' => '000000000'.($index + 1),
             ];
             if ($jenis === 'honor') {
-                $row += ['kewarganegaraan' => $index === 2 ? 'WNA' : 'WNI', 'penerima' => $name,
+                $row += ['kode_jenis' => $kodeJenis ?? '', 'penerima' => $name,
                     'identitas' => $index === 2 ? 'DUMMY-PASPOR-003' : '000000000000000'.($index + 1),
                     'npwp' => $index === 2 ? '' : '00.000.000.0-000.00'.($index + 1)];
             }

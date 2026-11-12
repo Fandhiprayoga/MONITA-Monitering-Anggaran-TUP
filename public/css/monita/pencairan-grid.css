@@ -45,6 +45,36 @@
     z-index: 3;
 }
 
+.spreadsheet-header-tools {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+}
+
+.spreadsheet-grid .spreadsheet-header-tools .spreadsheet-selector {
+    width: auto;
+    flex: 1;
+}
+
+.spreadsheet-header-help {
+    flex: 0 0 auto;
+    padding: 4px 6px;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    line-height: 1;
+}
+
+.spreadsheet-header-help:hover,
+.spreadsheet-header-help:focus-visible {
+    color: #1d4ed8;
+}
+
+.spreadsheet-header-help:focus-visible {
+    outline: 2px solid #3478f6;
+    outline-offset: -2px;
+}
+
 .spreadsheet-selector {
     display: block;
     width: 100%;
@@ -88,6 +118,10 @@
     font: inherit;
     cursor: cell;
     text-overflow: ellipsis;
+}
+
+.spreadsheet-grid select.spreadsheet-cell {
+    cursor: pointer;
 }
 
 .spreadsheet-grid .spreadsheet-numeric {

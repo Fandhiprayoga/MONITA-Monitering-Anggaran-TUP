@@ -55,7 +55,14 @@ class PencairanPengajuan extends Model
     {
         $relation = $this->jenis.'Details';
         $rows = $this->relationLoaded('details') ? $this->details : $this->{$relation};
-        return $rows->map(fn ($row) => $row->raw_data)->all();
+        return $rows->map(function ($row) {
+            $data = $row->raw_data;
+            if ($this->jenis === 'honor' && !array_key_exists('kode_jenis', $data)) {
+                $data['kode_jenis'] = $data['kewarganegaraan'] ?? '';
+                unset($data['kewarganegaraan']);
+            }
+            return $data;
+        })->all();
     }
 
     public function histories() { return $this->hasMany(PencairanHistory::class, 'pengajuan_id')->orderBy('id'); }

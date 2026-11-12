@@ -64,22 +64,24 @@ tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
 - Beban: potongan pajak dalam rupiah; total pengajuan memakai bruto. Nominal
   Setelah Pajak otomatis dihitung dari nominal dikurangi potongan pajak, dan
   dapat diisi manual. Perubahan nominal atau pajak mengaktifkan hitung otomatis lagi.
-- Potongan pajak pada baris baru Honor dan Beban memiliki nilai awal 0 rupiah,
-  tetap dapat diedit. Baris yang hanya berisi pajak default 0 tetap diabaikan.
-- Honor: Total Diterima diisi manual dalam rupiah, tanpa perhitungan otomatis;
-  total pengajuan memakai bruto. Kewarganegaraan diisi WNI atau WNA; NPWP boleh kosong jika belum
-  tersedia. Selain No yang opsional, kolom lain wajib diisi pada baris yang digunakan.
+- Potongan pajak Beban diisi manual. Untuk Honor, potongan pajak dihitung
+  otomatis dari Nominal Honor dikali tarif PPh pada Kd Jenis yang dipilih,
+  dibulatkan ke 2 desimal. Total Diterima Honor otomatis dihitung dari Nominal
+  Honor dikurangi Potongan Pajak; total
+  pengajuan memakai bruto. NPWP boleh kosong jika belum tersedia. Selain No
+  yang opsional, kolom lain wajib diisi pada baris yang digunakan.
 - Ringkasan total hanya ditampilkan sebagai Nominal Diajukan di header; tidak ada
   total pengajuan, total pajak, atau total transfer di bawah tabel.
 - Kolom No merupakan input teks opsional, dengan nilai awal sesuai posisi baris
   saat ditambahkan. No dapat diedit, dikosongkan, dipilih, dan disalin/ditempel;
   nilainya tidak ditimpa saat perhitungan ulang atau penghapusan baris.
-  Baris yang hanya berisi No dan pajak default 0 tetap diabaikan.
+  Baris yang hanya berisi No tanpa data rincian tetap diabaikan.
 - Paste Excel dimulai dari sel aktif, hanya kolom input (tanpa header
   tabel). Impresfund: No, Uraian, Volume, Tarif, Subtotal. Beban: No, Nominal, Pot Pajak, Nominal Setelah Pajak,
   Nama Bank, Nama Rekening, No Rekening.
   Honor: No, Kd Jenis, Nominal Honor, Potongan Pajak, Total Diterima, Nama Penerima, Nama Rekening,
-  Nama Bank, Nomor Rekening, No KTP / Paspor, No NPWP.
+  Nama Bank, Nomor Rekening, No KTP / Paspor, No NPWP. Potongan Pajak Honor
+  dihitung otomatis; nilai pajak pada paste tidak digunakan.
 - Rincian tampil sebagai sel spreadsheet dengan header nama kolom tanpa kode huruf, nomor
   baris dan header yang tetap terlihat saat scroll, serta penanda rentang aktif.
   Tombol Bantuan di samping judul Rincian Pengajuan membuka modal berisi ketentuan

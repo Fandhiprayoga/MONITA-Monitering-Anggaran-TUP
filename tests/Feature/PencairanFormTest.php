@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use App\Models\JenisPenghasilan;
 use App\Services\GoogleSheetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
@@ -87,12 +88,20 @@ class PencairanFormTest extends TestCase
 
     public function test_honor_renders_all_detail_columns_and_grid(): void
     {
+        JenisPenghasilan::create(['kode_jenis' => '01', 'nama_jenis_pph' => 'Honorarium', 'tarif_pph' => '5.00']);
+        JenisPenghasilan::create(['kode_jenis' => '02', 'nama_jenis_pph' => 'Pegawai Tidak Tetap', 'tarif_pph' => '2.50']);
         $this->withSession(['user_authenticated' => true])
             ->get(route('pencairan.form', 'honor'))
             ->assertOk()
             ->assertSee('data-grid-body', false)
             ->assertSee('pencairan-grid.js')
             ->assertSee('Kd Jenis')
+            ->assertSee('01')
+            ->assertDontSee('01 - Honorarium')
+            ->assertSee('data-bs-target="#jenis-penghasilan-help-modal"', false)
+            ->assertSee('Keterangan Kode Jenis Penghasilan')
+            ->assertSee('Pegawai Tidak Tetap')
+            ->assertSee('Lihat keterangan kode jenis penghasilan')
             ->assertSee('Nominal Honor')
             ->assertSee('Potongan Pajak')
             ->assertSee('Total Diterima')
@@ -120,7 +129,7 @@ class PencairanFormTest extends TestCase
         foreach ([
             'impresfund' => 'Subtotal otomatis = Volume x Tarif',
             'beban' => 'Isi Nominal Setelah Pajak untuk memakai nilai manual',
-            'honor' => 'Isi kewarganegaraan dengan WNI atau WNA',
+            'honor' => 'Pilih Kd Jenis dari master data jenis penghasilan',
         ] as $kind => $instruction) {
             $response = $this->withSession(['user_authenticated' => true])
                 ->get(route('pencairan.form', $kind))

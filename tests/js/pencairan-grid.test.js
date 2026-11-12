@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateRow, formatAmount, parseAmount, parseTsv, toTsv, schemas } from '../../public/js/monita/pencairan-grid.js';
+import { calculateHonorTax, calculateRow, formatAmount, parseAmount, parseTsv, toTsv, schemas } from '../../public/js/monita/pencairan-grid.js';
 
 test('Indonesian amounts are parsed exactly to cents; invalid formats are rejected', () => {
     assert.equal(parseAmount('1.250,50'), 125050);
@@ -127,12 +127,13 @@ test('Beban clipboard includes editable after-tax amount in table order', () => 
 });
 
 test('Tax defaults to zero without activating unused Honor and Beban rows', () => {
-    for (const kind of ['honor', 'beban']) {
-        assert.equal(schemas[kind].find((column) => column.key === 'pajak').defaultValue, '0');
-        assert.deepEqual(calculateRow(kind, { pajak: '0' }), { empty: true, gross: 0, tax: 0, net: 0 });
-        assert.ok(calculateRow(kind, { pajak: '1' }).errors.nominal);
-        assert.ok(calculateRow(kind, { pajak: '0', nominal: '100' }).errors.bank);
-    }
+    assert.equal(schemas.beban.find((column) => column.key === 'pajak').defaultValue, '0');
+    assert.equal(schemas.honor.find((column) => column.key === 'pajak').calculated, true);
+    assert.deepEqual(calculateRow('honor', { pajak: '0' }), { empty: true, gross: 0, tax: 0, net: 0 });
+    assert.deepEqual(calculateRow('honor', { pajak: '1' }), { empty: true, gross: 0, tax: 0, net: 0 });
+    assert.deepEqual(calculateRow('beban', { pajak: '0' }), { empty: true, gross: 0, tax: 0, net: 0 });
+    assert.ok(calculateRow('beban', { pajak: '1' }).errors.nominal);
+    assert.ok(calculateRow('beban', { pajak: '0', nominal: '100' }).errors.bank);
 });
 
 test('Excel TSV roundtrips quotes, newlines, tabs, leading zeros and empty trailing cells', () => {
@@ -145,36 +146,38 @@ test('Excel TSV roundtrips quotes, newlines, tabs, leading zeros and empty trail
 
 const honor = {
     no: '007',
-    kewarganegaraan: 'WNI', nominal: '1.000.000', pajak: '50.000', neto: '925.000',
+    kode_jenis: '01', nominal: '1.000.000', pajak: '1', neto: '925.000',
     penerima: 'Penerima Test', nama: 'Rekening Test', bank: 'Bank Test',
     rekening: '00123456789012345678', identitas: '0012345678901234', npwp: '0012345678901234',
 };
+const honorOptions = { jenisPenghasilan: [{ value: '01', rate: '5.00' }, { value: '02', rate: '2.50' }] };
 
-test('Honor uses manual received amount and accepts WNI/WNA including lowercase input', () => {
-    for (const kewarganegaraan of ['WNI', 'WNA', 'wni', 'wna']) {
-        assert.deepEqual(calculateRow('honor', { ...honor, kewarganegaraan }), {
-            gross: 100000000, tax: 5000000, net: 92500000,
-        });
-    }
-    assert.equal(calculateRow('honor', { ...honor, pajak: '0', nominal: '2.000.000', npwp: '' }).net, 92500000);
-    assert.equal(calculateRow('honor', { ...honor, neto: '0' }).net, 0);
-    assert.ok(calculateRow('honor', { ...honor, neto: '' }).errors.neto);
-    assert.ok(calculateRow('honor', { ...honor, neto: '-1' }).errors.neto);
-    assert.ok(calculateRow('honor', { ...honor, neto: 'invalid' }).errors.neto);
+test('Honor tax is calculated from nominal and the selected income-type rate', () => {
+    assert.deepEqual(calculateRow('honor', honor, honorOptions), {
+        gross: 100000000, tax: 5000000, net: 95000000,
+    });
+    assert.equal(calculateRow('honor', { ...honor, pajak: '0', nominal: '2.000.000', npwp: '' }, honorOptions).tax, 10000000);
+    assert.equal(calculateRow('honor', { ...honor, neto: '0' }, honorOptions).net, 95000000);
+    assert.equal(calculateRow('honor', { ...honor, neto: '', nominal: '2.000.000' }, honorOptions).net, 190000000);
+    assert.equal(schemas.honor.find((column) => column.key === 'neto').calculated, true);
     assert.equal(calculateRow('honor', {}).empty, true);
 });
 
-test('Honor rejects invalid citizenship, missing recipient/identity and excessive or invalid tax', () => {
-    assert.ok(calculateRow('honor', { ...honor, kewarganegaraan: 'OTHER' }).errors.kewarganegaraan);
-    assert.ok(calculateRow('honor', { ...honor, penerima: '' }).errors.penerima);
-    assert.ok(calculateRow('honor', { ...honor, identitas: '' }).errors.identitas);
-    assert.ok(calculateRow('honor', { ...honor, pajak: '1.000.001' }).errors.pajak);
-    assert.ok(calculateRow('honor', { ...honor, pajak: '-1' }).errors.pajak);
+test('Honor rounds calculated tax to rupiah cents and rejects codes outside the master list', () => {
+    assert.equal(calculateHonorTax('02', '100', honorOptions.jenisPenghasilan), '2,5');
+    assert.equal(calculateHonorTax('01', '0,1', honorOptions.jenisPenghasilan), '0,01');
+    assert.ok(calculateRow('honor', { ...honor, kode_jenis: 'OTHER' }, honorOptions).errors.kode_jenis);
+    assert.ok(calculateRow('honor', { ...honor, kode_jenis: '', pajak: '' }, honorOptions).errors.kode_jenis);
 });
 
-test('Honor clipboard columns include manual received amount and preserve text identifiers', () => {
+test('Honor still validates recipient and identity', () => {
+    assert.ok(calculateRow('honor', { ...honor, penerima: '' }, honorOptions).errors.penerima);
+    assert.ok(calculateRow('honor', { ...honor, identitas: '' }, honorOptions).errors.identitas);
+});
+
+test('Honor clipboard columns preserve income codes and text identifiers', () => {
     const keys = schemas.honor.filter((column) => !column.computed).map((column) => column.key);
-    assert.deepEqual(keys, ['kewarganegaraan', 'nominal', 'pajak', 'neto', 'penerima', 'nama', 'bank', 'rekening', 'identitas', 'npwp']);
+    assert.deepEqual(keys, ['kode_jenis', 'nominal', 'pajak', 'neto', 'penerima', 'nama', 'bank', 'rekening', 'identitas', 'npwp']);
     const values = keys.map((key) => honor[key]);
     assert.deepEqual(parseTsv(toTsv([values])), [values]);
 });

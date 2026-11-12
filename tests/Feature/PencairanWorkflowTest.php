@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\PencairanWorkflowController;
 use App\Models\PencairanAttachment;
+use App\Models\JenisPenghasilan;
 use App\Models\PencairanHistory;
 use App\Models\PencairanPengajuan;
 use App\Models\PencairanRevision;
@@ -29,6 +30,8 @@ class PencairanWorkflowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        JenisPenghasilan::create(['kode_jenis' => '01', 'nama_jenis_pph' => 'Honorarium', 'tarif_pph' => '5.00']);
+        JenisPenghasilan::create(['kode_jenis' => 'PPH-21', 'nama_jenis_pph' => 'PPh Pasal 21', 'tarif_pph' => '5.00']);
         $this->travelTo(now()->setDate(2026, 10, 31)->setTime(10, 0));
         config(['pencairan.actor_source_no_stable' => false, 'pencairan.attachment_disk' => 'local']);
         Storage::fake('local');
@@ -67,7 +70,7 @@ class PencairanWorkflowTest extends TestCase
         return match ($jenis) {
             'impresfund' => ['no' => '001', 'uraian' => 'Belanja', 'volume' => '2', 'tarif' => '50', 'subtotal' => ''],
             'beban' => ['no' => '001', 'nominal' => '100', 'pajak' => '10', 'neto' => '77', 'bank' => 'Bank', 'nama' => 'Nama', 'rekening' => '000123'],
-            'honor' => ['no' => '001', 'nominal' => '100', 'pajak' => '10', 'neto' => '77', 'bank' => 'Bank', 'nama' => 'Nama', 'rekening' => '000123', 'kewarganegaraan' => 'wni', 'penerima' => 'Penerima', 'identitas' => '000098', 'npwp' => '000012'],
+            'honor' => ['no' => '001', 'nominal' => '100', 'pajak' => '10', 'neto' => '77', 'bank' => 'Bank', 'nama' => 'Nama', 'rekening' => '000123', 'kode_jenis' => 'PPH-21', 'penerima' => 'Penerima', 'identitas' => '000098', 'npwp' => '000012'],
         };
     }
 
@@ -520,7 +523,7 @@ class PencairanWorkflowTest extends TestCase
             $this->assertNull($p->details->first()->volume);
         } else {
             $this->assertSame('000123', $p->detailRows()[0]['rekening']);
-            $this->assertSame('77.00', $p->total_neto);
+            $this->assertSame($jenis === 'honor' ? '95.00' : '77.00', $p->total_neto);
         }
         $this->action($p, 'submit')->assertUnprocessable();
     }
@@ -566,6 +569,34 @@ class PencairanWorkflowTest extends TestCase
         $this->action($p, 'submit')->assertUnprocessable();
     }
 
+    public function test_honor_master_code_is_saved_with_its_full_value(): void
+    {
+        $p = $this->draft('honor');
+
+        $this->assertSame('PPH-21', $p->detailRows()[0]['kode_jenis']);
+        $this->assertSame('5,00', $p->detailRows()[0]['pajak']);
+        $this->assertSame('95,00', $p->detailRows()[0]['neto']);
+        $this->assertDatabaseHas('pengajuan_honor_details', [
+            'pengajuan_id' => $p->id,
+            'kode_jenis' => 'PPH-21',
+        ]);
+        $this->assertSame('5.00', $p->fresh()->total_pajak);
+    }
+
+    public function test_honor_tax_is_recalculated_server_side_instead_of_trusting_pasted_value(): void
+    {
+        $row = $this->row('honor');
+        $row['nominal'] = '1.000,01';
+        $row['pajak'] = '999.999';
+        $row['neto'] = '0';
+        $p = $this->draft('honor', [$row]);
+
+        $this->assertSame('50,00', $p->detailRows()[0]['pajak']);
+        $this->assertSame('950,01', $p->detailRows()[0]['neto']);
+        $this->assertSame('50.00', $p->total_pajak);
+        $this->assertSame('950.01', $p->total_neto);
+    }
+
     public static function invalidNumbers(): array
     {
         return [['1.25'], ['-1'], ['1,234'], ['1e3'], ['1,2,3'], ['10.000.000.000,01'], [1.2], [true], [['x']]];
@@ -584,7 +615,7 @@ class PencairanWorkflowTest extends TestCase
             $this->postJson('/_workflow', ['jenis' => 'beban', 'details' => [$row]])->assertUnprocessable();
         }
         $this->postJson('/_workflow', ['jenis' => 'impresfund', 'details' => [['volume' => '0']]])->assertUnprocessable();
-        $this->postJson('/_workflow', ['jenis' => 'honor', 'details' => [['kewarganegaraan' => 'BAD']]])->assertUnprocessable();
+        $this->postJson('/_workflow', ['jenis' => 'honor', 'details' => [['kode_jenis' => 'BAD']]])->assertUnprocessable()->assertJsonValidationErrors('details.0.kode_jenis');
         $this->postJson('/_workflow', ['jenis' => 'beban', 'details' => array_fill(0, 501, ['no' => '1'])])->assertUnprocessable();
     }
 

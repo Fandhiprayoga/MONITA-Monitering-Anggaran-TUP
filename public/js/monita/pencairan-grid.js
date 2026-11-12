@@ -20,10 +20,10 @@ export const schemas = {
         { key: 'rekening', label: 'No Rekening' },
     ],
     honor: [
-        { key: 'kewarganegaraan', label: 'Kd Jenis', choices: ['WNI', 'WNA'], list: 'honor-kewarganegaraan' },
+        { key: 'kode_jenis', label: 'Kd Jenis', choiceSource: 'jenisPenghasilan' },
         { key: 'nominal', label: 'Nominal Honor', numeric: true, money: true },
-        { key: 'pajak', label: 'Potongan Pajak', numeric: true, defaultValue: '0', money: true },
-        { key: 'neto', label: 'Total Diterima', numeric: true, money: true },
+        { key: 'pajak', label: 'Potongan Pajak', numeric: true, calculated: true, money: true },
+        { key: 'neto', label: 'Total Diterima', numeric: true, calculated: true, money: true },
         { key: 'penerima', label: 'Nama Penerima' },
         { key: 'nama', label: 'Nama Rekening' },
         { key: 'bank', label: 'Nama Bank' },
@@ -50,10 +50,29 @@ export function formatAmount(value) {
     return format(parseAmount(value));
 }
 
-export function calculateRow(kind, values) {
+function parsePphRate(value) {
+    const text = String(value ?? '');
+    if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
+    const [whole, fraction = ''] = text.split('.');
+    const rate = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
+    return Number.isSafeInteger(rate) && rate <= 10000 ? rate : null;
+}
+
+export function calculateHonorTax(code, nominal, jenisPenghasilanOptions = []) {
+    const option = jenisPenghasilanOptions.find((item) => item.value === String(code ?? '').toUpperCase());
+    if (!option || !nominal) return '';
+    let nominalCents;
+    try { nominalCents = parseAmount(nominal); } catch { return ''; }
+    const rateCents = parsePphRate(option.rate);
+    if (rateCents === null) return '';
+    const taxCents = (BigInt(nominalCents) * BigInt(rateCents) + 5000n) / 10000n;
+    return format(Number(taxCents));
+}
+
+export function calculateRow(kind, values, optionChoices = {}) {
     const columns = schemas[kind];
     if (!columns) throw new Error('Jenis form tidak dikenal.');
-    if (columns.filter((column) => !column.computed).every((column) => {
+    if (columns.filter((column) => !column.computed && !column.calculated).every((column) => {
         const value = String(values[column.key] ?? '').trim();
         return !value || value === column.defaultValue;
     })) {
@@ -61,19 +80,33 @@ export function calculateRow(kind, values) {
     }
     const errors = {};
     const numbers = {};
-    for (const column of columns.filter((column) => !column.computed)) {
+    for (const column of columns.filter((column) => !column.computed && !column.calculated)) {
         const value = String(values[column.key] ?? '').trim();
         if (!value) {
             if (!column.optional) errors[column.key] = `${column.label} wajib diisi.`;
-        } else if (column.choices && !column.choices.includes(value.toUpperCase())) {
-            errors[column.key] = `${column.label} harus diisi ${column.choices.join(' atau ')}.`;
-        } else if (column.numeric) {
-            try {
-                numbers[column.key] = parseAmount(value);
-            } catch (error) {
-                errors[column.key] = error.message;
+        } else {
+            const sourceOptions = column.choiceSource ? optionChoices[column.choiceSource] : null;
+            const choices = sourceOptions ? sourceOptions.map((option) => option.value) : column.choices;
+            const choiceValue = column.choiceSource ? value.toUpperCase() : value;
+            if (choices && !choices.includes(choiceValue)) {
+                errors[column.key] = column.choiceSource
+                    ? `${column.label} harus dipilih dari master data jenis penghasilan.`
+                    : `${column.label} harus diisi ${choices.join(' atau ')}.`;
+            } else if (column.numeric) {
+                try {
+                    numbers[column.key] = parseAmount(value);
+                } catch (error) {
+                    errors[column.key] = error.message;
+                }
             }
         }
+    }
+    if (kind === 'honor' && numbers.nominal !== undefined) {
+        const tax = calculateHonorTax(values.kode_jenis, values.nominal, optionChoices.jenisPenghasilan ?? []);
+        if (tax !== '') numbers.pajak = parseAmount(tax);
+    }
+    if (kind === 'honor' && numbers.nominal !== undefined && numbers.pajak !== undefined) {
+        numbers.neto = numbers.nominal - numbers.pajak;
     }
     if (kind === 'impresfund' && numbers.volume === 0) errors.volume = 'Volume harus lebih dari nol.';
     if (kind !== 'impresfund' && numbers.pajak > numbers.nominal) errors.pajak = 'Potongan pajak tidak boleh melebihi nominal.';
@@ -146,9 +179,10 @@ export function toTsv(rows) {
     }).join('\t')).join('\r\n');
 }
 
-export function mountGrid(form) {
+export function mountGrid(form, { jenisPenghasilanOptions = [] } = {}) {
     const kind = form.dataset.jenis;
     const columns = schemas[kind];
+    const optionChoices = { jenisPenghasilan: jenisPenghasilanOptions };
     const editable = columns.filter((column) => !column.computed);
     const body = form.querySelector('[data-grid-body]');
     const table = body.closest('table');
@@ -192,18 +226,31 @@ export function mountGrid(form) {
         for (const column of columns) {
             const td = document.createElement('td');
             td.setAttribute('role', 'gridcell');
-            td.setAttribute('aria-readonly', String(Boolean(column.computed)));
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.className = `spreadsheet-cell${column.numeric || column.computed ? ' spreadsheet-numeric' : ''}${column.computed ? ' spreadsheet-computed' : ''}`;
-            input.style.minWidth = column.numeric || column.computed ? '145px' : '190px';
-            input.dataset.key = column.key;
-            input.value = column.defaultValue ?? '';
-            if (kind === 'beban' && column.key === 'neto') input.dataset.manualNeto = 'false';
-            input.readOnly = true;
-            input.tabIndex = -1;
-            if (column.numeric) input.inputMode = 'decimal';
-            td.append(input);
+            td.setAttribute('aria-readonly', String(Boolean(column.computed || column.calculated)));
+            const cell = column.choiceSource ? document.createElement('select') : document.createElement('input');
+            cell.className = `spreadsheet-cell${column.numeric || column.computed ? ' spreadsheet-numeric' : ''}${column.computed || column.calculated ? ' spreadsheet-computed' : ''}`;
+            cell.style.minWidth = column.numeric || column.computed ? '145px' : '190px';
+            cell.dataset.key = column.key;
+            if (column.choiceSource) {
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = jenisPenghasilanOptions.length ? '-- Pilih Jenis Penghasilan --' : 'Master jenis penghasilan belum tersedia';
+                cell.append(placeholder);
+                for (const option of jenisPenghasilanOptions) {
+                    const item = document.createElement('option');
+                    item.value = option.value;
+                    item.textContent = option.value;
+                    cell.append(item);
+                }
+            } else {
+                cell.type = 'text';
+                cell.value = column.defaultValue ?? '';
+                cell.readOnly = true;
+                if (kind === 'beban' && column.key === 'neto') cell.dataset.manualNeto = 'false';
+                if (column.numeric) cell.inputMode = 'decimal';
+            }
+            cell.tabIndex = -1;
+            td.append(cell);
             tr.append(td);
         }
         body.append(tr);
@@ -253,7 +300,7 @@ export function mountGrid(form) {
             rowButton.textContent = index + 1;
             rowButton.setAttribute('aria-label', `Pilih baris ${index + 1}`);
             const values = {};
-            row.querySelectorAll('input').forEach((input) => {
+            row.querySelectorAll('.spreadsheet-cell').forEach((input) => {
                 values[input.dataset.key] = input.value;
                 input.setAttribute('aria-label', `Baris ${index + 1}, ${columns.find((c) => c.key === input.dataset.key).label}`);
                 input.classList.remove('is-invalid');
@@ -261,12 +308,30 @@ export function mountGrid(form) {
                 input.removeAttribute('aria-invalid');
                 input.removeAttribute('title');
             });
+            if (kind === 'honor') {
+                const pajak = row.querySelector('[data-key="pajak"]');
+                pajak.value = calculateHonorTax(values.kode_jenis, values.nominal, jenisPenghasilanOptions);
+                values.pajak = pajak.value;
+                pajak.setAttribute('aria-description', 'Dihitung otomatis dari Nominal Honor dikali tarif PPh pada Kd Jenis.');
+                const neto = row.querySelector('[data-key="neto"]');
+                const nominalCents = (() => {
+                    try { return parseAmount(values.nominal); } catch { return null; }
+                })();
+                const taxCents = (() => {
+                    try { return parseAmount(values.pajak); } catch { return null; }
+                })();
+                neto.value = nominalCents !== null && taxCents !== null && taxCents <= nominalCents
+                    ? format(nominalCents - taxCents)
+                    : '';
+                values.neto = neto.value;
+                neto.setAttribute('aria-description', 'Dihitung otomatis dari Nominal Honor dikurangi Potongan Pajak.');
+            }
             const neto = row.querySelector('[data-key="neto"]');
             if (kind === 'beban' && neto.dataset.manualNeto !== 'true') {
                 neto.value = automaticBebanNeto(values);
                 values.neto = neto.value;
             }
-            const result = calculateRow(kind, values);
+            const result = calculateRow(kind, values, optionChoices);
             for (const [key, error] of Object.entries(result.errors ?? {})) {
                 const input = row.querySelector(`[data-key="${key}"]`);
                 input.classList.add('is-invalid');
@@ -318,7 +383,6 @@ export function mountGrid(form) {
         const input = editing;
         editing.readOnly = true;
         editing.classList.remove('is-editing');
-        editing.removeAttribute('list');
         editing = null;
         formatNumericCell(input);
     }
@@ -386,29 +450,33 @@ export function mountGrid(form) {
 
     function startEditing(input, replace = false) {
         const column = columns[position(input).col];
-        if (column.computed) {
+        if (column.computed || column.calculated) {
             notify('Kolom hasil hitung tidak dapat diedit.', true);
             return;
         }
+        if (input.matches('select')) return;
         select(input);
         editing = input;
         input.readOnly = false;
         input.classList.add('is-editing');
-        if (column.list) input.setAttribute('list', column.list);
         if (replace) input.value = '';
         else input.select();
         formatNumericCell(input);
     }
 
     body.addEventListener('focusin', (event) => {
-        if (event.target.matches('input') && event.target !== active) select(event.target, false, false);
+        if (event.target.matches('.spreadsheet-cell') && event.target !== active) select(event.target, false, false);
     });
     body.addEventListener('focusout', (event) => {
         if (event.target === editing) finishEditing();
     });
     body.addEventListener('pointerdown', (event) => {
-        const input = event.target.closest('input');
+        const input = event.target.closest('.spreadsheet-cell');
         if (!input || event.button !== 0 || editing === input && !event.shiftKey) return;
+        if (input.matches('select')) {
+            select(input, event.shiftKey, false);
+            return;
+        }
         event.preventDefault();
         select(input, event.shiftKey);
         dragging = true;
@@ -416,7 +484,7 @@ export function mountGrid(form) {
     });
     body.addEventListener('pointerover', (event) => {
         if (!dragging || !(event.buttons & 1)) return;
-        const input = event.target.closest('input');
+        const input = event.target.closest('.spreadsheet-cell');
         if (input && input !== active) select(input, true);
     });
     body.ownerDocument.addEventListener('pointerup', () => {
@@ -427,6 +495,7 @@ export function mountGrid(form) {
         if (event.target.matches('input')) startEditing(event.target);
     });
     body.addEventListener('input', (event) => {
+        if (!event.target.matches('.spreadsheet-cell')) return;
         resetSubtotal(event.target);
         if (kind === 'beban' && event.target.dataset.key === 'neto') {
             event.target.dataset.manualNeto = event.target.value.trim() ? 'true' : 'false';
@@ -435,9 +504,13 @@ export function mountGrid(form) {
         }
         recalculate();
     });
+    body.addEventListener('change', (event) => {
+        if (event.target.matches('select.spreadsheet-cell')) recalculate();
+    });
     body.addEventListener('keydown', (event) => {
         const input = event.target;
-        if (!input.matches('input') || event.isComposing) return;
+        if (!input.matches('.spreadsheet-cell') || event.isComposing) return;
+        if (input.matches('select') && ['ArrowDown', 'ArrowUp'].includes(event.key)) return;
         const modifier = event.ctrlKey || event.metaKey;
         if (event.key === 'Escape') {
             event.preventDefault();
@@ -469,7 +542,7 @@ export function mountGrid(form) {
             const bounds = selection ?? { top: row, bottom: row, left: col, right: col };
             [...body.rows].slice(bounds.top, bounds.bottom + 1).forEach((tr) => {
                 columns.forEach((column, c) => {
-                    if (!column.computed && c >= bounds.left && c <= bounds.right) {
+                    if (!column.computed && !column.calculated && c >= bounds.left && c <= bounds.right) {
                         const input = tr.querySelector(`[data-key="${column.key}"]`);
                         input.value = '';
                         resetSubtotal(input);
@@ -483,7 +556,7 @@ export function mountGrid(form) {
             event.preventDefault();
             startEditing(input);
             return;
-        } else if (event.key.length === 1) {
+        } else if (event.key.length === 1 && input.matches('input')) {
             startEditing(input, true);
             return;
         } else return;
@@ -496,7 +569,7 @@ export function mountGrid(form) {
 
     body.addEventListener('paste', (event) => {
         let input = event.target;
-        if (!input.matches('input') || !event.clipboardData) return;
+        if (!input.matches('.spreadsheet-cell') || !event.clipboardData) return;
         if (!editing && selection) {
             input = body.rows[selection.top].querySelector(`[data-key="${columns[selection.left].key}"]`);
         }
@@ -572,7 +645,7 @@ export function mountGrid(form) {
         finishEditing();
         const row = addRow();
         recalculate();
-        select(row.querySelector('input'));
+        select(row.querySelector('.spreadsheet-cell'));
     });
     form.querySelector('[data-grid-delete]').addEventListener('click', () => {
         if (!active || !body.contains(active)) { notify('Pilih sel pada baris yang ingin dihapus.', true); return; }
@@ -585,22 +658,22 @@ export function mountGrid(form) {
         clearSelection();
         if (!body.rows.length) addRow();
         recalculate();
-        select(body.rows[Math.min(top, body.rows.length - 1)].querySelector('input'));
+        select(body.rows[Math.min(top, body.rows.length - 1)].querySelector('.spreadsheet-cell'));
         notify(`${bottom - top + 1} baris dihapus.`);
     });
     addRow();
     recalculate();
-    select(body.rows[0].querySelector('input'), false, false);
+    select(body.rows[0].querySelector('.spreadsheet-cell'), false, false);
     return {
         rows() {
             finishEditing();
-            return [...body.rows].map((row) => Object.fromEntries([...row.querySelectorAll('input')].map((input) => [input.dataset.key, input.value])));
+            return [...body.rows].map((row) => Object.fromEntries([...row.querySelectorAll('.spreadsheet-cell')].map((input) => [input.dataset.key, input.value])));
         },
         load(rows) {
             finishEditing(); active = null; anchor = null; clearSelection(); body.replaceChildren();
             for (const values of rows.slice(0, MAX_ROWS)) {
                 const row = addRow();
-                row.querySelectorAll('input').forEach((input) => {
+                row.querySelectorAll('.spreadsheet-cell').forEach((input) => {
                     input.value = String(values[input.dataset.key] ?? '');
                     if (kind === 'beban' && input.dataset.key === 'neto') {
                         input.dataset.manualNeto = input.value.trim() ? 'true' : 'false';
@@ -608,7 +681,7 @@ export function mountGrid(form) {
                 });
             }
             if (!body.rows.length) addRow();
-            recalculate(); select(body.rows[0].querySelector('input'), false, false);
+            recalculate(); select(body.rows[0].querySelector('.spreadsheet-cell'), false, false);
         },
     };
 }

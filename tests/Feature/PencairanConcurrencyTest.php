@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\PencairanActor;
+use App\Models\JenisPenghasilan;
 use App\Models\PencairanPengajuan;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -20,6 +21,8 @@ class PencairanConcurrencyTest extends TestCase
             DB::purge('sqlite');
             // Only this newly-created temporary TEST database is migrated, never the production DB.
             $this->artisan('migrate', ['--database' => 'sqlite', '--force' => true])->assertExitCode(0);
+            JenisPenghasilan::create(['kode_jenis' => '01', 'nama_jenis_pph' => 'Honorarium', 'tarif_pph' => '5.00']);
+            JenisPenghasilan::create(['kode_jenis' => 'PPH-21', 'nama_jenis_pph' => 'PPh Pasal 21', 'tarif_pph' => '5.00']);
             $actor = PencairanActor::create(['source_key' => 'test', 'username' => 'test', 'name' => 'test', 'role' => 'user']);
             $ids = [];
             foreach (['impresfund', 'beban', 'honor', 'beban'] as $i => $kind) {
@@ -29,7 +32,7 @@ class PencairanConcurrencyTest extends TestCase
                     $raw = ['uraian' => 'Test', 'volume' => '1', 'tarif' => '100', 'subtotal' => ''];
                 } else {
                     $raw = ['nominal' => '100', 'pajak' => '0', 'neto' => '100', 'bank' => 'Bank', 'nama' => 'Name', 'rekening' => '0001'];
-                    if ($kind === 'honor') { $raw += ['kewarganegaraan' => 'WNI', 'penerima' => 'Person', 'identitas' => '0002']; }
+                    if ($kind === 'honor') { $raw += ['kode_jenis' => 'PPH-21', 'penerima' => 'Person', 'identitas' => '0002']; }
                 }
                 $p->details()->create(['urutan' => 1, 'raw_data' => $raw]); $ids[] = $p->id;
             }

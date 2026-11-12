@@ -28,7 +28,7 @@ Kondisi awal: halaman form dan grid sudah tersedia, tetapi belum ada endpoint pe
 | Pengembalian lintas periode | Jika returned setelah TW asal berakhir, admin verifikator membatalkan pengajuan lama; pengguna membuat pengajuan baru dengan DRK TW aktif dan nomor baru saat submit |
 | Verifikasi saat sumber gagal | Persetujuan diblokir jika data Google Sheets gagal diperoleh; pengembalian dengan remark tetap boleh |
 | Batas pengajuan | Total pengajuan tidak boleh melebihi saldo terkini TW DRK terpilih; submit diblokir dengan alasan |
-| Nominal manual | Subtotal Impresfund dan neto Beban/Honor tetap boleh manual tanpa alasan tambahan |
+| Nominal manual | Subtotal Impresfund dan neto Beban tetap boleh manual tanpa alasan tambahan; neto Honor dihitung otomatis |
 | Pengembalian | Bisa dari verifikasi maupun antrean transaksi; remark admin wajib; pengguna memperbaiki dan submit ulang untuk verifikasi kembali |
 | Pembatalan | Pengguna dapat membatalkan draft/returned; admin verifikator dapat membatalkan submitted/returned langsung tanpa edit pengguna, dengan remark wajib; verified harus dikembalikan dahulu |
 | Penyelesaian | Tanggal proses wajib untuk semua jenis; tidak ada nomor bukti pencairan maupun referensi TUB; lampiran opsional |
@@ -161,9 +161,9 @@ Transisi lain ditolak server. `completed` dan `cancelled` terminal pada MVP. Pen
 - Impresfund: uraian, volume, tarif, subtotal. Volume > 0; subtotal otomatis = volume × tarif, dibulatkan ke 2 desimal; subtotal manual diperbolehkan.
 - Simpan `subtotal_manual` nullable (null = otomatis) dan `subtotal_efektif`. Nilai manual nol berbeda dari kosong.
 - Beban: nominal bruto, potongan pajak, neto otomatis (bruto dikurangi pajak) dengan nilai manual yang dapat menggantinya, bank, nama rekening, nomor rekening. Perubahan bruto atau pajak mengembalikan neto ke hitung otomatis.
-- Honor: WNI/WNA, nominal honor, pajak, neto manual, nama penerima, nama rekening, bank, nomor rekening, KTP/paspor, NPWP opsional.
-- Pajak tidak negatif dan tidak melebihi bruto; volume/tarif/nominal/neto tidak negatif. WNI/WNA dinormalisasi ke huruf besar.
-- Neto manual Beban/Honor tidak dipaksa sama dengan bruto dikurangi pajak; tidak wajib alasan tambahan. Admin tetap dapat melihat bruto, pajak, dan neto untuk pemeriksaan.
+- Honor: kode jenis dari master jenis penghasilan, nominal honor, pajak otomatis = nominal honor × tarif PPh untuk kode terpilih (pembulatan 2 desimal), neto otomatis = nominal honor − pajak, nama penerima, nama rekening, bank, nomor rekening, KTP/paspor, NPWP opsional.
+- Pajak Beban tidak negatif dan tidak melebihi bruto; pajak Honor dihitung ulang di server dari tarif master dan nominal. Volume/tarif/nominal/neto tidak negatif. Kode jenis harus terdaftar pada master.
+- Neto manual Beban tidak dipaksa sama dengan bruto dikurangi pajak; tidak wajib alasan tambahan. Neto Honor selalu dihitung dari nominal dikurangi pajak. Admin dapat melihat bruto, pajak, dan neto untuk pemeriksaan.
 - Total dihitung ulang dari rincian di server menggunakan decimal/fixed-point, bukan floating-point atau total payload.
 - Maksimal 500 baris sesuai grid saat ini; batas per nilai dan batas total didokumentasikan serta diselaraskan frontend/backend sebelum implementasi.
 - Rekening, identitas, NPWP, dan kode disimpan sebagai teks; nol di depan tidak hilang.
@@ -214,7 +214,7 @@ Nama tabel dapat disesuaikan konvensi Laravel, tetapi relasi dan integritas beri
 ### Rincian
 - `pengajuan_impresfund_details`: `id`, `pengajuan_id`, `urutan`, `uraian`, `volume`, `tarif`, `subtotal_manual`, `subtotal_efektif`.
 - `pengajuan_beban_details`: `id`, `pengajuan_id`, `urutan`, `nominal`, `pajak`, `neto`, `bank`, `nama_rekening`, `nomor_rekening`.
-- `pengajuan_honor_details`: seperti Beban ditambah `kewarganegaraan`, `nama_penerima`, `nomor_identitas`, `npwp`.
+- `pengajuan_honor_details`: seperti Beban ditambah `kode_jenis` (kode dari master jenis penghasilan), `nama_penerima`, `nomor_identitas`, `npwp`.
 - Unique `(pengajuan_id, urutan)` per tabel; foreign key ke induk. Jenis induk harus konsisten dengan tabel rincian melalui service dan pengujian.
 - Nominal `DECIMAL(18,2)` sebagai usulan kapasitas penyimpanan, bukan izin menerima semua nilai sampai kapasitas DB; volume dapat `DECIMAL(18,2)` mengikuti UI sekarang.
 
@@ -285,7 +285,7 @@ Kode respons: 422 untuk input/saldo, 403 atau 404 konsisten untuk akses terlaran
 8. Saldo kurang menolak submit, menampilkan nominal/saldo/alasan, tanpa nomor/status/history submit baru.
 9. Saldo sama dengan total lolos; gagal memperoleh saldo terkini dari Google Sheets menolak submit tanpa menggunakan cache/snapshot lama sebagai pengganti.
 10. DRK lintas PP, periode tidak valid, dan field readonly palsu ditolak/diabaikan server.
-11. Subtotal manual/otomatis dan neto manual dipertahankan; neto Beban otomatis dari bruto dikurangi pajak kecuali diisi manual. Total server tidak bergantung pada total browser.
+11. Subtotal manual/otomatis dan neto manual Beban dipertahankan; neto Beban otomatis dari bruto dikurangi pajak kecuali diisi manual. Pajak dan neto Honor dihitung otomatis dan server tidak bergantung pada total browser.
 12. Verifikasi gagal saat saldo tidak cukup; verifikasi valid menghasilkan antrean transaksi sesuai jenis.
 13. Selesai tanpa tanggal ditolak untuk semua jenis; semua jenis dapat selesai tanpa nomor bukti/referensi eksternal dan tidak menampilkan/menerima field tersebut. Label Impresfund tetap Dicairkan, Beban/Honor Diajukan ke TUB.
 14. Retry submit/complete tidak menggandakan nomor, completion, snapshot, atau riwayat.

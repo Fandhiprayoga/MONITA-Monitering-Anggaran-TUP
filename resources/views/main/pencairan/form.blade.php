@@ -108,12 +108,13 @@
             import { mountSubmission } from "{{ asset('js/monita/pencairan-submit.js') }}";
             const form = document.getElementById('form-pencairan');
             const initial = {{ Illuminate\Support\Js::from(isset($pengajuan) ? ['uuid' => $pengajuan->uuid, 'lock_version' => $pengajuan->lock_version, 'drk_id' => $pengajuan->drk_source_id, 'uraian_pengajuan' => $pengajuan->uraian_pengajuan, 'details' => $pengajuan->detailRows()] : null) }};
+            const jenisPenghasilanOptions = {{ Illuminate\Support\Js::from($jenisPenghasilanOptions ?? []) }};
             if (initial) {
                 form.querySelector('#pilih-drk').value = initial.drk_id ?? '';
                 form.querySelector('#uraian-pengajuan').value = initial.uraian_pengajuan ?? '';
             }
             mountBudgetHeader(form);
-            const grid = mountGrid(form);
+            const grid = mountGrid(form, { jenisPenghasilanOptions });
             if (initial) grid.load(initial.details);
             mountSubmission(form, grid, initial, {{ Illuminate\Support\Js::from(route('pencairan.store')) }});
             if (typeof window.jQuery?.fn.select2 === 'function') {
