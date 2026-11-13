@@ -182,9 +182,9 @@
                             <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
                         </a>
                         <ul class="pc-submenu">
-                            <li class="pc-item {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'impresfund' ? 'active' : '' }}">
-                                <a class="pc-link {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'impresfund' ? 'active' : '' }}"
-                                    href="{{ route('pencairan.transaksi', 'impresfund') }}">
+                            <li class="pc-item {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'imprestfund' ? 'active' : '' }}">
+                                <a class="pc-link {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'imprestfund' ? 'active' : '' }}"
+                                    href="{{ route('pencairan.transaksi', 'imprestfund') }}">
                                     Pengajuan Imprestfund
                                 </a>
                             </li>

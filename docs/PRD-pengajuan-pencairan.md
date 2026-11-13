@@ -5,7 +5,7 @@ Status: Siap menjadi acuan implementasi; asumsi pada bagian 14 perlu dikonfirmas
 
 ## 1. Tujuan
 
-Mengaktifkan penyimpanan Form Impresfund, Beban, dan Honor dari draft sampai penyelesaian oleh admin. Pengguna dapat memantau status, memperbaiki pengajuan yang dikembalikan, dan melihat riwayat tindakan. Sistem harus mencegah nomor ganda, akses lintas PP, perubahan data setelah submit, dan hilangnya jejak revisi.
+Mengaktifkan penyimpanan Form Imprestfund, Beban, dan Honor dari draft sampai penyelesaian oleh admin. Pengguna dapat memantau status, memperbaiki pengajuan yang dikembalikan, dan melihat riwayat tindakan. Sistem harus mencegah nomor ganda, akses lintas PP, perubahan data setelah submit, dan hilangnya jejak revisi.
 
 Kondisi awal: halaman form dan grid sudah tersedia, tetapi belum ada endpoint penyimpanan dan tombol simpan/submit masih dinonaktifkan. Data akun dan anggaran berasal dari Google Sheets; autentikasi memakai session spreadsheet, bukan otomatis akun Eloquent lokal.
 
@@ -28,12 +28,12 @@ Kondisi awal: halaman form dan grid sudah tersedia, tetapi belum ada endpoint pe
 | Pengembalian lintas periode | Jika returned setelah TW asal berakhir, admin verifikator membatalkan pengajuan lama; pengguna membuat pengajuan baru dengan DRK TW aktif dan nomor baru saat submit |
 | Verifikasi saat sumber gagal | Persetujuan diblokir jika data Google Sheets gagal diperoleh; pengembalian dengan remark tetap boleh |
 | Batas pengajuan | Total pengajuan tidak boleh melebihi saldo terkini TW DRK terpilih; submit diblokir dengan alasan |
-| Nominal manual | Subtotal Impresfund dan neto Beban tetap boleh manual tanpa alasan tambahan; neto Honor dihitung otomatis |
+| Nominal manual | Subtotal Imprestfund dan neto Beban tetap boleh manual tanpa alasan tambahan; neto Honor dihitung otomatis |
 | Pengembalian | Bisa dari verifikasi maupun antrean transaksi; remark admin wajib; pengguna memperbaiki dan submit ulang untuk verifikasi kembali |
 | Pembatalan | Pengguna dapat membatalkan draft/returned; admin verifikator dapat membatalkan submitted/returned langsung tanpa edit pengguna, dengan remark wajib; verified harus dikembalikan dahulu |
 | Penyelesaian | Tanggal proses wajib untuk semua jenis; tidak ada nomor bukti pencairan maupun referensi TUB; lampiran opsional |
 | Tanggal penyelesaian | Default hari ini; boleh backdate, tidak sebelum tanggal verifikasi aktif dan tidak melebihi hari ini; waktu tindakan server tetap otomatis |
-| Label akhir Impresfund | Tetap Dicairkan; tidak menambah tahap Sedang Dicairkan |
+| Label akhir Imprestfund | Tetap Dicairkan; tidak menambah tahap Sedang Dicairkan |
 | Referensi TUB | Tidak dicatat dalam MONITA; proses dan dokumen TUB dikerjakan di luar sistem |
 | Penolakan final | Tidak termasuk versi pertama |
 
@@ -57,7 +57,7 @@ Kondisi awal: halaman form dan grid sudah tersedia, tetapi belum ada endpoint pe
 ### Tidak termasuk
 - Integrasi otomatis ke TUB/SIMKUG/bank dan pencairan dana secara langsung.
 - Pencatatan nomor referensi atau pengelolaan dokumen TUB; proses tersebut berada di luar MONITA.
-- Pencatatan nomor bukti pencairan Impresfund.
+- Pencatatan nomor bukti pencairan Imprestfund.
 - Pengelolaan saldo, reservasi anggaran, atau pencatatan realisasi ke Google Sheets.
 - Approval bertingkat, pemisahan wajib verifikator/pelaksana, dan penolakan final.
 - Email/WhatsApp notifikasi, transaksi parsial, pembukaan kembali pengajuan selesai.
@@ -94,7 +94,7 @@ Kondisi awal: halaman form dan grid sudah tersedia, tetapi belum ada endpoint pe
 | `completed` | Berdasarkan jenis | Proses MONITA selesai |
 | `cancelled` | Dibatalkan | Terminal; isi tidak dapat diedit atau disubmit |
 
-Label `completed`: Impresfund = **Dicairkan**; Beban dan Honor = **Diajukan ke TUB**. Selesai Beban/Honor tidak menyatakan dana sudah cair di TUB.
+Label `completed`: Imprestfund = **Dicairkan**; Beban dan Honor = **Diajukan ke TUB**. Selesai Beban/Honor tidak menyatakan dana sudah cair di TUB.
 
 Transisi yang diperbolehkan:
 1. `draft → submitted`: pengguna, validasi lengkap dan cek saldo; buat nomor resmi.
@@ -158,7 +158,7 @@ Transisi lain ditolak server. `completed` dan `cancelled` terminal untuk perubah
 - Tidak ada update saldo otomatis ketika submit, verifikasi, atau selesai.
 
 ### FR-04 — Rincian dan perhitungan
-- Impresfund: uraian, volume, tarif, subtotal. Volume > 0; subtotal otomatis = volume × tarif, dibulatkan ke 2 desimal; subtotal manual diperbolehkan.
+- Imprestfund: uraian, volume, tarif, subtotal. Volume > 0; subtotal otomatis = volume × tarif, dibulatkan ke 2 desimal; subtotal manual diperbolehkan.
 - Simpan `subtotal_manual` nullable (null = otomatis) dan `subtotal_efektif`. Nilai manual nol berbeda dari kosong.
 - Beban: nominal bruto, potongan pajak, neto otomatis (bruto dikurangi pajak) dengan nilai manual yang dapat menggantinya, bank, nama rekening, nomor rekening. Perubahan bruto atau pajak mengembalikan neto ke hitung otomatis.
 - Honor: kode jenis dari master jenis penghasilan, nominal honor, pajak otomatis = nominal honor × tarif PPh untuk kode terpilih (pembulatan 2 desimal), neto otomatis = nominal honor − pajak, nama penerima, nama rekening, bank, nomor rekening, KTP/paspor, NPWP opsional.
@@ -179,7 +179,7 @@ Transisi lain ditolak server. `completed` dan `cancelled` terminal untuk perubah
 ### FR-06 — Transaksi dan penyelesaian
 - Antrean per jenis hanya memuat `verified`; tab riwayat dapat memuat `completed`.
 - Admin dapat mengembalikan pengajuan `verified` kepada PP dari antrean transaksi dengan remark wajib dan konfirmasi. Setelah diperbaiki, pengajuan kembali melalui `submitted → verified`, tidak langsung kembali ke antrean transaksi. Nomor resmi tetap sama dan snapshot revisi sebelumnya tidak berubah.
-- Form selesai mewajibkan tanggal proses untuk semua jenis. Tidak ada field/validasi nomor bukti pencairan Impresfund maupun referensi TUB; pengguna cukup melihat status penyelesaian.
+- Form selesai mewajibkan tanggal proses untuk semua jenis. Tidak ada field/validasi nomor bukti pencairan Imprestfund maupun referensi TUB; pengguna cukup melihat status penyelesaian.
 - Beban/Honor hanya mencatat tanggal diajukan ke TUB, admin pelaksana, dan waktu tindakan sistem; catatan serta lampiran opsional. Tidak ada field, validasi wajib, atau nomor otomatis referensi TUB.
 - Status “Diajukan ke TUB” merupakan konfirmasi tindakan admin di MONITA, bukan hasil integrasi atau verifikasi dokumen dari TUB. Pengelolaan dokumen/referensi TUB sepenuhnya di luar sistem.
 - Pisahkan tanggal bisnis (`completion_date`) dari waktu tindakan sistem (`completed_at`).
@@ -212,7 +212,7 @@ Nama tabel dapat disesuaikan konvensi Laravel, tetapi relasi dan integritas beri
 - Indeks untuk PP/status/periode, status/jenis, DRK/periode; foreign key aktor jika memakai tabel lokal.
 
 ### Rincian
-- `pengajuan_impresfund_details`: `id`, `pengajuan_id`, `urutan`, `uraian`, `volume`, `tarif`, `subtotal_manual`, `subtotal_efektif`.
+- `pengajuan_imprestfund_details`: `id`, `pengajuan_id`, `urutan`, `uraian`, `volume`, `tarif`, `subtotal_manual`, `subtotal_efektif`.
 - `pengajuan_beban_details`: `id`, `pengajuan_id`, `urutan`, `nominal`, `pajak`, `neto`, `bank`, `nama_rekening`, `nomor_rekening`.
 - `pengajuan_honor_details`: seperti Beban ditambah `kode_jenis` (kode dari master jenis penghasilan), `nama_penerima`, `nomor_identitas`, `npwp`.
 - Unique `(pengajuan_id, urutan)` per tabel; foreign key ke induk. Jenis induk harus konsisten dengan tabel rincian melalui service dan pengujian.
@@ -287,7 +287,7 @@ Kode respons: 422 untuk input/saldo, 403 atau 404 konsisten untuk akses terlaran
 10. DRK lintas PP, periode tidak valid, dan field readonly palsu ditolak/diabaikan server.
 11. Subtotal manual/otomatis dan neto manual Beban dipertahankan; neto Beban otomatis dari bruto dikurangi pajak kecuali diisi manual. Pajak dan neto Honor dihitung otomatis dan server tidak bergantung pada total browser.
 12. Verifikasi gagal saat saldo tidak cukup; verifikasi valid menghasilkan antrean transaksi sesuai jenis.
-13. Selesai tanpa tanggal ditolak untuk semua jenis; semua jenis dapat selesai tanpa nomor bukti/referensi eksternal dan tidak menampilkan/menerima field tersebut. Label Impresfund tetap Dicairkan, Beban/Honor Diajukan ke TUB.
+13. Selesai tanpa tanggal ditolak untuk semua jenis; semua jenis dapat selesai tanpa nomor bukti/referensi eksternal dan tidak menampilkan/menerima field tersebut. Label Imprestfund tetap Dicairkan, Beban/Honor Diajukan ke TUB.
 14. Retry submit/complete tidak menggandakan nomor, completion, snapshot, atau riwayat.
 15. Konflik edit/admin ditolak dengan 409; tidak terjadi lost update.
 16. Pengguna hanya dapat membatalkan draft/returned; admin dapat membatalkan submitted/returned dengan remark tanpa edit pengguna. Admin tidak dapat membatalkan langsung verified/completed; nomor yang sudah ada tetap tercatat dan tidak digunakan ulang; status terminal tidak dapat dibatalkan lagi.

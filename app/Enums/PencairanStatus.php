@@ -18,7 +18,7 @@ enum PencairanStatus: string
             self::Submitted => 'Menunggu Verifikasi',
             self::Returned => 'Dikembalikan untuk Perbaikan',
             self::Verified => 'Terverifikasi / Menunggu Transaksi',
-            self::Completed => $jenis === 'impresfund' ? 'Dicairkan' : 'Diajukan ke TUB',
+            self::Completed => $jenis === 'imprestfund' ? 'Dicairkan' : 'Diajukan ke TUB',
             self::Cancelled => 'Dibatalkan',
         };
     }

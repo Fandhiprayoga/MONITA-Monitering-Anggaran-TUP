@@ -6,7 +6,7 @@
         $activeFilters = [];
         if (request()->filled('q')) $activeFilters['q'] = 'Pencarian: '.request('q');
         if (in_array($statusFilter, $allowedStatuses, true)) $activeFilters['status'] = 'Status: '.$statusLabels[$statusFilter];
-        if ($mode !== 'transaksi' && in_array(request('jenis'), ['impresfund', 'beban', 'honor'], true)) $activeFilters['jenis'] = request('jenis') === 'impresfund' ? 'Imprestfund' : ucfirst(request('jenis'));
+        if ($mode !== 'transaksi' && in_array(request('jenis'), ['imprestfund', 'beban', 'honor'], true)) $activeFilters['jenis'] = ucfirst(request('jenis'));
         if (request()->filled('tahun')) $activeFilters['tahun'] = 'Tahun: '.request('tahun');
         if (in_array((string) request('tw'), ['1', '2', '3', '4'], true)) $activeFilters['tw'] = 'Triwulan '.request('tw');
         if (session('user_role') === 'admin' && request()->filled('pp')) $activeFilters['pp'] = 'Unit: '.request('pp');
@@ -42,7 +42,7 @@
                 </li>
             </ul>
             @else
-            <h5 class="mb-3">{{ $mode === 'transaksi' && request()->route('jenis') === 'impresfund' ? 'Transaksi Imprestfund' : $title }}</h5>
+            <h5 class="mb-3">{{ $title }}</h5>
             @endif
             <div class="d-flex align-items-center gap-2 mb-3">
                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalFilter">
@@ -105,7 +105,7 @@
                         @forelse($items as $item)
                         <tr>
                             <td class="text-nowrap">{{ $item->nomor_pengajuan ?? 'Draft #'.$item->id }}<small class="d-block text-muted">{{ $item->kode_pp }}</small></td>
-                            <td class="text-nowrap"><span class="badge {{ $item->jenisBadgeClass() }}">{{ $item->jenis === 'impresfund' ? 'Imprestfund' : $item->jenisLabel() }}</span></td>
+                            <td class="text-nowrap"><span class="badge {{ $item->jenisBadgeClass() }}">{{ $item->jenisLabel() }}</span></td>
                             <td style="min-width: 200px; max-width: 350px; white-space: normal; overflow-wrap: anywhere;">{{ Illuminate\Support\Str::limit($item->uraian_pengajuan, 80) }}</td>
                             <td class="text-end text-nowrap">Rp {{ number_format((float)$item->total_bruto, 2, ',', '.') }}</td>
                             <td><span class="badge {{ $item->statusBadgeClass() }}">{{ $item->statusLabel() }}</span><small class="d-block text-muted">{{ $item->updated_at->format('d/m/Y H:i') }}</small></td>
@@ -166,8 +166,8 @@
                             <label for="filter-jenis" class="form-label">Jenis pengajuan</label>
                             <select id="filter-jenis" name="jenis" class="form-select">
                                 <option value="">Semua jenis</option>
-                                @foreach (['impresfund', 'beban', 'honor'] as $kind)
-                                    <option value="{{ $kind }}" @selected(request('jenis') === $kind)>{{ $kind === 'impresfund' ? 'Imprestfund' : ucfirst($kind) }}</option>
+                                @foreach (['imprestfund', 'beban', 'honor'] as $kind)
+                                    <option value="{{ $kind }}" @selected(request('jenis') === $kind)>{{ ucfirst($kind) }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -217,7 +217,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="list-group">
-                        <a href="{{ route('pencairan.form', 'impresfund') }}"
+                        <a href="{{ route('pencairan.form', 'imprestfund') }}"
                             class="list-group-item list-group-item-action d-flex align-items-center py-3">
                             <i class="ti ti-wallet fs-4 text-primary me-3"></i>
                             <div>

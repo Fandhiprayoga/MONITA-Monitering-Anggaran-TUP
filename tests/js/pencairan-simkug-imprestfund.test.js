@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mountSimkugImpresfund } from '../../public/js/monita/pencairan-simkug-impresfund.js';
+import { mountSimkugImprestfund } from '../../public/js/monita/pencairan-simkug-imprestfund.js';
 
 test('SIMKUG tracks unsaved edits and retains navigation without a separate copy section', (t) => {
     const events = {};
@@ -32,7 +32,7 @@ test('SIMKUG tracks unsaved edits and retains navigation without a separate copy
             else delete globalThis[key];
         });
     }
-    mountSimkugImpresfund(panel);
+    mountSimkugImprestfund(panel);
     events.change();
     let prevented = false;
     windowEvents.beforeunload({ preventDefault() { prevented = true; } });

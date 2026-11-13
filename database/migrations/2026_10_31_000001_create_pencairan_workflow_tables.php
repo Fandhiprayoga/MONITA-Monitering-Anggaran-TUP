@@ -55,13 +55,13 @@ return new class extends Migration
             $table->index(['status', 'jenis']);
             $table->index(['drk_source_id', 'tahun_anggaran', 'triwulan'], 'pengajuan_drk_period');
         });
-        foreach (['impresfund', 'beban', 'honor'] as $jenis) {
+        foreach (['imprestfund', 'beban', 'honor'] as $jenis) {
             Schema::create('pengajuan_'.$jenis.'_details', function (Blueprint $table) use ($jenis) {
                 $table->id();
                 $table->foreignId('pengajuan_id')->constrained('pengajuans')->cascadeOnDelete();
                 $table->unsignedInteger('urutan');
                 $table->json('raw_data');
-                if ($jenis === 'impresfund') {
+                if ($jenis === 'imprestfund') {
                     $table->text('uraian')->nullable();
                     foreach (['volume', 'tarif', 'subtotal_manual', 'subtotal_efektif'] as $field) {
                         $table->decimal($field, 18, 2)->nullable();
@@ -140,7 +140,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        foreach (['pengajuan_idempotencies', 'pengajuan_attachments', 'pengajuan_completions', 'pengajuan_histories', 'pengajuan_revisions', 'pengajuan_honor_details', 'pengajuan_beban_details', 'pengajuan_impresfund_details', 'pengajuans', 'pengajuan_number_sequences', 'pengajuan_actors'] as $table) {
+        foreach (['pengajuan_idempotencies', 'pengajuan_attachments', 'pengajuan_completions', 'pengajuan_histories', 'pengajuan_revisions', 'pengajuan_honor_details', 'pengajuan_beban_details', 'pengajuan_imprestfund_details', 'pengajuans', 'pengajuan_number_sequences', 'pengajuan_actors'] as $table) {
             Schema::dropIfExists($table);
         }
     }

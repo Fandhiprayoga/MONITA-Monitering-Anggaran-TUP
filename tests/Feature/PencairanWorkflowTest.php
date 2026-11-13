@@ -71,7 +71,7 @@ class PencairanWorkflowTest extends TestCase
     private function row(string $jenis): array
     {
         return match ($jenis) {
-            'impresfund' => ['no' => '001', 'uraian' => 'Belanja', 'volume' => '2', 'tarif' => '50', 'subtotal' => ''],
+            'imprestfund' => ['no' => '001', 'uraian' => 'Belanja', 'volume' => '2', 'tarif' => '50', 'subtotal' => ''],
             'beban' => ['no' => '001', 'nominal' => '100', 'pajak' => '10', 'neto' => '77', 'bank' => 'BRI', 'nama' => 'Nama', 'rekening' => '000123'],
             'honor' => ['no' => '001', 'nominal' => '100', 'pajak' => '10', 'neto' => '77', 'bank' => 'BRI', 'nama' => 'Nama', 'rekening' => '000123', 'kode_jenis' => 'PPH-21', 'penerima' => 'Penerima', 'identitas' => '000098', 'npwp' => '000012'],
         };
@@ -100,12 +100,12 @@ class PencairanWorkflowTest extends TestCase
         $this->action($p, 'verify')->assertOk(); return $p->fresh();
     }
 
-    public static function kinds(): array { return [['impresfund'], ['beban'], ['honor']]; }
+    public static function kinds(): array { return [['imprestfund'], ['beban'], ['honor']]; }
     public static function readonlySimkugKinds(): array { return [['beban'], ['honor']]; }
 
     public function test_detail_displays_effective_subtotal_without_changing_automatic_edit_values(): void
     {
-        $p = $this->draft('impresfund', [
+        $p = $this->draft('imprestfund', [
             ['no'=>'1', 'uraian'=>'Otomatis', 'volume'=>'2', 'tarif'=>'123,45', 'subtotal'=>''],
             ['no'=>'2', 'uraian'=>'Manual', 'volume'=>'2', 'tarif'=>'1000000', 'subtotal'=>'1234567,89'],
             ['no'=>'3', 'uraian'=>'Manual nol', 'volume'=>'1', 'tarif'=>'100', 'subtotal'=>'0'],
@@ -253,9 +253,9 @@ class PencairanWorkflowTest extends TestCase
         return ['dc' => 'C'];
     }
 
-    public function test_impresfund_simkug_uses_submission_values_and_saves_only_dc(): void
+    public function test_imprestfund_simkug_uses_submission_values_and_saves_only_dc(): void
     {
-        $p = $this->verified('impresfund');
+        $p = $this->verified('imprestfund');
         $before = $p->only(['total_bruto', 'total_pajak', 'total_neto', 'header_snapshot', 'uraian_pengajuan', 'kode_pp', 'revision_no']);
         $details = $p->detailRows();
         $response = $this->get(route('pencairan.show', $p))->assertOk()->assertSee('Simpan Data SIMKUG')
@@ -314,7 +314,7 @@ class PencairanWorkflowTest extends TestCase
 
     public function test_simkug_rejects_invalid_dc_and_source_columns(): void
     {
-        $p = $this->verified('impresfund');
+        $p = $this->verified('imprestfund');
         foreach ([
             ['dc' => 'X'], ['dc' => ''], ['kode_akun' => '   '],
             ['kode_akun' => ['invalid']],
@@ -337,9 +337,9 @@ class PencairanWorkflowTest extends TestCase
         }
     }
 
-    public function test_simkug_is_admin_only_verified_impresfund_and_completed_data_remains_readonly(): void
+    public function test_simkug_is_admin_only_verified_imprestfund_and_completed_data_remains_readonly(): void
     {
-        $p = $this->verified('impresfund');
+        $p = $this->verified('imprestfund');
         $url = route('pencairan.simkug.save', $p);
         $payload = ['lock_version' => $p->lock_version, 'simkug' => $this->simkugPayload()];
         $this->login();
@@ -390,7 +390,7 @@ class PencairanWorkflowTest extends TestCase
     public function test_completed_simkug_is_visible_to_admin_and_remains_readonly(string $jenis): void
     {
         $p = $this->verified($jenis);
-        if ($jenis === 'impresfund') {
+        if ($jenis === 'imprestfund') {
             $this->patchJson(route('pencairan.simkug.save', $p), [
                 'lock_version' => $p->lock_version, 'simkug' => ['dc' => 'C'],
             ])->assertOk();
@@ -402,7 +402,7 @@ class PencairanWorkflowTest extends TestCase
             ->assertOk()->assertSee('>SIMKUG</button>', false)
             ->assertSee('id="pengajuan-simkug-'.$p->id.'"', false)
             ->assertDontSee('Simpan Data SIMKUG');
-        if ($jenis === 'impresfund') {
+        if ($jenis === 'imprestfund') {
             $response->assertSee('data-editable="false"', false)
                 ->assertSee('<option value="C" selected>', false);
             $this->patchJson(route('pencairan.simkug.save', $p), [
@@ -420,7 +420,7 @@ class PencairanWorkflowTest extends TestCase
 
         $this->login();
         $response = $this->get(route('pencairan.show', $p))->assertOk();
-        if ($jenis === 'impresfund') {
+        if ($jenis === 'imprestfund') {
             $response->assertSee('>SIMKUG</button>', false)->assertSee('data-editable="false"', false);
         } else {
             $response->assertDontSee('>SIMKUG</button>', false);
@@ -431,7 +431,7 @@ class PencairanWorkflowTest extends TestCase
 
     public function test_simkug_native_save_keeps_menu_tab_and_validation_inputs_and_resets_on_resubmission(): void
     {
-        $p = $this->verified('impresfund');
+        $p = $this->verified('imprestfund');
         $url = route('pencairan.simkug.save', $p);
         $detailUrl = route('pencairan.show', ['pengajuan' => $p, 'menu' => 'transaksi', 'tab' => 'simkug']);
         $this->from($detailUrl)->patch($url, ['lock_version' => $p->lock_version, 'simkug' => $this->simkugPayload()])
@@ -608,46 +608,49 @@ class PencairanWorkflowTest extends TestCase
         $this->assertNull($p->fresh()->nomor_pengajuan);
     }
 
-    public function test_imprestfund_display_labels_preserve_internal_kind(): void
+    public function test_imprestfund_uses_new_kind_in_views_database_and_revisions(): void
     {
-        $p = $this->draft('impresfund');
+        $p = $this->draft('imprestfund');
 
-        $this->get(route('pencairan.pengajuan', ['jenis' => 'impresfund']))
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('pengajuan_imprestfund_details'));
+        $this->assertDatabaseHas('pengajuan_imprestfund_details', ['pengajuan_id' => $p->id]);
+        $this->get(route('pencairan.pengajuan', ['jenis' => 'imprestfund']))
             ->assertOk()->assertSee('Pengajuan pencairan Imprestfund')->assertSee('Form Imprestfund')
-            ->assertSee('value="impresfund" selected>Imprestfund</option>', false)
+            ->assertSee('value="imprestfund" selected>Imprestfund</option>', false)
             ->assertSee('>Imprestfund</span>', false);
-        $this->get(route('pencairan.form', 'impresfund'))->assertOk()
+        $this->get(route('pencairan.form', 'imprestfund'))->assertOk()
             ->assertSee('<title>Form Imprestfund | MONITA</title>', false)
             ->assertSee('Form Pencairan Anggaran - Imprestfund')
-            ->assertSee('data-jenis="impresfund"', false);
+            ->assertSee('data-jenis="imprestfund"', false);
         $this->get(route('pencairan.edit', $p))->assertOk()->assertSee('Form Pencairan Anggaran - Imprestfund');
         $this->get(route('pencairan.show', $p))->assertOk()->assertSee('— Imprestfund');
         $this->get(route('pencairan.form', 'beban'))->assertOk()->assertSee('Form Pencairan Anggaran - Beban');
 
         $this->action($p, 'submit')->assertOk();
+        $this->assertSame('imprestfund', $p->revisions()->firstOrFail()->snapshot['header']['jenis']);
         $this->login('admin', '', 'admin');
         $this->action($p, 'verify')->assertOk();
-        $this->get(route('pencairan.transaksi', 'impresfund'))->assertOk()
+        $this->get(route('pencairan.transaksi', 'imprestfund'))->assertOk()
             ->assertSee('<title>Transaksi Imprestfund | MONITA</title>', false)
             ->assertSee('>Transaksi Imprestfund</h5>', false)->assertSee('>Imprestfund</span>', false)
             ->assertSee('Pengajuan Imprestfund');
-        $this->get(route('pencairan.history', ['jenis' => 'impresfund']))->assertOk()
-            ->assertSee('value="impresfund" selected>Imprestfund</option>', false)
+        $this->get(route('pencairan.history', ['jenis' => 'imprestfund']))->assertOk()
+            ->assertSee('value="imprestfund" selected>Imprestfund</option>', false)
             ->assertSee('>Imprestfund</span>', false);
         $this->get(route('pencairan.show', $p))->assertOk()->assertSee('aria-label="Data SIMKUG Imprestfund"', false);
-        $this->assertSame('impresfund', $p->fresh()->jenis);
+        $this->assertSame('imprestfund', $p->fresh()->jenis);
     }
 
     public function test_real_routes_render_forms_lists_detail_revision_and_admin_actions(): void
     {
-        foreach (['impresfund', 'beban', 'honor'] as $kind) {
+        foreach (['imprestfund', 'beban', 'honor'] as $kind) {
             $this->login();
             $this->get(route('pencairan.form', $kind))->assertOk()->assertSee('pencairan-submit.js');
             $result = $this->postJson(route('pencairan.store'), ['jenis' => $kind, 'drk_id' => str_repeat('a',64), 'uraian_pengajuan' => 'Narasi pengajuan', 'details' => [$this->row($kind)]]);
             $result->assertCreated();
             $p = PencairanPengajuan::where('uuid', $result->json('uuid'))->firstOrFail();
             $this->get(route('pencairan.show',$p))->assertOk()->assertSee('Edit / Submit');
-            $this->get(route('pencairan.edit',$p))->assertOk()->assertSee($kind === 'impresfund' ? 'Belanja' : '000123', false);
+            $this->get(route('pencairan.edit',$p))->assertOk()->assertSee($kind === 'imprestfund' ? 'Belanja' : '000123', false);
             $this->postJson(route('pencairan.submit',$p), ['lock_version'=>$p->lock_version, 'idempotency_key'=>'ui-'.$kind])->assertOk();
             $this->get(route('pencairan.pengajuan'))->assertOk()->assertSee($p->fresh()->nomor_pengajuan);
             $this->get(route('pencairan.show',$p))->assertOk()
@@ -716,7 +719,7 @@ class PencairanWorkflowTest extends TestCase
             ->assertSee('data-menu="transaksi"', false);
 
         $row = $this->row($jenis);
-        if ($jenis === 'impresfund') {
+        if ($jenis === 'imprestfund') {
             $row['uraian'] = 'Rincian diperbarui admin';
         } else {
             $row['nominal'] = '200';
@@ -748,7 +751,7 @@ class PencairanWorkflowTest extends TestCase
             'lock_version' => $p->lock_version,
             'drk_id' => str_repeat('a', 64),
             'uraian_pengajuan' => 'Narasi selesai diperbarui',
-            'details' => [array_replace($this->row($jenis), $jenis === 'impresfund'
+            'details' => [array_replace($this->row($jenis), $jenis === 'imprestfund'
                 ? ['uraian' => 'Rincian diperbarui', 'tarif' => '100']
                 : ['nominal' => '200'])],
         ];
@@ -787,7 +790,7 @@ class PencairanWorkflowTest extends TestCase
     public function test_all_forms_save_incomplete_drafts_and_roundtrip_manual_values(string $jenis): void
     {
         $row = $this->row($jenis);
-        if ($jenis === 'impresfund') { $row['volume'] = ''; $row['subtotal'] = '0'; }
+        if ($jenis === 'imprestfund') { $row['volume'] = ''; $row['subtotal'] = '0'; }
         else { $row['bank'] = ''; }
         $p = $this->draft($jenis, [$row, ['no' => '2', 'pajak' => '0']]);
         $this->assertNull($p->nomor_pengajuan);
@@ -795,7 +798,7 @@ class PencairanWorkflowTest extends TestCase
         $this->assertSame(0, $p->revisions()->count());
         $this->assertCount(1, $p->detailRows());
         $this->assertSame('001', $p->detailRows()[0]['no']);
-        if ($jenis === 'impresfund') {
+        if ($jenis === 'imprestfund') {
             $this->assertSame('0.00', $p->details->first()->subtotal_manual);
             $this->assertNull($p->details->first()->volume);
         } else {
@@ -813,7 +816,7 @@ class PencairanWorkflowTest extends TestCase
         $this->action($p, 'complete', ['completion_date' => '2026-10-31'])->assertOk();
         $p->refresh();
         $this->assertSame('completed', $p->status);
-        $this->assertSame($jenis === 'impresfund' ? 'Dicairkan' : 'Diajukan ke TUB', $p->statusLabel());
+        $this->assertSame($jenis === 'imprestfund' ? 'Dicairkan' : 'Diajukan ke TUB', $p->statusLabel());
         $this->assertSame('2026-10-31', $p->completion->completion_date->toDateString());
         $this->assertSame('000001/2026/3110/8910', $p->nomor_pengajuan);
         $this->assertCount(1, $p->revisions);
@@ -826,7 +829,7 @@ class PencairanWorkflowTest extends TestCase
 
     public function test_manual_subtotal_and_exact_rounding_and_zero_override(): void
     {
-        $p = $this->draft('impresfund', [
+        $p = $this->draft('imprestfund', [
             ['uraian' => 'a', 'volume' => '0,03', 'tarif' => '0,50', 'subtotal' => ''],
             ['uraian' => 'b', 'volume' => '2', 'tarif' => '100', 'subtotal' => '7,23'],
             ['uraian' => 'c', 'volume' => '2', 'tarif' => '100', 'subtotal' => '0'],
@@ -892,7 +895,7 @@ class PencairanWorkflowTest extends TestCase
         foreach ([['pajak' => '101', 'nominal' => '100'], ['rekening' => 123], ['bank' => str_repeat('a', 256)]] as $row) {
             $this->postJson('/_workflow', ['jenis' => 'beban', 'details' => [$row]])->assertUnprocessable();
         }
-        $this->postJson('/_workflow', ['jenis' => 'impresfund', 'details' => [['volume' => '0']]])->assertUnprocessable();
+        $this->postJson('/_workflow', ['jenis' => 'imprestfund', 'details' => [['volume' => '0']]])->assertUnprocessable();
         $this->postJson('/_workflow', ['jenis' => 'honor', 'details' => [['kode_jenis' => 'BAD']]])->assertUnprocessable()->assertJsonValidationErrors('details.0.kode_jenis');
         $this->postJson('/_workflow', ['jenis' => 'beban', 'details' => array_fill(0, 501, ['no' => '1'])])->assertUnprocessable();
         $this->postJson('/_workflow', ['jenis' => 'honor', 'details' => [['identitas' => '12345678901234567']]])
@@ -932,9 +935,9 @@ class PencairanWorkflowTest extends TestCase
     public function test_number_expands_beyond_six_digits_and_eager_loaded_details_roundtrip(): void
     {
         DB::table('pengajuan_number_sequences')->insert(['year' => 2026, 'last_number' => 999999]);
-        $p = $this->submitted('impresfund');
+        $p = $this->submitted('imprestfund');
         $this->assertSame('1000000/2026/3110/8910', $p->nomor_pengajuan);
-        $loaded = PencairanPengajuan::with('impresfundDetails')->find($p->id);
+        $loaded = PencairanPengajuan::with('imprestfundDetails')->find($p->id);
         $this->assertSame($p->detailRows(), $loaded->detailRows());
         $this->assertSame('100.00', $p->revisions->first()->snapshot['detail_values'][0]['subtotal_efektif']);
         $this->assertNull($p->revisions->first()->snapshot['detail_values'][0]['subtotal_manual']);
@@ -974,10 +977,10 @@ class PencairanWorkflowTest extends TestCase
     public function test_drk_budget_options_sum_all_committed_form_types_for_the_matching_period(): void
     {
         foreach ([
-            ['impresfund', 'submitted'],
+            ['imprestfund', 'submitted'],
             ['beban', 'verified'],
             ['honor', 'completed'],
-            ['impresfund', 'draft'],
+            ['imprestfund', 'draft'],
             ['beban', 'returned'],
             ['honor', 'cancelled'],
         ] as [$jenis, $status]) {
@@ -1095,7 +1098,7 @@ class PencairanWorkflowTest extends TestCase
         $this->login(); $second = $this->submitted('honor'); $this->assertSame(2, $second->nomor_urut);
         $draft = $this->draft(); $this->action($draft, 'cancel', ['confirmed' => false])->assertUnprocessable();
         $this->action($draft, 'cancel')->assertOk();
-        $verified = $this->verified('impresfund');
+        $verified = $this->verified('imprestfund');
         $this->action($verified, 'cancel', ['remark' => 'No'])->assertConflict();
     }
 

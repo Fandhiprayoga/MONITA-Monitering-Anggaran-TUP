@@ -3,7 +3,7 @@
 @section('content')
 @php
     $showSimkug = ($pengajuan->status === 'verified' && $actor['role'] === 'admin')
-        || ($pengajuan->status === 'completed' && ($actor['role'] === 'admin' || $pengajuan->jenis === 'impresfund'));
+        || ($pengajuan->status === 'completed' && ($actor['role'] === 'admin' || $pengajuan->jenis === 'imprestfund'));
     $simkugActive = $showSimkug && (request('tab') === 'simkug' || session()->hasOldInput('simkug'));
     $headerFieldOrder = ['kode_akun', 'nama_akun', 'kode_pp', 'nama_pp', 'kode_drk', 'uraian_drk', 'saldo_awal', 'anggaran_terpakai', 'saldo_terkini', 'tipe', 'drk_tup'];
     $orderedHeaderSnapshot = array_replace(array_fill_keys($headerFieldOrder, null), $headerSnapshot);
@@ -37,7 +37,7 @@
 @endphp
 <link rel="stylesheet" href="{{ asset('css/monita/pencairan-grid.css') }}">
 <link rel="stylesheet" href="{{ asset('css/monita/pencairan-timeline.css') }}">
-<div class="card"><div class="card-header d-flex justify-content-between"><h5>{{ $pengajuan->nomor_pengajuan ?? 'Draft #'.$pengajuan->id }} — {{ $pengajuan->jenis === 'impresfund' ? 'Imprestfund' : ucfirst($pengajuan->jenis) }}</h5><span class="badge {{ $pengajuan->statusBadgeClass() }}">{{ $pengajuan->statusLabel() }}</span></div>
+<div class="card"><div class="card-header d-flex justify-content-between"><h5>{{ $pengajuan->nomor_pengajuan ?? 'Draft #'.$pengajuan->id }} — {{ $pengajuan->jenisLabel() }}</h5><span class="badge {{ $pengajuan->statusBadgeClass() }}">{{ $pengajuan->statusLabel() }}</span></div>
 <div class="card-body">
     @include('main.pencairan.partials.feedback')
     <ul class="nav nav-tabs mb-3" id="pengajuan-tabs-{{ $pengajuan->id }}" role="tablist">
@@ -76,8 +76,8 @@
     @if($showSimkug)
         <section class="tab-pane fade {{ $simkugActive ? 'show active' : '' }}" id="pengajuan-simkug-{{ $pengajuan->id }}" role="tabpanel" aria-labelledby="pengajuan-simkug-tab-{{ $pengajuan->id }}" tabindex="0" data-simkug-panel>
             @include('main.pencairan.partials.detail-header')
-            @if($pengajuan->jenis === 'impresfund')
-                @include('main.pencairan.partials.simkug-impresfund')
+            @if($pengajuan->jenis === 'imprestfund')
+                @include('main.pencairan.partials.simkug-imprestfund')
             @else
                 @include('main.pencairan.partials.simkug-header-copy')
                 @include('main.pencairan.partials.detail-data', ['simkug' => true])
@@ -191,10 +191,10 @@
 <script type="module">
     import { mountReadOnlySpreadsheetGrid } from "{{ asset('js/monita/pencairan-detail-grid.js') }}";
     import { mountSimkugCopy } from "{{ asset('js/monita/pencairan-simkug.js') }}";
-    import { mountSimkugImpresfund } from "{{ asset('js/monita/pencairan-simkug-impresfund.js') }}";
+    import { mountSimkugImprestfund } from "{{ asset('js/monita/pencairan-simkug-imprestfund.js') }}";
     document.querySelectorAll('[data-detail-grid]').forEach(mountReadOnlySpreadsheetGrid);
     document.querySelectorAll('[data-simkug-panel]').forEach(mountSimkugCopy);
-    document.querySelectorAll('[data-simkug-impresfund]').forEach(mountSimkugImpresfund);
+    document.querySelectorAll('[data-simkug-imprestfund]').forEach(mountSimkugImprestfund);
 </script>
 @endpush
 @push('scripts')

@@ -38,7 +38,7 @@ class PencairanFormTest extends TestCase
 
     public function test_forms_share_header_and_render_their_own_details(): void
     {
-        foreach (['impresfund' => 'Subtotal', 'beban' => 'Nominal Setelah Pajak', 'honor' => 'Total Diterima'] as $kind => $column) {
+        foreach (['imprestfund' => 'Subtotal', 'beban' => 'Nominal Setelah Pajak', 'honor' => 'Total Diterima'] as $kind => $column) {
             $this->withSession(['user_authenticated' => true])
                 ->get(route('pencairan.form', $kind))
                 ->assertOk()
@@ -122,10 +122,10 @@ class PencairanFormTest extends TestCase
             ->assertSee('Total nominal sebelum pajak (bruto).');
     }
 
-    public function test_impresfund_explains_manual_subtotal_and_clipboard_order(): void
+    public function test_imprestfund_explains_manual_subtotal_and_clipboard_order(): void
     {
         $this->withSession(['user_authenticated' => true])
-            ->get(route('pencairan.form', 'impresfund'))
+            ->get(route('pencairan.form', 'imprestfund'))
             ->assertOk()
             ->assertSee('Uraian, Volume, Tarif, Subtotal')
             ->assertSee('kosongkan untuk kembali otomatis')
@@ -135,7 +135,7 @@ class PencairanFormTest extends TestCase
     public function test_all_forms_place_grid_and_specific_instructions_in_help_modal(): void
     {
         foreach ([
-            'impresfund' => 'Subtotal otomatis = Volume x Tarif',
+            'imprestfund' => 'Subtotal otomatis = Volume x Tarif',
             'beban' => 'Isi Nominal Setelah Pajak untuk memakai nilai manual',
             'honor' => 'Pilih Kd Jenis dari master data jenis penghasilan',
         ] as $kind => $instruction) {
@@ -160,7 +160,7 @@ class PencairanFormTest extends TestCase
             $this->assertSame(0, $xpath->query('//form//*[@id="grid-help-modal" or @id="grid-help"]')->length);
             $help = $xpath->query('//*[@id="grid-help"]')->item(0)->textContent;
             $this->assertStringContainsString($instruction, $help);
-            if (in_array($kind, ['beban', 'impresfund'], true)) {
+            if (in_array($kind, ['beban', 'imprestfund'], true)) {
                 $this->assertStringContainsString('peringatan di atas tabel yang mencantumkan nomor baris dan nilai yang seharusnya', $help);
                 $this->assertStringContainsString('tanpa mengubah nilai isian atau menghalangi penyimpanan', $help);
                 $this->assertSame(1, $xpath->query('//form//div[@data-grid-warnings and @role="status" and @aria-live="polite"]/following-sibling::div[contains(@class, "spreadsheet-viewport")]')->length);
@@ -182,7 +182,7 @@ class PencairanFormTest extends TestCase
     {
         $this->withSession(['user_authenticated' => true, 'user_role' => 'admin',
             'user_data' => ['username' => 'admin', 'role' => 'admin', 'kode_pp' => 'TEST', 'nama_pp' => 'Unit Test']]);
-        foreach (['impresfund', 'beban', 'honor'] as $kind) {
+        foreach (['imprestfund', 'beban', 'honor'] as $kind) {
             $response = $this->get(route('pencairan.form', $kind))->assertOk()
                 ->assertSee('id="pilih-unit"', false)->assertSee('OTHER - Unit Lain')
                 ->assertSee('select2.min.css')->assertSee('select2.min.js')
@@ -205,7 +205,7 @@ class PencairanFormTest extends TestCase
     {
         $this->withSession(['user_authenticated' => true, 'user_role' => 'user',
             'user_data' => ['username' => 'user', 'role' => 'user', 'kode_pp' => 'TEST', 'nama_pp' => 'Unit Test']]);
-        $this->get(route('pencairan.form', 'impresfund'))->assertOk()->assertDontSee('id="pilih-unit"', false)
+        $this->get(route('pencairan.form', 'imprestfund'))->assertOk()->assertDontSee('id="pilih-unit"', false)
             ->assertSee('select2.min.js');
         $this->getJson(route('pencairan.drk-options', ['unit_kode_pp' => 'OTHER']))
             ->assertUnprocessable()->assertJsonValidationErrors('unit_kode_pp');
@@ -254,7 +254,7 @@ class PencairanFormTest extends TestCase
 
         $service->shouldReceive('getPencairanDrkOptions')->with('TEST', 4, 2026)->once()
             ->andThrow(new \RuntimeException('Source unavailable'));
-        $this->get(route('pencairan.form', 'impresfund'))
+        $this->get(route('pencairan.form', 'imprestfund'))
             ->assertOk()
             ->assertSee('Gagal memuat DRK dan saldo anggaran.')
             ->assertViewHas('drkOptions', [])

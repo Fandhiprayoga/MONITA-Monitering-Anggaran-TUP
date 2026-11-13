@@ -6,7 +6,7 @@
     ];
     $canEditSimkug = $actor['role'] === 'admin' && $pengajuan->status === 'verified';
 @endphp
-<div data-simkug-impresfund>
+<div data-simkug-imprestfund>
     <p class="text-muted">Satu baris berdasarkan total pengajuan. Kolom selain D/C berasal dari data pengajuan dan hanya dapat diubah dari pengajuan.</p>
     @if($pengajuan->simkug_data === null)
         <p class="small text-warning">Data awal dari pengajuan; belum pernah disimpan sebagai data SIMKUG. Pilih D (Debit) atau C (Credit) sebelum menyimpan.</p>
@@ -29,7 +29,7 @@
                     @foreach($simkugColumns as $key => $label)
                         @php
                             $value = $key === 'dc' && $canEditSimkug ? old('simkug.dc', $simkugData[$key]) : $simkugData[$key];
-                            $fieldId = 'simkug-impresfund-'.$pengajuan->id.'-'.$key;
+                            $fieldId = 'simkug-imprestfund-'.$pengajuan->id.'-'.$key;
                         @endphp
                         <td role="gridcell" aria-selected="false" aria-readonly="{{ $key === 'dc' && $canEditSimkug ? 'false' : 'true' }}" data-grid-cell style="min-width: {{ $key === 'dc' ? '145' : '200' }}px;">
                             @if($key === 'dc')

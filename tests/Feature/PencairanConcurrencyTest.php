@@ -27,10 +27,10 @@ class PencairanConcurrencyTest extends TestCase
             Bank::create(['kode_bank' => '002', 'inisial' => 'BRI', 'nama_bank' => 'Bank Rakyat Indonesia', 'status' => 'aktif']);
             $actor = PencairanActor::create(['source_key' => 'test', 'username' => 'test', 'name' => 'test', 'role' => 'user']);
             $ids = [];
-            foreach (['impresfund', 'beban', 'honor', 'beban'] as $i => $kind) {
+            foreach (['imprestfund', 'beban', 'honor', 'beban'] as $i => $kind) {
                 $p = PencairanPengajuan::create(['jenis' => $kind, 'status' => 'draft', 'kode_pp' => 'PP0'.($i + 1), 'nama_pp' => 'Test',
                     'created_by_actor_id' => $actor->id, 'tahun_anggaran' => 2026, 'triwulan' => 4, 'drk_source_id' => str_repeat('a', 64), 'uraian_pengajuan' => 'Test']);
-                if ($kind === 'impresfund') {
+                if ($kind === 'imprestfund') {
                     $raw = ['uraian' => 'Test', 'volume' => '1', 'tarif' => '100', 'subtotal' => ''];
                 } else {
                     $raw = ['nominal' => '100', 'pajak' => '0', 'neto' => '100', 'bank' => 'BRI', 'nama' => 'Name', 'rekening' => '0001'];

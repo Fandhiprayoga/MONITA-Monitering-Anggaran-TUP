@@ -5,7 +5,7 @@ const format = (cents) => (cents / 100).toLocaleString('id-ID', {
 });
 
 export const schemas = {
-    impresfund: [
+    imprestfund: [
         { key: 'uraian', label: 'Uraian' },
         { key: 'volume', label: 'Volume', numeric: true },
         { key: 'tarif', label: 'Tarif', numeric: true, money: true },
@@ -117,8 +117,8 @@ export function calculateRow(kind, values, optionChoices = {}) {
     if (kind === 'honor' && numbers.nominal !== undefined && numbers.pajak !== undefined) {
         numbers.neto = numbers.nominal - numbers.pajak;
     }
-    if (kind === 'impresfund' && numbers.volume === 0) errors.volume = 'Volume harus lebih dari nol.';
-    if (kind !== 'impresfund' && numbers.pajak > numbers.nominal) errors.pajak = 'Potongan pajak tidak boleh melebihi nominal.';
+    if (kind === 'imprestfund' && numbers.volume === 0) errors.volume = 'Volume harus lebih dari nol.';
+    if (kind !== 'imprestfund' && numbers.pajak > numbers.nominal) errors.pajak = 'Potongan pajak tidak boleh melebihi nominal.';
     const warnings = {};
     if (kind === 'beban' && numbers.nominal !== undefined && numbers.pajak !== undefined
         && numbers.neto !== undefined && numbers.pajak <= numbers.nominal
@@ -126,9 +126,9 @@ export function calculateRow(kind, values, optionChoices = {}) {
         warnings.neto = `Perhitungan kurang tepat. Nominal Setelah Pajak seharusnya ${format(numbers.nominal - numbers.pajak)} (Nominal - Pot Pajak). Nilai yang diisi tetap digunakan.`;
     }
     // Both operands are scaled by 100; bound the product before rounding to cents.
-    const product = kind === 'impresfund' ? numbers.volume * numbers.tarif : undefined;
+    const product = kind === 'imprestfund' ? numbers.volume * numbers.tarif : undefined;
     const automaticSubtotal = Number.isSafeInteger(product) ? Math.round(product / 100) : undefined;
-    if (kind === 'impresfund' && numbers.volume > 0 && numbers.subtotal !== undefined
+    if (kind === 'imprestfund' && numbers.volume > 0 && numbers.subtotal !== undefined
         && automaticSubtotal !== undefined && numbers.subtotal !== automaticSubtotal) {
         warnings.subtotal = `Perhitungan kurang tepat. Subtotal seharusnya ${format(automaticSubtotal)} (Volume x Tarif). Nilai yang diisi tetap digunakan.`;
     }
@@ -665,7 +665,7 @@ export function mountGrid(form, { jenisPenghasilanOptions = [], bankOptions = []
         anchor = { row: start, col: startCol };
         const width = Math.max(...rows.map((row) => row.length));
         select(body.rows[start + rows.length - 1].querySelector(`[data-key="${editable[offset + width - 1].key}"]`), true);
-        notify(`${rows.length} baris ditempel. Periksa penanda merah bila ada data tidak valid.${['beban', 'impresfund'].includes(kind) ? ' Peringatan di atas tabel dan penanda kuning menunjukkan nilai yang tidak sesuai perhitungan.' : ''}`);
+        notify(`${rows.length} baris ditempel. Periksa penanda merah bila ada data tidak valid.${['beban', 'imprestfund'].includes(kind) ? ' Peringatan di atas tabel dan penanda kuning menunjukkan nilai yang tidak sesuai perhitungan.' : ''}`);
     });
 
     function clipboardRows(all) {

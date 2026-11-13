@@ -41,13 +41,13 @@ class PencairanPengajuan extends Model
     public function details()
     {
         return match ($this->jenis) {
-            'impresfund' => $this->impresfundDetails(),
+            'imprestfund' => $this->imprestfundDetails(),
             'beban' => $this->bebanDetails(),
             'honor' => $this->honorDetails(),
         };
     }
 
-    public function impresfundDetails() { return $this->hasMany(PencairanImpresfundDetail::class, 'pengajuan_id')->orderBy('urutan'); }
+    public function imprestfundDetails() { return $this->hasMany(PencairanImprestfundDetail::class, 'pengajuan_id')->orderBy('urutan'); }
     public function bebanDetails() { return $this->hasMany(PencairanBebanDetail::class, 'pengajuan_id')->orderBy('urutan'); }
     public function honorDetails() { return $this->hasMany(PencairanHonorDetail::class, 'pengajuan_id')->orderBy('urutan'); }
 
@@ -72,11 +72,11 @@ class PencairanPengajuan extends Model
     public function statusBadgeClass(): string { return PencairanStatus::from($this->status)->badgeClass(); }
 
     public function jenisLabel(): string { return match ($this->jenis) {
-        'impresfund' => 'Impresfund', 'beban' => 'Beban', 'honor' => 'Honor', default => ucfirst($this->jenis),
+        'imprestfund' => 'Imprestfund', 'beban' => 'Beban', 'honor' => 'Honor', default => ucfirst($this->jenis),
     }; }
 
     public function jenisBadgeClass(): string { return match ($this->jenis) {
-        'impresfund' => 'bg-light-primary', 'beban' => 'bg-light-info', 'honor' => 'bg-light-warning', default => 'bg-light-secondary',
+        'imprestfund' => 'bg-light-primary', 'beban' => 'bg-light-info', 'honor' => 'bg-light-warning', default => 'bg-light-secondary',
     }; }
 
     public function scopeForActor(Builder $query, array $actor): Builder

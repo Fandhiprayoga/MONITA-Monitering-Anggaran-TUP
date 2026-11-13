@@ -16,54 +16,54 @@ test('Pasted numeric values can be formatted with Indonesian separators', () => 
     assert.throws(() => formatAmount('invalid'));
 });
 
-test('Impresfund calculates fractional volume and rounds to cents', () => {
-    assert.equal(calculateRow('impresfund', { uraian: 'ATK', volume: '2,5', tarif: '1.250,50' }).gross, 312625);
-    assert.ok(calculateRow('impresfund', { uraian: 'ATK', volume: '0', tarif: '100' }).errors.volume);
-    assert.ok(calculateRow('impresfund', { uraian: 'ATK', volume: '10000000000', tarif: '10000000000' }).errors.tarif);
+test('Imprestfund calculates fractional volume and rounds to cents', () => {
+    assert.equal(calculateRow('imprestfund', { uraian: 'ATK', volume: '2,5', tarif: '1.250,50' }).gross, 312625);
+    assert.ok(calculateRow('imprestfund', { uraian: 'ATK', volume: '0', tarif: '100' }).errors.volume);
+    assert.ok(calculateRow('imprestfund', { uraian: 'ATK', volume: '10000000000', tarif: '10000000000' }).errors.tarif);
 });
 
-test('Impresfund subtotal overrides automatic calculation and blank restores it', () => {
+test('Imprestfund subtotal overrides automatic calculation and blank restores it', () => {
     const values = { uraian: 'ATK', volume: '2,5', tarif: '1.250,50' };
-    const result = calculateRow('impresfund', { ...values, subtotal: '4.000,25' });
+    const result = calculateRow('imprestfund', { ...values, subtotal: '4.000,25' });
     assert.equal(result.gross, 400025);
     assert.equal(result.net, 400025);
     assert.equal(result.tax, 0);
     assert.equal(result.errors, undefined);
     assert.match(result.warnings.subtotal, /seharusnya 3\.126,25/);
-    assert.equal(calculateRow('impresfund', { ...values, subtotal: '0' }).gross, 0);
+    assert.equal(calculateRow('imprestfund', { ...values, subtotal: '0' }).gross, 0);
     for (const subtotal of ['', '  ']) {
-        assert.equal(calculateRow('impresfund', { ...values, subtotal }).gross, 312625);
+        assert.equal(calculateRow('imprestfund', { ...values, subtotal }).gross, 312625);
     }
     for (const subtotal of ['-1', 'invalid', '1,234', '10000000001']) {
-        assert.ok(calculateRow('impresfund', { ...values, subtotal }).errors.subtotal);
+        assert.ok(calculateRow('imprestfund', { ...values, subtotal }).errors.subtotal);
     }
-    assert.ok(calculateRow('impresfund', { subtotal: '500' }).errors.uraian);
-    assert.ok(calculateRow('impresfund', { ...values, volume: '0', subtotal: '500' }).errors.volume);
-    assert.equal(calculateRow('impresfund', {
+    assert.ok(calculateRow('imprestfund', { subtotal: '500' }).errors.uraian);
+    assert.ok(calculateRow('imprestfund', { ...values, volume: '0', subtotal: '500' }).errors.volume);
+    assert.equal(calculateRow('imprestfund', {
         ...values, volume: '10000000000', tarif: '10000000000', subtotal: '500',
     }).gross, 50000);
-    assert.deepEqual(schemas.impresfund.filter((column) => !column.computed).map((column) => column.key),
+    assert.deepEqual(schemas.imprestfund.filter((column) => !column.computed).map((column) => column.key),
         ['uraian', 'volume', 'tarif', 'subtotal']);
 });
 
-test('Impresfund warns on subtotal mismatches using the same rounded cents as automatic calculation', () => {
+test('Imprestfund warns on subtotal mismatches using the same rounded cents as automatic calculation', () => {
     const values = { uraian: 'ATK', volume: '1,5', tarif: '0,01' };
     for (const subtotal of ['0', '0,01', '0,03']) {
-        const result = calculateRow('impresfund', { ...values, subtotal });
+        const result = calculateRow('imprestfund', { ...values, subtotal });
         assert.equal(result.gross, parseAmount(subtotal));
         assert.equal(result.errors, undefined);
         assert.match(result.warnings.subtotal, /seharusnya 0,02/);
     }
     for (const subtotal of ['', '  ', '0,02']) {
-        assert.equal(calculateRow('impresfund', { ...values, subtotal }).warnings, undefined);
+        assert.equal(calculateRow('imprestfund', { ...values, subtotal }).warnings, undefined);
     }
-    assert.equal(calculateRow('impresfund', { ...values, tarif: '0', subtotal: '0' }).warnings, undefined);
-    assert.ok(calculateRow('impresfund', { ...values, uraian: '', subtotal: '0' }).warnings.subtotal);
+    assert.equal(calculateRow('imprestfund', { ...values, tarif: '0', subtotal: '0' }).warnings, undefined);
+    assert.ok(calculateRow('imprestfund', { ...values, uraian: '', subtotal: '0' }).warnings.subtotal);
     for (const changes of [
         { volume: '' }, { volume: 'invalid' }, { volume: '0' }, { tarif: 'invalid' },
         { subtotal: 'invalid' }, { volume: '10000000000', tarif: '10000000000' },
     ]) {
-        assert.equal(calculateRow('impresfund', { ...values, subtotal: '1', ...changes }).warnings, undefined);
+        assert.equal(calculateRow('imprestfund', { ...values, subtotal: '1', ...changes }).warnings, undefined);
     }
 });
 
@@ -117,7 +117,7 @@ test('Beban warnings remain visible on incomplete rows but not invalid numeric o
 
 test('Blank rows are ignored, incomplete rows are invalid, zero tax is allowed', () => {
     assert.equal(calculateRow('beban', {}).empty, true);
-    assert.ok(calculateRow('impresfund', { uraian: 'Incomplete' }).errors.volume);
+    assert.ok(calculateRow('imprestfund', { uraian: 'Incomplete' }).errors.volume);
     assert.equal(calculateRow('beban', { nominal: '100', pajak: '0', neto: '100', bank: 'B', nama: 'N', rekening: '001' }).tax, 0);
 });
 

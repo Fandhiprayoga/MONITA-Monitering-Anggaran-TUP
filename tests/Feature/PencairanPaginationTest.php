@@ -99,7 +99,7 @@ class PencairanPaginationTest extends TestCase
         ]);
         $urls = [
             route('pencairan.verifikasi'), route('pencairan.pengajuan'),
-            route('pencairan.transaksi', 'impresfund'), route('pencairan.transaksi', 'beban'),
+            route('pencairan.transaksi', 'imprestfund'), route('pencairan.transaksi', 'beban'),
             route('pencairan.transaksi', 'honor'),
         ];
         $this->get($urls[0])->assertOk()->assertSessionHas('pencairan.per_page', '50')

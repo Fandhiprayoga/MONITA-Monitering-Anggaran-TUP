@@ -53,6 +53,6 @@
     <div class="col-md-6">
         <label for="nominal-diajukan" class="form-label">Nominal Diajukan (Rp)</label>
         <input id="nominal-diajukan" class="form-control bg-light fw-bold" type="text" value="0" readonly>
-        <small class="text-muted">{{ $jenis !== 'impresfund' ? 'Total nominal sebelum pajak (bruto).' : 'Total subtotal seluruh rincian.' }}</small>
+        <small class="text-muted">{{ $jenis !== 'imprestfund' ? 'Total nominal sebelum pajak (bruto).' : 'Total subtotal seluruh rincian.' }}</small>
     </div>
 </div>

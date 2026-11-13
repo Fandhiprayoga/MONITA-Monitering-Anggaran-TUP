@@ -26,7 +26,7 @@ class PencairanPengajuanSeederTest extends TestCase
         $this->assertDatabaseCount('pengajuan_actors', 4);
         $this->assertDatabaseCount('pengajuan_revisions', 45);
         $this->assertDatabaseCount('pengajuan_completions', 9);
-        foreach (['impresfund', 'beban', 'honor'] as $jenis) {
+        foreach (['imprestfund', 'beban', 'honor'] as $jenis) {
             $this->assertDatabaseCount('pengajuan_'.$jenis.'_details', 54);
             foreach (PencairanStatus::cases() as $status) {
                 $this->assertSame(3, PencairanPengajuan::where('jenis', $jenis)->where('status', $status->value)->count());
@@ -56,7 +56,7 @@ class PencairanPengajuanSeederTest extends TestCase
                 $this->assertSame($p->verified_at->toDateString(), $p->completion->completion_date->toDateString());
                 $this->assertTrue($p->completed_at->lessThanOrEqualTo(now()));
             }
-            if ($p->jenis !== 'impresfund') {
+            if ($p->jenis !== 'imprestfund') {
                 $this->assertSame('0000000001', $p->detailRows()[0]['rekening']);
             }
         }

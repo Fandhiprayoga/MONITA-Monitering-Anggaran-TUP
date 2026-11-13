@@ -63,14 +63,14 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
         });
 
         Route::get('/form/{jenis}', [PencairanController::class, 'form'])
-            ->whereIn('jenis', ['impresfund', 'beban', 'honor'])
+            ->whereIn('jenis', ['imprestfund', 'beban', 'honor'])
             ->name('form');
 
         Route::get('/verifikasi', [PencairanController::class, 'verifikasi'])->name('verifikasi');
         Route::get('/history', [PencairanController::class, 'history'])->name('history');
 
         Route::get('/transaksi/{jenis}', [PencairanController::class, 'transaksi'])
-            ->whereIn('jenis', ['impresfund', 'beban', 'honor'])
+            ->whereIn('jenis', ['imprestfund', 'beban', 'honor'])
             ->name('transaksi');
     });
 

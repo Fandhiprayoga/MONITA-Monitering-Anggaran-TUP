@@ -53,7 +53,17 @@ Validasi: `php artisan test --filter="PencairanHistoryTest|PencairanNavigationTe
 
 ### Pratinjau form pencairan
 
-Form Impresfund, Beban, dan Honor menggunakan header bersama dan rincian sesuai jenis.
+Kode jenis dan nama tabel detail menggunakan `imprestfund` dan
+`pengajuan_imprestfund_details`. Perubahan ini ditujukan untuk database baru.
+Jika migrasi awal sudah dijalankan sebelum pembaruan, jalankan `php artisan migrate`
+untuk mengganti nama tabel detail lama tanpa menghapusnya. Migrasi berhenti jika
+ada pengajuan berkode lama atau kedua tabel ada; data tersebut memerlukan migrasi
+terpisah. Backup database sebelum menjalankan migrasi. URL formulir dan transaksi sekarang
+memakai `/pencairan/form/imprestfund` dan `/pencairan/transaksi/imprestfund`;
+tautan dengan ejaan lama tidak dialihkan. Setelah pembaruan, muat ulang halaman
+formulir yang sudah terbuka agar memakai kode frontend terbaru.
+
+Form Imprestfund, Beban, dan Honor menggunakan header bersama dan rincian sesuai jenis.
 Halaman ini belum menyimpan data ke backend; perubahan hilang saat halaman dimuat
 ulang. Pilih DRK menampilkan hanya data unit (Kode PP) akun yang login untuk
 triwulan kalender berjalan, dari `RAW Data TW I/II/III/IV!B2:N3000`.
@@ -75,7 +85,7 @@ pesan error; unit tanpa DRK mendapatkan pemberitahuan, bukan saldo nol buatan.
 Tombol Simpan sebagai Draft dan Submit Pengajuan ditampilkan pada semua form,
 tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
 
-- Impresfund: subtotal otomatis = volume x tarif, ditampilkan sebagai petunjuk
+- Imprestfund: subtotal otomatis = volume x tarif, ditampilkan sebagai petunjuk
   pada sel Subtotal kosong. Input/paste Subtotal mengganti nilai otomatis;
   kosongkan untuk kembali otomatis. Total pengajuan = jumlah subtotal yang berlaku.
   Copy rentang/semua menyertakan nilai Subtotal yang berlaku; jika ditempel kembali,
@@ -96,7 +106,7 @@ tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
   nilainya tidak ditimpa saat perhitungan ulang atau penghapusan baris.
   Baris yang hanya berisi No tanpa data rincian tetap diabaikan.
 - Paste Excel dimulai dari sel aktif, hanya kolom input (tanpa header
-  tabel). Impresfund: No, Uraian, Volume, Tarif, Subtotal. Beban: No, Nominal, Pot Pajak, Nominal Setelah Pajak,
+  tabel). Imprestfund: No, Uraian, Volume, Tarif, Subtotal. Beban: No, Nominal, Pot Pajak, Nominal Setelah Pajak,
   Nama Bank, Nama Rekening, No Rekening.
   Honor: No, Kd Jenis, Nominal Honor, Potongan Pajak, Total Diterima, Nama Penerima, Nama Rekening,
   Nama Bank, Nomor Rekening, No KTP / Paspor, No NPWP. Potongan Pajak Honor
@@ -104,7 +114,7 @@ tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
 - Rincian tampil sebagai sel spreadsheet dengan header nama kolom tanpa kode huruf, nomor
   baris dan header yang tetap terlihat saat scroll, serta penanda rentang aktif.
   Tombol Bantuan di samping judul Rincian Pengajuan membuka modal berisi ketentuan
-  khusus Impresfund/Beban/Honor, format data, copy-paste Excel, seleksi dan navigasi
+  khusus Imprestfund/Beban/Honor, format data, copy-paste Excel, seleksi dan navigasi
   sel. Petunjuk tidak lagi memenuhi area input; modal dapat ditutup lewat tombol
   Tutup, ikon silang, atau Escape.
   Nomor baris otomatis di sisi kiri terpisah dari kolom input No; klik nomor

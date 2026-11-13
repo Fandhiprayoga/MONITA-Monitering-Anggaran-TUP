@@ -145,7 +145,7 @@ class PencairanService
             if ($request->exists($field)) { PencairanDecimal::invalid($field, 'Referensi eksternal tidak dicatat dalam MONITA.'); }
         }
         $rules = match ($operation) {
-            'store', 'update' => ['jenis' => ($operation === 'store' ? 'required' : 'sometimes').'|in:impresfund,beban,honor',
+            'store', 'update' => ['jenis' => ($operation === 'store' ? 'required' : 'sometimes').'|in:imprestfund,beban,honor',
                 'unit_kode_pp' => 'sometimes|required|string|max:100',
                 'drk_id' => 'nullable|string|max:64', 'uraian_pengajuan' => 'nullable|string|max:5000',
                 'details' => 'present|array|max:500', 'details.*' => 'array'],
@@ -186,7 +186,7 @@ class PencairanService
     {
         if (count($rows) > 500) { PencairanDecimal::invalid('details', 'Maksimal 500 baris.'); }
         $keys = match ($jenis) {
-            'impresfund' => ['no', 'uraian', 'volume', 'tarif', 'subtotal'],
+            'imprestfund' => ['no', 'uraian', 'volume', 'tarif', 'subtotal'],
             'beban' => ['no', 'nominal', 'pajak', 'neto', 'bank', 'nama', 'rekening'],
             'honor' => ['no', 'kode_jenis', 'nominal', 'pajak', 'neto', 'penerima', 'nama', 'bank', 'rekening', 'identitas', 'npwp'],
         };
@@ -199,7 +199,7 @@ class PencairanService
             ? Bank::query()->where('status', 'aktif')->whereNotNull('inisial')->pluck('inisial')
                 ->map(fn ($inisial) => strtoupper(trim((string) $inisial)))->all()
             : [];
-        $numeric = $jenis === 'impresfund' ? ['volume', 'tarif', 'subtotal'] : ['nominal', 'pajak', 'neto'];
+        $numeric = $jenis === 'imprestfund' ? ['volume', 'tarif', 'subtotal'] : ['nominal', 'pajak', 'neto'];
         $totals = ['total_bruto' => BigDecimal::zero(), 'total_pajak' => BigDecimal::zero(), 'total_neto' => BigDecimal::zero()];
         $records = [];
         foreach (array_values($rows) as $index => $row) {
@@ -259,14 +259,14 @@ class PencairanService
             }
             if (!$active) { continue; }
             if ($complete) {
-                $required = $jenis === 'impresfund' ? ['uraian', 'volume', 'tarif'] : ['nominal', 'pajak', 'neto', 'bank', 'nama', 'rekening'];
+                $required = $jenis === 'imprestfund' ? ['uraian', 'volume', 'tarif'] : ['nominal', 'pajak', 'neto', 'bank', 'nama', 'rekening'];
                 if ($jenis === 'honor') { $required = array_merge($required, ['kode_jenis', 'penerima', 'identitas']); }
                 foreach ($required as $key) {
                     if (trim($raw[$key]) === '') { PencairanDecimal::invalid("details.$index.$key", 'Rincian ini wajib diisi sebelum submit.'); }
                 }
             }
             $record = ['urutan' => count($records) + 1, 'raw_data' => $raw];
-            if ($jenis === 'impresfund') {
+            if ($jenis === 'imprestfund') {
                 if ($numbers['volume'] !== null && BigDecimal::of($numbers['volume'])->isZero()) { PencairanDecimal::invalid("details.$index.volume", 'Volume harus lebih dari nol.'); }
                 $effective = $numbers['subtotal'] ?? PencairanDecimal::multiply($numbers['volume'], $numbers['tarif'], "details.$index.subtotal");
                 $record += ['uraian' => $raw['uraian'] ?: null, 'volume' => $numbers['volume'], 'tarif' => $numbers['tarif'], 'subtotal_manual' => $numbers['subtotal'], 'subtotal_efektif' => $effective];
@@ -339,7 +339,7 @@ class PencairanService
         abort_unless($actor['role'] === 'admin' || $p->kode_pp === $actor['kode_pp'], 403, 'Akses PP ditolak.');
         $admin = in_array($operation, ['return', 'verify', 'complete', 'simkug'], true);
         if ($admin) { abort_unless($actor['role'] === 'admin', 403, 'Tindakan tidak diizinkan untuk peran ini.'); }
-        if ($operation === 'simkug') { abort_unless($p->jenis === 'impresfund', 403, 'Penyimpanan SIMKUG hanya tersedia untuk Impresfund.'); }
+        if ($operation === 'simkug') { abort_unless($p->jenis === 'imprestfund', 403, 'Penyimpanan SIMKUG hanya tersedia untuk Imprestfund.'); }
         if (in_array($operation, ['update', 'submit'], true)) {
             abort_unless($actor['role'] === 'admin' || ($actor['kode_pp'] !== '' && $p->kode_pp === $actor['kode_pp']), 403, 'Pengajuan hanya dapat diubah atau disubmit untuk PP sendiri.');
         }

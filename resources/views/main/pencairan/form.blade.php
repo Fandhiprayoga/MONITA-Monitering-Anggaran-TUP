@@ -1,12 +1,10 @@
 @extends('layouts.app')
 
-@php($jenisNama = $jenis === 'impresfund' ? 'Imprestfund' : $jenisNama)
-
 @section('title', 'Form ' . $jenisNama . ' | MONITA')
 
 @section('content')
     <link rel="stylesheet" href="{{ asset('css/monita/pencairan-grid.css') }}">
-    @if (in_array($jenis, ['impresfund', 'beban', 'honor'], true))
+    @if (in_array($jenis, ['imprestfund', 'beban', 'honor'], true))
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
         <style>
             .unit-select2 .select2-selection--single {
@@ -69,7 +67,7 @@
                 </div>
             </div>
 
-            @if (in_array($jenis, ['impresfund', 'beban', 'honor'], true))
+            @if (in_array($jenis, ['imprestfund', 'beban', 'honor'], true))
                 <div id="save-message" class="alert d-none" role="alert"></div>
                 <form id="form-pencairan" data-jenis="{{ $jenis }}" data-menu="{{ $activeMenu ?? 'pengajuan' }}" novalidate>
                     @if (isset($pengajuan))
@@ -117,7 +115,7 @@
 @endsection
 
 @push('scripts')
-    @if (in_array($jenis, ['impresfund', 'beban', 'honor'], true))
+    @if (in_array($jenis, ['imprestfund', 'beban', 'honor'], true))
         <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/i18n/id.min.js"></script>
         <script type="module">

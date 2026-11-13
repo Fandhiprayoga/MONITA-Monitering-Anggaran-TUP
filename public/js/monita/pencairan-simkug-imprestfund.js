@@ -1,6 +1,6 @@
 import { mountEditableSpreadsheetGrid, mountReadOnlySpreadsheetGrid } from './pencairan-detail-grid.js';
 
-export function mountSimkugImpresfund(panel) {
+export function mountSimkugImprestfund(panel) {
     const form = panel.querySelector('[data-simkug-form]');
     const table = form.querySelector('table');
     const gridStatus = form.querySelector('[data-simkug-grid-status]');

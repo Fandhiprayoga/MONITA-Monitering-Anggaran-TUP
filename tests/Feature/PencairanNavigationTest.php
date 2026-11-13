@@ -25,7 +25,7 @@ class PencairanNavigationTest extends TestCase
 
     public function test_each_transaction_menu_uses_its_own_view_and_retains_navigation_on_detail(): void
     {
-        foreach (['impresfund', 'beban', 'honor'] as $jenis) {
+        foreach (['imprestfund', 'beban', 'honor'] as $jenis) {
             $response = $this->get(route('pencairan.transaksi', ['jenis' => $jenis]).'?jenis=invalid')
                 ->assertOk()->assertViewIs('main.pencairan.transaksi.'.$jenis);
             $items = $response->viewData('items');
@@ -49,10 +49,10 @@ class PencairanNavigationTest extends TestCase
 
     public function test_transaction_type_cannot_be_overridden_by_query_filter(): void
     {
-        $response = $this->get(route('pencairan.transaksi', 'impresfund').'?jenis=honor')->assertOk();
+        $response = $this->get(route('pencairan.transaksi', 'imprestfund').'?jenis=honor')->assertOk();
         $this->assertGreaterThan(0, $response->viewData('items')->total());
         foreach ($response->viewData('items') as $item) {
-            $this->assertSame('impresfund', $item->jenis);
+            $this->assertSame('imprestfund', $item->jenis);
         }
     }
 

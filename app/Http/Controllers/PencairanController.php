@@ -99,7 +99,7 @@ class PencairanController extends Controller
             'start_date' => ['nullable', 'date_format:Y-m-d'],
             'end_date' => ['nullable', 'date_format:Y-m-d', ...($request->filled('start_date') ? ['after_or_equal:start_date'] : [])],
             'action' => ['nullable', 'in:verify,complete'],
-            'jenis' => ['nullable', 'in:impresfund,beban,honor'],
+            'jenis' => ['nullable', 'in:imprestfund,beban,honor'],
             'pp' => ['nullable', 'string', 'max:100'],
             'q' => ['nullable', 'string', 'max:100'],
         ]);
@@ -160,7 +160,7 @@ class PencairanController extends Controller
         }
         $query->whereIn('status', $allowedStatuses);
         if ($jenis) { $query->where('jenis', $jenis); }
-        if (!$jenis && in_array($request->jenis, ['impresfund', 'beban', 'honor'], true)) { $query->where('jenis', $request->jenis); }
+        if (!$jenis && in_array($request->jenis, ['imprestfund', 'beban', 'honor'], true)) { $query->where('jenis', $request->jenis); }
         $defaultStatus = $mode === 'verifikasi' ? 'submitted' : ($mode === 'transaksi' ? 'verified' : '');
         $status = $request->query('status', $defaultStatus);
         if (in_array($status, $allowedStatuses, true)) { $query->where('status', $status); }
@@ -207,8 +207,8 @@ class PencairanController extends Controller
             ->where('drk_source_id', $pengajuan->drk_source_id)->where('tahun_anggaran', $pengajuan->tahun_anggaran)
             ->where('triwulan', $pengajuan->triwulan)->whereIn('status', ['submitted', 'verified', 'completed'])->sum('total_bruto');
         $displayRows = $pengajuan->detailRows();
-        if ($pengajuan->jenis === 'impresfund') {
-            $displayRows = $pengajuan->impresfundDetails->map(function ($detail) {
+        if ($pengajuan->jenis === 'imprestfund') {
+            $displayRows = $pengajuan->imprestfundDetails->map(function ($detail) {
                 $row = $detail->raw_data;
                 $row['subtotal'] = $detail->subtotal_efektif === null ? 'Belum dihitung'
                     : \App\Services\PencairanDecimal::format($detail->subtotal_efektif);

@@ -27,7 +27,7 @@ class PencairanPengajuanSeeder extends Seeder
 
             foreach (['SIF', 'KUG', 'AKA'] as $kodePp) {
                 $creator = $this->actor('user', $kodePp);
-                foreach (['impresfund', 'beban', 'honor'] as $jenis) {
+                foreach (['imprestfund', 'beban', 'honor'] as $jenis) {
                     foreach (PencairanStatus::cases() as $status) {
                         $description = '[DUMMY] '.ucfirst($jenis).' '.$kodePp.' — '.$status->value;
                         if (PencairanPengajuan::where('created_by_actor_id', $creator->id)
@@ -68,7 +68,7 @@ class PencairanPengajuanSeeder extends Seeder
             'dummy' => true, 'kode_pp' => $kodePp, 'nama_pp' => config('units.'.$kodePp, $kodePp),
             'drk_tup' => 'DUMMY-'.strtoupper($jenis).'-'.$kodePp,
             'kode_drk' => 'DUMMY-DRK-'.$kodePp, 'tipe' => 'Operasional',
-            'kode_akun' => match ($jenis) { 'impresfund' => '521111', 'beban' => '521211', 'honor' => '521213' },
+            'kode_akun' => match ($jenis) { 'imprestfund' => '521111', 'beban' => '521211', 'honor' => '521213' },
             'nama_akun' => 'Anggaran dummy '.ucfirst($jenis),
             'uraian_drk' => 'Kegiatan dummy untuk pengujian, bukan DRK Google Sheets',
             'saldo_awal' => '100.000.000,00', 'anggaran_terpakai' => '10.000.000,00',
@@ -165,7 +165,7 @@ class PencairanPengajuanSeeder extends Seeder
 
     private function rows(string $jenis, string $kodePp): array
     {
-        if ($jenis === 'impresfund') {
+        if ($jenis === 'imprestfund') {
             return [
                 ['no' => '001', 'uraian' => 'ATK kegiatan '.$kodePp, 'volume' => '5', 'tarif' => '75.000', 'subtotal' => ''],
                 ['no' => '002', 'uraian' => 'Konsumsi rapat '.$kodePp, 'volume' => '20', 'tarif' => '35.000', 'subtotal' => ''],
