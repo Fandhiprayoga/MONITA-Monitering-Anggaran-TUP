@@ -301,7 +301,7 @@ class PencairanController extends Controller
             return [];
         }
 
-        return Bank::query()->orderBy('kode_bank')->get(['kode_bank', 'inisial', 'nama_bank', 'status'])
+        return Bank::query()->where('status', 'aktif')->orderByRaw('UPPER(inisial)')->orderBy('kode_bank')->get(['kode_bank', 'inisial', 'nama_bank', 'status'])
             ->map(fn (Bank $bank) => [
                 'value' => strtoupper(trim((string) $bank->inisial)),
                 'code' => $bank->kode_bank,
