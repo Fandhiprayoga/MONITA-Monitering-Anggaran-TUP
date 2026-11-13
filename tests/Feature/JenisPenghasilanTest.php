@@ -28,7 +28,11 @@ class JenisPenghasilanTest extends TestCase
         $this->get(route('jenis-penghasilan.index'))
             ->assertOk()
             ->assertSee('Jenis Penghasilan')
-            ->assertSee('Tarif PPh (%)');
+            ->assertSee('Tarif PPh');
+
+        $this->get(route('jenis-penghasilan.create'))
+            ->assertOk()
+            ->assertSee('Tambah Jenis Penghasilan');
 
         $this->post(route('jenis-penghasilan.store'), [
             'kode_jenis' => ' 01 ',
@@ -39,6 +43,11 @@ class JenisPenghasilanTest extends TestCase
         $jenisPenghasilan = JenisPenghasilan::firstOrFail();
         $this->assertSame('01', $jenisPenghasilan->kode_jenis);
         $this->assertSame('2.50', $jenisPenghasilan->tarif_pph);
+
+        $this->get(route('jenis-penghasilan.edit', $jenisPenghasilan))
+            ->assertOk()
+            ->assertSee('Ubah Jenis Penghasilan')
+            ->assertSee('Honorarium');
 
         $this->patch(route('jenis-penghasilan.update', $jenisPenghasilan), [
             'kode_jenis' => '02',

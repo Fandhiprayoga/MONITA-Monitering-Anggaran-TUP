@@ -33,6 +33,10 @@ class BankTest extends TestCase
             ->assertSee('Nama Bank')
             ->assertSee('Status');
 
+        $this->get(route('bank.create'))
+            ->assertOk()
+            ->assertSee('Tambah Bank');
+
         $this->post(route('bank.store'), [
             'kode_bank' => ' bni ',
             'inisial' => 'bni',
@@ -44,6 +48,11 @@ class BankTest extends TestCase
         $this->assertSame('BNI', $bank->kode_bank);
         $this->assertSame('BNI', $bank->inisial);
         $this->assertSame('aktif', $bank->status);
+
+        $this->get(route('bank.edit', $bank))
+            ->assertOk()
+            ->assertSee('Ubah Bank')
+            ->assertSee('Bank Negara Indonesia');
 
         $this->patch(route('bank.update', $bank), [
             'kode_bank' => 'BNI',
@@ -65,14 +74,14 @@ class BankTest extends TestCase
     {
         Bank::create(['kode_bank' => 'BNI', 'inisial' => 'BNI', 'nama_bank' => 'BNI', 'status' => 'aktif']);
 
-        $this->from(route('bank.index'))
+        $this->from(route('bank.create'))
             ->post(route('bank.store'), [
                 'kode_bank' => 'bni',
                 'inisial' => 'bni',
                 'nama_bank' => 'Duplikat',
                 'status' => 'invalid',
             ])
-            ->assertRedirect(route('bank.index'))
+            ->assertRedirect(route('bank.create'))
             ->assertSessionHasErrors(['kode_bank', 'inisial', 'status']);
 
         $this->assertDatabaseCount('banks', 1);

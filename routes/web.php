@@ -91,11 +91,15 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
     Route::delete('/management/delete/{row}', [ManagementController::class, 'destroy'])->name('management.destroy');
 
     Route::get('/jenis-penghasilan', [JenisPenghasilanController::class, 'index'])->name('jenis-penghasilan.index');
+    Route::get('/jenis-penghasilan/create', [JenisPenghasilanController::class, 'create'])->name('jenis-penghasilan.create');
+    Route::get('/jenis-penghasilan/{jenisPenghasilan}/edit', [JenisPenghasilanController::class, 'edit'])->name('jenis-penghasilan.edit');
     Route::post('/jenis-penghasilan', [JenisPenghasilanController::class, 'store'])->name('jenis-penghasilan.store');
     Route::patch('/jenis-penghasilan/{jenisPenghasilan}', [JenisPenghasilanController::class, 'update'])->name('jenis-penghasilan.update');
     Route::delete('/jenis-penghasilan/{jenisPenghasilan}', [JenisPenghasilanController::class, 'destroy'])->name('jenis-penghasilan.destroy');
 
     Route::get('/bank', [BankController::class, 'index'])->name('bank.index');
+    Route::get('/bank/create', [BankController::class, 'create'])->name('bank.create');
+    Route::get('/bank/{bank}/edit', [BankController::class, 'edit'])->name('bank.edit');
     Route::post('/bank', [BankController::class, 'store'])->name('bank.store');
     Route::patch('/bank/{bank}', [BankController::class, 'update'])->name('bank.update');
 
