@@ -37,6 +37,7 @@
                             <th scope="col" class="text-white">Kode Jenis</th>
                             <th scope="col" class="text-white">Nama Jenis PPh</th>
                             <th scope="col" class="text-white">Tarif PPh</th>
+                            <th scope="col" class="text-white">Deskripsi</th>
                             <th scope="col" class="text-white">Aksi</th>
                         </tr>
                     </thead>
@@ -47,6 +48,7 @@
                                 <td>{{ $jenisPenghasilan->kode_jenis }}</td>
                                 <td>{{ $jenisPenghasilan->nama_jenis_pph }}</td>
                                 <td class="text-end">{{ number_format((float) $jenisPenghasilan->tarif_pph, 2, ',', '.') }}%</td>
+                                <td style="white-space: pre-line">{{ $jenisPenghasilan->deskripsi ?? '-' }}</td>
                                 <td class="text-center text-nowrap">
                                     <a href="{{ route('jenis-penghasilan.edit', $jenisPenghasilan) }}"
                                         class="btn btn-sm btn-icon btn-light-warning"
@@ -66,7 +68,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-4">
+                                <td colspan="6" class="text-center text-muted py-4">
                                     <div class="d-flex flex-column align-items-center gap-2">
                                         <i class="ti ti-database-off f-30" aria-hidden="true"></i>
                                         <span>Belum ada data jenis penghasilan.</span>

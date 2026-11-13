@@ -12,6 +12,7 @@ class JenisPenghasilan extends Model
         'kode_jenis',
         'nama_jenis_pph',
         'tarif_pph',
+        'deskripsi',
     ];
 
     protected function casts(): array

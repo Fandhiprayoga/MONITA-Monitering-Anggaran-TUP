@@ -38,12 +38,18 @@
                     <input id="nama-jenis-pph" name="nama_jenis_pph" class="form-control" maxlength="255"
                         value="{{ old('nama_jenis_pph', $jenisPenghasilan->nama_jenis_pph) }}" required>
                 </div>
-                <div class="mb-4">
+                <div class="mb-3">
                     <label for="tarif-pph" class="form-label">Tarif PPh (%)</label>
                     <input id="tarif-pph" name="tarif_pph" type="number" class="form-control"
                         min="0" max="100" step="0.01"
                         value="{{ old('tarif_pph', $jenisPenghasilan->tarif_pph) }}" required>
                     <small class="form-text text-muted">Isi 0 sampai 100 persen, maksimal dua angka desimal.</small>
+                </div>
+                <div class="mb-4">
+                    <label for="deskripsi" class="form-label">Deskripsi</label>
+                    <textarea id="deskripsi" name="deskripsi" class="form-control" rows="3"
+                        maxlength="10000">{{ old('deskripsi', $jenisPenghasilan->deskripsi) }}</textarea>
+                    <small class="form-text text-muted">Opsional, maksimal 10.000 karakter.</small>
                 </div>
 
                 <div class="d-flex justify-content-end gap-2">

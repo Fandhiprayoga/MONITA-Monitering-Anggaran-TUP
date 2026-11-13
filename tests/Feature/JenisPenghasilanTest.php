@@ -32,27 +32,36 @@ class JenisPenghasilanTest extends TestCase
 
         $this->get(route('jenis-penghasilan.create'))
             ->assertOk()
-            ->assertSee('Tambah Jenis Penghasilan');
+            ->assertSee('Tambah Jenis Penghasilan')
+            ->assertSee('name="deskripsi"', false);
 
         $this->post(route('jenis-penghasilan.store'), [
             'kode_jenis' => ' 01 ',
             'nama_jenis_pph' => 'Honorarium',
             'tarif_pph' => '2.50',
+            'deskripsi' => 'Deskripsi honorarium',
         ])->assertRedirect(route('jenis-penghasilan.index'));
 
         $jenisPenghasilan = JenisPenghasilan::firstOrFail();
         $this->assertSame('01', $jenisPenghasilan->kode_jenis);
         $this->assertSame('2.50', $jenisPenghasilan->tarif_pph);
+        $this->assertSame('Deskripsi honorarium', $jenisPenghasilan->deskripsi);
+
+        $this->get(route('jenis-penghasilan.index'))
+            ->assertOk()
+            ->assertSee('Deskripsi honorarium');
 
         $this->get(route('jenis-penghasilan.edit', $jenisPenghasilan))
             ->assertOk()
             ->assertSee('Ubah Jenis Penghasilan')
-            ->assertSee('Honorarium');
+            ->assertSee('Honorarium')
+            ->assertSee('Deskripsi honorarium');
 
         $this->patch(route('jenis-penghasilan.update', $jenisPenghasilan), [
             'kode_jenis' => '02',
             'nama_jenis_pph' => 'Jasa',
             'tarif_pph' => '5',
+            'deskripsi' => 'Deskripsi jasa',
         ])->assertRedirect(route('jenis-penghasilan.index'));
 
         $this->assertDatabaseHas('jenis_penghasilan', [
@@ -60,11 +69,41 @@ class JenisPenghasilanTest extends TestCase
             'kode_jenis' => '02',
             'nama_jenis_pph' => 'Jasa',
             'tarif_pph' => '5.00',
+            'deskripsi' => 'Deskripsi jasa',
         ]);
 
         $this->delete(route('jenis-penghasilan.destroy', $jenisPenghasilan))
             ->assertRedirect(route('jenis-penghasilan.index'));
         $this->assertDatabaseCount('jenis_penghasilan', 0);
+    }
+
+    public function test_description_is_optional_can_be_cleared_and_is_validated(): void
+    {
+        $this->post(route('jenis-penghasilan.store'), [
+            'kode_jenis' => '01',
+            'nama_jenis_pph' => 'Honorarium',
+            'tarif_pph' => '2.50',
+        ])->assertRedirect(route('jenis-penghasilan.index'));
+
+        $jenisPenghasilan = JenisPenghasilan::firstOrFail();
+        $this->assertNull($jenisPenghasilan->deskripsi);
+
+        $jenisPenghasilan->update(['deskripsi' => 'Deskripsi lama']);
+        $this->patch(route('jenis-penghasilan.update', $jenisPenghasilan), [
+            'kode_jenis' => '01',
+            'nama_jenis_pph' => 'Honorarium',
+            'tarif_pph' => '2.50',
+            'deskripsi' => '',
+        ])->assertRedirect(route('jenis-penghasilan.index'));
+        $this->assertNull($jenisPenghasilan->fresh()->deskripsi);
+
+        $this->post(route('jenis-penghasilan.store'), [
+            'kode_jenis' => '02',
+            'nama_jenis_pph' => 'Jasa',
+            'tarif_pph' => '5',
+            'deskripsi' => str_repeat('a', 10001),
+        ])->assertSessionHasErrors('deskripsi');
+        $this->assertDatabaseCount('jenis_penghasilan', 1);
     }
 
     public function test_code_must_be_unique_and_tax_rate_must_be_a_percentage(): void
