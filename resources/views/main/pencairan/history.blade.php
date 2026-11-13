@@ -41,7 +41,7 @@
                         <label for="history-jenis" class="form-label">Jenis pengajuan</label>
                         <select id="history-jenis" name="jenis" class="form-select">
                             <option value="">Semua jenis</option>
-                            @foreach(['impresfund' => 'Impresfund', 'beban' => 'Beban', 'honor' => 'Honor'] as $value => $label)
+                            @foreach(['impresfund' => 'Imprestfund', 'beban' => 'Beban', 'honor' => 'Honor'] as $value => $label)
                                 <option value="{{ $value }}" @selected(($filters['jenis'] ?? '') === $value)>{{ $label }}</option>
                             @endforeach
                         </select>
@@ -102,7 +102,7 @@
                                 <td class="text-nowrap"><time datetime="{{ $event->created_at->toISOString() }}">{{ $event->created_at->format('d/m/Y H:i:s') }}</time></td>
                                 <td>{{ $event->pengajuan->nomor_pengajuan }}<small class="d-block text-muted">{{ $event->pengajuan->uraian_pengajuan }}</small></td>
                                 <td>{{ $event->pengajuan->kode_pp }}<small class="d-block text-muted">{{ $event->pengajuan->nama_pp }}</small></td>
-                                <td><span class="badge {{ $event->pengajuan->jenisBadgeClass() }}">{{ $event->pengajuan->jenisLabel() }}</span></td>
+                                <td><span class="badge {{ $event->pengajuan->jenisBadgeClass() }}">{{ $event->pengajuan->jenis === 'impresfund' ? 'Imprestfund' : $event->pengajuan->jenisLabel() }}</span></td>
                                 <td>
                                     <span class="badge {{ $event->action === 'verify' ? 'bg-light-primary' : 'bg-light-success' }}">{{ $actionLabels[$event->action] }}</span>
                                     @if($event->display_remark)<small class="d-block mt-1">{{ $event->display_remark }}</small>@endif

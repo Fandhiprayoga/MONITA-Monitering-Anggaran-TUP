@@ -37,7 +37,7 @@
 @endphp
 <link rel="stylesheet" href="{{ asset('css/monita/pencairan-grid.css') }}">
 <link rel="stylesheet" href="{{ asset('css/monita/pencairan-timeline.css') }}">
-<div class="card"><div class="card-header d-flex justify-content-between"><h5>{{ $pengajuan->nomor_pengajuan ?? 'Draft #'.$pengajuan->id }} — {{ ucfirst($pengajuan->jenis) }}</h5><span class="badge {{ $pengajuan->statusBadgeClass() }}">{{ $pengajuan->statusLabel() }}</span></div>
+<div class="card"><div class="card-header d-flex justify-content-between"><h5>{{ $pengajuan->nomor_pengajuan ?? 'Draft #'.$pengajuan->id }} — {{ $pengajuan->jenis === 'impresfund' ? 'Imprestfund' : ucfirst($pengajuan->jenis) }}</h5><span class="badge {{ $pengajuan->statusBadgeClass() }}">{{ $pengajuan->statusLabel() }}</span></div>
 <div class="card-body">
     @include('main.pencairan.partials.feedback')
     <ul class="nav nav-tabs mb-3" id="pengajuan-tabs-{{ $pengajuan->id }}" role="tablist">

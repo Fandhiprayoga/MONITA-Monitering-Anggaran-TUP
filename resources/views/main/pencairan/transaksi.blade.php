@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@php($jenisNama = $jenisNama === 'Impresfund' ? 'Imprestfund' : $jenisNama)
+
 @section('title', 'Transaksi ' . $jenisNama . ' | MONITA')
 
 @section('content')

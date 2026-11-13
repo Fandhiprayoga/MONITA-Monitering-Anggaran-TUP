@@ -17,7 +17,7 @@
         @method('PATCH')
         <input type="hidden" name="lock_version" value="{{ $pengajuan->lock_version }}">
         <div class="table-responsive border rounded spreadsheet-viewport">
-            <table class="table table-bordered align-middle mb-0 spreadsheet-grid" role="grid" aria-label="Data SIMKUG Impresfund" aria-multiselectable="true">
+            <table class="table table-bordered align-middle mb-0 spreadsheet-grid" role="grid" aria-label="Data SIMKUG Imprestfund" aria-multiselectable="true">
                 <thead class="table-light"><tr>
                     <th scope="col" class="spreadsheet-row-header"><button type="button" class="spreadsheet-selector" data-grid-select-all aria-label="Pilih seluruh tabel">&#9698;</button></th>
                     @foreach($simkugColumns as $label)

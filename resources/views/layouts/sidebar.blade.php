@@ -185,7 +185,7 @@
                             <li class="pc-item {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'impresfund' ? 'active' : '' }}">
                                 <a class="pc-link {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'impresfund' ? 'active' : '' }}"
                                     href="{{ route('pencairan.transaksi', 'impresfund') }}">
-                                    Pengajuan Impresfund
+                                    Pengajuan Imprestfund
                                 </a>
                             </li>
                             <li class="pc-item {{ $pencairanMenu === 'transaksi' && $pencairanJenis === 'beban' ? 'active' : '' }}">

@@ -267,7 +267,7 @@ class PencairanWorkflowTest extends TestCase
         try { $document->loadHTML($response->getContent()); }
         finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
         $xpath = new \DOMXPath($document);
-        $grid = '//table[@aria-label="Data SIMKUG Impresfund"]';
+        $grid = '//table[@aria-label="Data SIMKUG Imprestfund"]';
         $this->assertSame(1, $xpath->query($grid.'[@role="grid"]')->length);
         $this->assertSame(1, $xpath->query($grid.'//tr[@data-grid-row]')->length);
         $this->assertSame(9, $xpath->query($grid.'//td[@data-grid-cell]')->length);
@@ -606,6 +606,36 @@ class PencairanWorkflowTest extends TestCase
         $this->action($p, 'submit')->assertStatus(503);
         $this->assertSame('draft', $p->fresh()->status);
         $this->assertNull($p->fresh()->nomor_pengajuan);
+    }
+
+    public function test_imprestfund_display_labels_preserve_internal_kind(): void
+    {
+        $p = $this->draft('impresfund');
+
+        $this->get(route('pencairan.pengajuan', ['jenis' => 'impresfund']))
+            ->assertOk()->assertSee('Pengajuan pencairan Imprestfund')->assertSee('Form Imprestfund')
+            ->assertSee('value="impresfund" selected>Imprestfund</option>', false)
+            ->assertSee('>Imprestfund</span>', false);
+        $this->get(route('pencairan.form', 'impresfund'))->assertOk()
+            ->assertSee('<title>Form Imprestfund | MONITA</title>', false)
+            ->assertSee('Form Pencairan Anggaran - Imprestfund')
+            ->assertSee('data-jenis="impresfund"', false);
+        $this->get(route('pencairan.edit', $p))->assertOk()->assertSee('Form Pencairan Anggaran - Imprestfund');
+        $this->get(route('pencairan.show', $p))->assertOk()->assertSee('— Imprestfund');
+        $this->get(route('pencairan.form', 'beban'))->assertOk()->assertSee('Form Pencairan Anggaran - Beban');
+
+        $this->action($p, 'submit')->assertOk();
+        $this->login('admin', '', 'admin');
+        $this->action($p, 'verify')->assertOk();
+        $this->get(route('pencairan.transaksi', 'impresfund'))->assertOk()
+            ->assertSee('<title>Transaksi Imprestfund | MONITA</title>', false)
+            ->assertSee('>Transaksi Imprestfund</h5>', false)->assertSee('>Imprestfund</span>', false)
+            ->assertSee('Pengajuan Imprestfund');
+        $this->get(route('pencairan.history', ['jenis' => 'impresfund']))->assertOk()
+            ->assertSee('value="impresfund" selected>Imprestfund</option>', false)
+            ->assertSee('>Imprestfund</span>', false);
+        $this->get(route('pencairan.show', $p))->assertOk()->assertSee('aria-label="Data SIMKUG Imprestfund"', false);
+        $this->assertSame('impresfund', $p->fresh()->jenis);
     }
 
     public function test_real_routes_render_forms_lists_detail_revision_and_admin_actions(): void
