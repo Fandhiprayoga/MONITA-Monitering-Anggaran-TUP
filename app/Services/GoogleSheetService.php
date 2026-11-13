@@ -91,6 +91,11 @@ class GoogleSheetService
         } finally {
             $this->spreadsheetId = $previous;
         }
+        $options = array_values(array_filter($options, fn ($option) => in_array(
+            strtoupper(trim((string) ($option['tipe'] ?? ''))),
+            ['OPERASIONAL', 'BANG'],
+            true
+        )));
         foreach ($options as &$option) {
             $option['id'] = self::pencairanDrkId($kodePp, $option);
             $option['kode_pp_sheet'] = $option['kode_pp'];

@@ -26,9 +26,9 @@ class PencairanDrkSourceTest extends TestCase
         return $service;
     }
 
-    private function row(string $account = '001'): array
+    private function row(string $account = '001', string $type = 'Operasional', string $drk = 'DRK-1'): array
     {
-        return [' pp01 ', 'Operasional', 'DRK-1', $account, 'Akun', 'Uraian', 1000.5, 100.25, 900.25, 'OTHER', 'Nama', '', 'SIM1'];
+        return [' pp01 ', $type, $drk, $account, 'Akun', 'Uraian', 1000.5, 100.25, 900.25, 'OTHER', 'Nama', '', 'SIM1'];
     }
 
     public function test_submission_units_read_columns_b_and_c_including_first_user_and_normalize_codes(): void
@@ -58,6 +58,25 @@ class PencairanDrkSourceTest extends TestCase
         $this->assertSame('OTHER', $before[0]['kode_pp_sheet']);
         $this->assertSame('900,25', $before[0]['saldo_terkini']);
         $this->assertSame(GoogleSheetService::pencairanDrkId('PP01', $before[0]), $before[0]['id']);
+    }
+
+    public function test_pencairan_drk_options_only_include_operasional_and_bang_types(): void
+    {
+        $service = $this->service([['current', [
+            $this->row('001', 'Operasional', 'DRK-OPERASIONAL'),
+            $this->row('002', ' BANG ', 'DRK-BANG'),
+            $this->row('003', 'Remun', 'DRK-REMUN'),
+            $this->row('004', 'NTF', 'DRK-NTF'),
+            $this->row('005', 'Lainnya', 'DRK-LAINNYA'),
+            $this->row('006', 'operasional', 'DRK-LOWERCASE'),
+        ]]]);
+
+        $options = $service->getPencairanDrkOptions('PP01', 4, 2026);
+
+        $this->assertSame(
+            ['DRK-OPERASIONAL', 'DRK-BANG', 'DRK-LOWERCASE'],
+            array_column($options, 'drk_tup')
+        );
     }
 
     public function test_missing_and_malformed_source_balances_are_never_replaced_by_zero(): void
