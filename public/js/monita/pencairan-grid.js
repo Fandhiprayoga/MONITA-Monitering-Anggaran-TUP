@@ -188,6 +188,11 @@ export function toTsv(rows) {
     }).join('\t')).join('\r\n');
 }
 
+export function toClipboardTsv(rows, columns) {
+    return toTsv(rows.map((row) => row.map((value, index) =>
+        columns[index]?.key === 'rekening' && value !== '' ? `'${value}` : value)));
+}
+
 export function mountGrid(form, { jenisPenghasilanOptions = [], bankOptions = [] } = {}) {
     const kind = form.dataset.jenis;
     const columns = schemas[kind];
@@ -631,7 +636,8 @@ export function mountGrid(form, { jenisPenghasilanOptions = [], bankOptions = []
         const text = event.clipboardData.getData('text/plain');
         if (columns[position(input).col].computed) { event.preventDefault(); notify('Kolom hasil hitung tidak dapat ditempel.', true); return; }
         // Keep native text editing only while the cell editor is open.
-        if (editing === input && !/[\t\r\n]/.test(text)) return;
+        if (editing === input && !/[\t\r\n]/.test(text)
+            && !(input.dataset.key === 'rekening' && text.startsWith("'"))) return;
         event.preventDefault();
         let rows;
         try { rows = parseTsv(text); }
@@ -650,6 +656,7 @@ export function mountGrid(form, { jenisPenghasilanOptions = [], bankOptions = []
         rows.forEach((row, r) => row.forEach((value, c) => {
             const input = body.rows[start + r].querySelector(`[data-key="${editable[offset + c].key}"]`);
             if (input.matches('select')) setChoiceValue(input, value);
+            else if (input.dataset.key === 'rekening' && value.startsWith("'")) input.value = value.slice(1);
             else input.value = kind === 'honor' && input.dataset.key === 'identitas'
                 ? normalizeIdentity(value)
                 : value;
@@ -668,33 +675,37 @@ export function mountGrid(form, { jenisPenghasilanOptions = [], bankOptions = []
         notify(`${rows.length} baris ditempel. Periksa penanda merah bila ada data tidak valid.${['beban', 'imprestfund'].includes(kind) ? ' Peringatan di atas tabel dan penanda kuning menunjukkan nilai yang tidak sesuai perhitungan.' : ''}`);
     });
 
-    function clipboardRows(all) {
+    function clipboardData(all) {
         const value = (row, column) => {
             const input = row.querySelector(`[data-key="${column.key}"]`);
             return column.key === 'subtotal' && !input.value.trim() ? input.placeholder : input.value;
         };
-        if (all) {
-            return [...body.rows].map((row) =>
-                editable.map((column) => value(row, column)));
-        }
-        const bounds = selection;
-        const selected = columns.filter((column, c) => !column.computed && c >= bounds.left && c <= bounds.right);
+        const selected = all
+            ? editable
+            : columns.filter((column, c) => !column.computed && c >= selection.left && c <= selection.right);
         if (!selected.length) throw new Error('Pilih setidaknya satu kolom input untuk disalin.');
-        return [...body.rows].slice(bounds.top, bounds.bottom + 1).map((row) =>
-            selected.map((column) => value(row, column)));
+        const selectedRows = all
+            ? [...body.rows]
+            : [...body.rows].slice(selection.top, selection.bottom + 1);
+        return {
+            columns: selected,
+            rows: selectedRows.map((row) => selected.map((column) => value(row, column))),
+        };
     }
     body.addEventListener('copy', (event) => {
         if (editing || !selection || !event.clipboardData) return;
         event.preventDefault();
         try {
-            event.clipboardData.setData('text/plain', toTsv(clipboardRows(false)));
+            const data = clipboardData(false);
+            event.clipboardData.setData('text/plain', toClipboardTsv(data.rows, data.columns));
             notify('Rentang kolom input disalin, termasuk nilai Subtotal yang berlaku.');
         } catch (error) { notify(error.message, true); }
     });
     form.querySelector('[data-grid-copy]').addEventListener('click', async () => {
         try {
             if (!navigator.clipboard?.writeText) throw new Error('Clipboard tidak tersedia. Gunakan Shift+klik untuk memilih rentang lalu Ctrl+C.');
-            await navigator.clipboard.writeText(toTsv(clipboardRows(true)));
+            const data = clipboardData(true);
+            await navigator.clipboard.writeText(toClipboardTsv(data.rows, data.columns));
             notify('Semua kolom input disalin tanpa header. Siap ditempel ke Excel dan kembali ke form.');
         } catch (error) { notify(`Tidak dapat menyalin: ${error.message}`, true); }
     });

@@ -157,7 +157,9 @@
                     <h6>Format data</h6>
                     <p>
                         Angka menggunakan format Indonesia (contoh: 1.250,50).
-                        No Rekening harus berformat teks di Excel agar nol di depan tetap utuh. Maksimal 500 baris.
+                        No Rekening yang disalin dari tabel otomatis ditandai sebagai teks di Excel.
+                        Saat menempel dari Excel ke tabel, formatkan kolom No Rekening sebagai teks agar nol di depan tetap utuh.
+                        Maksimal 500 baris.
                     </p>
                     <h6>Pemilihan sel</h6>
                     <p>

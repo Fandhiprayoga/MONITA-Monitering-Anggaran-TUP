@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateHonorTax, calculateRow, formatAmount, normalizeIdentity, parseAmount, parseTsv, toTsv, schemas } from '../../public/js/monita/pencairan-grid.js';
+import { calculateHonorTax, calculateRow, formatAmount, normalizeIdentity, parseAmount, parseTsv, toClipboardTsv, toTsv, schemas } from '../../public/js/monita/pencairan-grid.js';
 
 test('Indonesian amounts are parsed exactly to cents; invalid formats are rejected', () => {
     assert.equal(parseAmount('1.250,50'), 125050);
@@ -154,6 +154,12 @@ test('Excel TSV roundtrips quotes, newlines, tabs, leading zeros and empty trail
     assert.deepEqual(parseTsv('ATK\t2\t1.000\r\nKertas\t3\t5.000\r\n'), [['ATK', '2', '1.000'], ['Kertas', '3', '5.000']]);
     assert.throws(() => parseTsv('"unclosed'));
     assert.throws(() => parseTsv('"closed"x'));
+});
+
+test('Copied account numbers are marked as text for Excel', () => {
+    const columns = [{ key: 'nama' }, { key: 'rekening' }];
+    const copied = toClipboardTsv([['Nama', '00123456789012345678'], ['Kosong', '']], columns);
+    assert.equal(copied, "Nama\t'00123456789012345678\r\nKosong\t");
 });
 
 const honor = {
