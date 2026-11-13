@@ -64,7 +64,7 @@ body {
 }
 [data-pc-preset="preset-1"] .bg-secondary {
     background: #a31d1d;
-    color: #a31d1d;
+    color: #ffffff;
 }
 [data-pc-preset="preset-1"] .bg-warning-dark {
     background: #eb9515;
