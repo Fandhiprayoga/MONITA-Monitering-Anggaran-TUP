@@ -79,7 +79,6 @@
             @if($pengajuan->jenis === 'imprestfund')
                 @include('main.pencairan.partials.simkug-imprestfund')
             @else
-                @include('main.pencairan.partials.simkug-header-copy')
                 @include('main.pencairan.partials.detail-data', ['simkug' => true])
             @endif
         </section>

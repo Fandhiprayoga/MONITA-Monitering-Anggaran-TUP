@@ -163,12 +163,7 @@ class PencairanWorkflowTest extends TestCase
         $xpath = new \DOMXPath($document);
         $panel = '//section[@data-simkug-panel]';
         $this->assertSame(1, $xpath->query($panel)->length);
-        $fields = $xpath->query($panel.'//details//input | '.$panel.'//details//textarea');
-        $this->assertGreaterThan(0, $fields->length);
-        $this->assertSame($fields->length, $xpath->query($panel.'//button[@data-simkug-copy]')->length);
-        foreach ($fields as $field) {
-            $this->assertTrue($field->hasAttribute('readonly'));
-        }
+        $this->assertSame(0, $xpath->query($panel.'//details | '.$panel.'//button[@data-simkug-copy]')->length);
         $detailCells = $xpath->query('//section[@id="pengajuan-detail-'.$p->id.'"]//td[@data-grid-cell]');
         $simkugCells = $xpath->query($panel.'//td[@data-grid-cell]');
         $cellValues = fn ($cells) => array_map(fn ($cell) => trim($cell->textContent), iterator_to_array($cells));
@@ -185,7 +180,6 @@ class PencairanWorkflowTest extends TestCase
             array_splice($expectedCells, $last, 0, ['PPh Pasal 21']);
         }
         $this->assertSame($expectedCells, $cellValues($simkugCells));
-        $this->assertSame(1, $xpath->query($panel.'//*[@data-simkug-copy-status][@role="status"]')->length);
         $this->assertSame(0, $xpath->query($panel.'//form')->length);
     }
 
@@ -410,7 +404,7 @@ class PencairanWorkflowTest extends TestCase
             ])->assertConflict();
             $this->assertSame('C', $p->fresh()->simkug_data['dc']);
         } else {
-            $response->assertSee('Salin data header')
+            $response->assertDontSee('Salin data header')
                 ->assertSee('aria-label="Rincian pengajuan SIMKUG"', false);
             if ($jenis === 'honor') {
                 $response->assertSee('PPh Pasal 21')
