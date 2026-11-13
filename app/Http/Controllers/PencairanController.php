@@ -286,11 +286,12 @@ class PencairanController extends Controller
             return [];
         }
 
-        return JenisPenghasilan::query()->orderBy('kode_jenis')->get(['kode_jenis', 'nama_jenis_pph', 'tarif_pph'])
+        return JenisPenghasilan::query()->orderBy('kode_jenis')->get(['kode_jenis', 'nama_jenis_pph', 'tarif_pph', 'deskripsi'])
             ->map(fn (JenisPenghasilan $jenisPenghasilan) => [
                 'value' => $jenisPenghasilan->kode_jenis,
                 'description' => $jenisPenghasilan->nama_jenis_pph,
                 'rate' => $jenisPenghasilan->tarif_pph,
+                'deskripsi' => $jenisPenghasilan->deskripsi,
             ])->all();
     }
 

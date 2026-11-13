@@ -72,7 +72,12 @@
                                         @foreach ($jenisPenghasilanOptions as $option)
                                             <tr>
                                                 <td>{{ $option['value'] }}</td>
-                                                <td>{{ $option['description'] }}</td>
+                                                <td>
+                                                    <div>{{ $option['description'] }}</div>
+                                                    @if ($option['deskripsi'] !== null && $option['deskripsi'] !== '')
+                                                        <div class="text-muted" style="white-space: pre-line">{{ $option['deskripsi'] }}</div>
+                                                    @endif
+                                                </td>
                                             </tr>
                                         @endforeach
                                     </tbody>

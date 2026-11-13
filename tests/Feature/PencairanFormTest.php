@@ -122,6 +122,45 @@ class PencairanFormTest extends TestCase
             ->assertSee('Total nominal sebelum pajak (bruto).');
     }
 
+    public function test_income_type_help_shows_optional_description_with_its_code(): void
+    {
+        JenisPenghasilan::create([
+            'kode_jenis' => '01',
+            'nama_jenis_pph' => 'Honorarium',
+            'tarif_pph' => '5.00',
+            'deskripsi' => "Keterangan <khusus>\nBaris kedua",
+        ]);
+        JenisPenghasilan::create([
+            'kode_jenis' => '02',
+            'nama_jenis_pph' => 'Jasa',
+            'tarif_pph' => '2.50',
+        ]);
+
+        $response = $this->withSession(['user_authenticated' => true])
+            ->get(route('pencairan.form', 'honor'))
+            ->assertOk();
+
+        $document = new \DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $document->loadHTML($response->getContent());
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+
+        $xpath = new \DOMXPath($document);
+        $rows = $xpath->query('//*[@id="jenis-penghasilan-help-modal"]//tbody/tr');
+        $this->assertCount(2, $rows);
+        $this->assertStringContainsString('01', $rows->item(0)->textContent);
+        $this->assertStringContainsString('Honorarium', $rows->item(0)->textContent);
+        $this->assertStringContainsString("Keterangan <khusus>\nBaris kedua", $rows->item(0)->textContent);
+        $this->assertCount(0, $xpath->query('.//khusus', $rows->item(0)));
+        $this->assertStringContainsString('02', $rows->item(1)->textContent);
+        $this->assertStringContainsString('Jasa', $rows->item(1)->textContent);
+        $this->assertStringNotContainsString('Keterangan', $rows->item(1)->textContent);
+    }
+
     public function test_imprestfund_explains_manual_subtotal_and_clipboard_order(): void
     {
         $this->withSession(['user_authenticated' => true])
