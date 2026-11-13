@@ -59,6 +59,14 @@ class BankController extends Controller
         return redirect()->route('bank.index')->with('success', 'Bank berhasil diperbarui.');
     }
 
+    public function destroy(Bank $bank)
+    {
+        $this->ensureAdmin();
+        $bank->delete();
+
+        return redirect()->route('bank.index')->with('success', 'Bank berhasil dihapus.');
+    }
+
     private function validatedData(Request $request, ?Bank $bank = null): array
     {
         $request->merge([

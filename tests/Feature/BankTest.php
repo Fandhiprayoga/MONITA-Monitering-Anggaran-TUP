@@ -87,6 +87,28 @@ class BankTest extends TestCase
         $this->assertDatabaseCount('banks', 1);
     }
 
+    public function test_admin_can_soft_delete_bank(): void
+    {
+        $bank = Bank::create([
+            'kode_bank' => 'BNI',
+            'inisial' => 'BNI',
+            'nama_bank' => 'Bank Negara Indonesia',
+            'status' => 'aktif',
+        ]);
+
+        $this->get(route('bank.index'))
+            ->assertOk()
+            ->assertSee('Hapus Bank Negara Indonesia');
+
+        $this->delete(route('bank.destroy', $bank))
+            ->assertRedirect(route('bank.index'))
+            ->assertSessionHas('success', 'Bank berhasil dihapus.');
+
+        $this->assertSoftDeleted('banks', ['id' => $bank->id]);
+        $this->assertNull(Bank::find($bank->id));
+        $this->get(route('bank.index'))->assertDontSee('Bank Negara Indonesia');
+    }
+
     public function test_bank_seeder_inserts_all_banks_without_overwriting_existing_status(): void
     {
         $existingBank = Bank::create([
@@ -115,6 +137,21 @@ class BankTest extends TestCase
         ]);
     }
 
+    public function test_bank_seeder_does_not_restore_soft_deleted_banks(): void
+    {
+        $bank = Bank::create([
+            'kode_bank' => 'DELETED',
+            'inisial' => 'DELETED',
+            'nama_bank' => 'Bank Deleted',
+            'status' => 'aktif',
+        ]);
+        $bank->delete();
+
+        $this->seed(BankSeeder::class);
+
+        $this->assertSoftDeleted('banks', ['id' => $bank->id]);
+    }
+
     public function test_non_admin_cannot_manage_banks(): void
     {
         $this->withSession(['user_role' => 'user'])
@@ -130,6 +167,17 @@ class BankTest extends TestCase
             ])
             ->assertForbidden();
 
-        $this->assertDatabaseCount('banks', 0);
+        $bank = Bank::create([
+            'kode_bank' => 'BNI',
+            'inisial' => 'BNI',
+            'nama_bank' => 'BNI',
+            'status' => 'aktif',
+        ]);
+        $this->withSession(['user_role' => 'user'])
+            ->delete(route('bank.destroy', $bank))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('banks', ['id' => $bank->id, 'deleted_at' => null]);
+        $this->assertDatabaseCount('banks', 1);
     }
 }

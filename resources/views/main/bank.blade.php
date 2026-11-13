@@ -59,6 +59,15 @@
                                         aria-label="Ubah {{ $bank->nama_bank }}" title="Ubah">
                                         <i class="ti ti-pencil" aria-hidden="true"></i>
                                     </a>
+                                    <form method="POST" action="{{ route('bank.destroy', $bank) }}"
+                                        class="d-inline" onsubmit="return confirm('Hapus bank {{ $bank->nama_bank }}?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-icon btn-light-danger"
+                                            aria-label="Hapus {{ $bank->nama_bank }}" title="Hapus">
+                                            <i class="ti ti-trash" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         @empty

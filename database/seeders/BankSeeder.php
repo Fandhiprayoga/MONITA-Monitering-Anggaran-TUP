@@ -82,7 +82,7 @@ class BankSeeder extends Seeder
         ];
 
         foreach ($banks as [$kodeBank, $inisial, $namaBank, $status]) {
-            Bank::firstOrCreate(
+            Bank::withTrashed()->firstOrCreate(
                 ['kode_bank' => $kodeBank],
                 ['inisial' => $inisial, 'nama_bank' => $namaBank, 'status' => $status],
             );
