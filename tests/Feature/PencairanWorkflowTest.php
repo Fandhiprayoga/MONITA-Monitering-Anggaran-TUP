@@ -646,7 +646,9 @@ class PencairanWorkflowTest extends TestCase
             $this->get(route('pencairan.show',$p))->assertOk()->assertSee('Edit / Submit');
             $this->get(route('pencairan.edit',$p))->assertOk()->assertSee($kind === 'imprestfund' ? 'Belanja' : '000123', false);
             $this->postJson(route('pencairan.submit',$p), ['lock_version'=>$p->lock_version, 'idempotency_key'=>'ui-'.$kind])->assertOk();
-            $this->get(route('pencairan.pengajuan'))->assertOk()->assertSee($p->fresh()->nomor_pengajuan);
+            $this->get(route('pencairan.pengajuan'))->assertOk()
+                ->assertSee($p->fresh()->nomor_pengajuan)
+                ->assertSee('DRK: DRK1 - Kegiatan');
             $this->get(route('pencairan.show',$p))->assertOk()
                 ->assertSee('Revisi 1')->assertSee('Diajukan untuk verifikasi')
                 ->assertSee('Menunggu Verifikasi')->assertSee('Pengajuan dibuat');

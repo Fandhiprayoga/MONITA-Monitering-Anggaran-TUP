@@ -53,6 +53,13 @@ Validasi: `php artisan test --filter="PencairanHistoryTest|PencairanNavigationTe
 
 ### Pratinjau form pencairan
 
+Data dummy pencairan untuk environment local/testing dapat dibuat dengan
+`php artisan db:seed --class=PencairanPengajuanSeeder`. Seeder ini menyiapkan
+master bank dan jenis penghasilan yang belum tersedia, tanpa menimpa data master
+yang sudah ada. Rincian Beban/Honor memakai inisial bank aktif yang tidak dihapus,
+bukan `BANK DUMMY`. Jika tidak ada bank aktif dengan inisial yang terisi,
+aktifkan bank melalui master data sebelum menjalankan seeder kembali.
+
 Kode jenis dan nama tabel detail menggunakan `imprestfund` dan
 `pengajuan_imprestfund_details`. Perubahan ini ditujukan untuk database baru.
 Jika migrasi awal sudah dijalankan sebelum pembaruan, jalankan `php artisan migrate`

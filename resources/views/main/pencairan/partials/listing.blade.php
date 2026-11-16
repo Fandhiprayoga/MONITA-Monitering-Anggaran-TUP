@@ -106,7 +106,14 @@
                         <tr>
                             <td class="text-nowrap">{{ $item->nomor_pengajuan ?? 'Draft #'.$item->id }}<small class="d-block text-muted">{{ $item->kode_pp }}</small></td>
                             <td class="text-nowrap"><span class="badge {{ $item->jenisBadgeClass() }}">{{ $item->jenisLabel() }}</span></td>
-                            <td style="min-width: 200px; max-width: 350px; white-space: normal; overflow-wrap: anywhere;">{{ Illuminate\Support\Str::limit($item->uraian_pengajuan, 80) }}</td>
+                            <td style="min-width: 200px; max-width: 350px; white-space: normal; overflow-wrap: anywhere;">
+                                {{ Illuminate\Support\Str::limit($item->uraian_pengajuan, 80) }}
+                                @if (!empty($item->header_snapshot['drk_tup']) || !empty($item->header_snapshot['uraian_drk']))
+                                    <small class="d-block text-muted">
+                                        DRK: {{ $item->header_snapshot['drk_tup'] ?? '-' }} - {{ $item->header_snapshot['uraian_drk'] ?? '-' }}
+                                    </small>
+                                @endif
+                            </td>
                             <td class="text-end text-nowrap">Rp {{ number_format((float)$item->total_bruto, 2, ',', '.') }}</td>
                             <td><span class="badge {{ $item->statusBadgeClass() }}">{{ $item->statusLabel() }}</span><small class="d-block text-muted">{{ $item->updated_at->format('d/m/Y H:i') }}</small></td>
                             <td class="text-center text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{{ route('pencairan.show', ['pengajuan' => $item, 'menu' => $mode]) }}">Detail</a></td>

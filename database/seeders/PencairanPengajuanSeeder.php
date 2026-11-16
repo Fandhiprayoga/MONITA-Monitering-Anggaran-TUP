@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\JenisPenghasilan;
 use App\Enums\PencairanStatus;
+use App\Models\Bank;
 use App\Models\PencairanActor;
 use App\Models\PencairanPengajuan;
 use App\Services\PencairanService;
@@ -21,6 +22,8 @@ class PencairanPengajuanSeeder extends Seeder
         }
 
         DB::transaction(function () {
+            $this->call([BankSeeder::class, JenisPenghasilanSeeder::class]);
+
             $admin = $this->actor('admin', 'KUG');
             // Serialize repeated runs without truncating or changing existing submissions.
             PencairanActor::whereKey($admin->id)->lockForUpdate()->firstOrFail();
@@ -174,13 +177,19 @@ class PencairanPengajuanSeeder extends Seeder
         }
 
         $rows = [];
+        $bank = Bank::query()->where('status', 'aktif')->orderBy('kode_bank')->pluck('inisial')
+            ->map(fn ($inisial) => strtoupper(trim((string) $inisial)))
+            ->first(fn ($inisial) => $inisial !== '');
+        if ($bank === null) {
+            throw new LogicException('Seeder pencairan dummy memerlukan bank aktif dengan inisial pada master data bank.');
+        }
         $kodeJenis = $jenis === 'honor'
             ? JenisPenghasilan::query()->orderBy('kode_jenis')->value('kode_jenis')
             : null;
         foreach (['Andi Dummy', 'Budi Dummy', 'Citra Dummy'] as $index => $name) {
             $row = [
                 'no' => sprintf('%03d', $index + 1), 'nominal' => '1.000.000', 'pajak' => '50.000',
-                'neto' => '950.000', 'bank' => 'BANK DUMMY', 'nama' => $name,
+                'neto' => '950.000', 'bank' => $bank, 'nama' => $name,
                 'rekening' => '000000000'.($index + 1),
             ];
             if ($jenis === 'honor') {

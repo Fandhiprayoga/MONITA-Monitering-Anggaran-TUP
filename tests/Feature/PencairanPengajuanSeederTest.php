@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Enums\PencairanStatus;
+use App\Models\Bank;
 use App\Models\PencairanPengajuan;
 use App\Services\GoogleSheetService;
 use App\Services\PencairanService;
 use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\BankSeeder;
 use Database\Seeders\PencairanPengajuanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -58,6 +60,8 @@ class PencairanPengajuanSeederTest extends TestCase
             }
             if ($p->jenis !== 'imprestfund') {
                 $this->assertSame('0000000001', $p->detailRows()[0]['rekening']);
+                $this->assertTrue(Bank::where('status', 'aktif')
+                    ->where('inisial', $p->detailRows()[0]['bank'])->exists());
             }
         }
         $this->assertSame(45, (int) DB::table('pengajuan_number_sequences')->where('year', 2026)->value('last_number'));
@@ -108,5 +112,24 @@ class PencairanPengajuanSeederTest extends TestCase
         $this->app->instance('env', 'production');
         $this->expectException(\LogicException::class);
         $this->seed(PencairanPengajuanSeeder::class);
+    }
+
+    public function test_seeder_uses_an_active_bank_without_modifying_existing_master_data(): void
+    {
+        $this->seed(BankSeeder::class);
+        Bank::query()->update(['status' => 'nonaktif']);
+        Bank::where('inisial', 'BRI')->update(['status' => 'aktif']);
+        Bank::where('inisial', 'BRI')->firstOrFail()->delete();
+        Bank::where('inisial', 'BCA')->update(['status' => 'aktif']);
+        $before = Bank::withTrashed()->orderBy('id')->get()->toJson();
+
+        $this->seed(PencairanPengajuanSeeder::class);
+
+        $this->assertSame($before, Bank::withTrashed()->orderBy('id')->get()->toJson());
+        foreach (PencairanPengajuan::whereIn('jenis', ['beban', 'honor'])->get() as $p) {
+            foreach ($p->detailRows() as $row) {
+                $this->assertSame('BCA', $row['bank']);
+            }
+        }
     }
 }
