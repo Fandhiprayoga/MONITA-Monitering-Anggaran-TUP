@@ -1,7 +1,12 @@
 @php
-    $pencairanMenu = $activeMenu ?? (request()->routeIs('pencairan.transaksi') ? 'transaksi'
-        : (request()->routeIs('pencairan.history') ? 'history' : (request()->routeIs('pencairan.verifikasi') ? 'verifikasi'
-            : (request()->routeIs('pencairan.pengajuan', 'pencairan.form', 'pencairan.show', 'pencairan.edit') ? 'pengajuan' : null))));
+    $pencairanMenu = $activeMenu ?? match (true) {
+        request()->routeIs('pencairan.transaksi') => 'transaksi',
+        request()->routeIs('pencairan.sla') => 'sla',
+        request()->routeIs('pencairan.history') => 'history',
+        request()->routeIs('pencairan.verifikasi') => 'verifikasi',
+        request()->routeIs('pencairan.pengajuan', 'pencairan.form', 'pencairan.show', 'pencairan.edit') => 'pengajuan',
+        default => null,
+    };
     $pencairanJenis = $activeJenis ?? request()->route('jenis');
 @endphp
 <nav class="pc-sidebar">
@@ -201,6 +206,13 @@
                                 </a>
                             </li>
                         </ul>
+                    </li>
+                    <li class="pc-item">
+                        <a class="pc-link {{ $pencairanMenu === 'sla' ? 'active' : '' }}"
+                            href="{{ route('pencairan.sla') }}">
+                            <span class="pc-micon"><i class="ti ti-clock"></i></span>
+                            <span class="pc-mtext">Monitoring SLA</span>
+                        </a>
                     </li>
                     <li class="pc-item">
                         <a class="pc-link {{ $pencairanMenu === 'history' ? 'active' : '' }}"

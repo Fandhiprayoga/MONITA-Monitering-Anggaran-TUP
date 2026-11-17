@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Session;
 use App\Services\GoogleSheetService;
 use App\Services\PencairanService;
+use App\Services\PencairanSlaService;
 use App\Models\Bank;
 use App\Models\JenisPenghasilan;
 use App\Models\PencairanHistory;
 use App\Models\PencairanPengajuan;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class PencairanController extends Controller
 {
@@ -90,6 +92,68 @@ class PencairanController extends Controller
         $this->requireAdmin();
 
         return $this->listing($request, 'Transaksi '.ucfirst($jenis), 'transaksi', $jenis);
+    }
+
+    public function monitoringSla(Request $request, PencairanSlaService $slaService)
+    {
+        $this->requireAdmin();
+        $filters = $request->validate([
+            'tahap' => ['nullable', 'in:verifikasi,transaksi'],
+            'jenis' => ['nullable', 'in:imprestfund,beban,honor'],
+            'status_sla' => ['nullable', 'in:aman,mendekati,terlambat,data_missing'],
+            'q' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'in:10,25,50,100'],
+        ]);
+        $records = PencairanPengajuan::query()
+            ->whereIn('status', ['submitted', 'verified'])
+            ->orderByRaw("CASE WHEN status = 'submitted' THEN last_submitted_at ELSE verified_at END")
+            ->orderBy('id')
+            ->get();
+
+        $measured = $records->map(function (PencairanPengajuan $pengajuan) use ($slaService) {
+            $pengajuan->setAttribute('sla_measurement', $slaService->measure($pengajuan));
+            return $pengajuan;
+        });
+        $summary = [
+            'total' => $measured->count(),
+            'aman' => $measured->where('sla_measurement.status', 'aman')->count(),
+            'mendekati' => $measured->where('sla_measurement.status', 'mendekati')->count(),
+            'terlambat' => $measured->where('sla_measurement.status', 'terlambat')->count(),
+            'data_missing' => $measured->where('sla_measurement.status', 'data_missing')->count(),
+        ];
+        $filtered = $measured
+            ->when($filters['tahap'] ?? null, fn ($items, $stage) => $items->filter(
+                fn (PencairanPengajuan $item) => $item->sla_measurement['stage'] === $stage
+            ))
+            ->when($filters['jenis'] ?? null, fn ($items, $jenis) => $items->where('jenis', $jenis))
+            ->when($filters['status_sla'] ?? null, fn ($items, $status) => $items->filter(
+                fn (PencairanPengajuan $item) => $item->sla_measurement['status'] === $status
+            ))
+            ->when(isset($filters['q']) && trim($filters['q']) !== '', function ($items) use ($filters) {
+                $term = mb_strtolower(trim($filters['q']));
+                return $items->filter(fn (PencairanPengajuan $item) =>
+                    str_contains(mb_strtolower((string) $item->nomor_pengajuan), $term)
+                    || str_contains(mb_strtolower((string) $item->uraian_pengajuan), $term)
+                    || str_contains(mb_strtolower((string) $item->nama_pp), $term)
+                    || str_contains(mb_strtolower((string) $item->kode_pp), $term)
+                );
+            })
+            ->values();
+        $perPage = (int) ($filters['per_page'] ?? 25);
+        $items = new LengthAwarePaginator(
+            $filtered->forPage(LengthAwarePaginator::resolveCurrentPage(), $perPage)->values(),
+            $filtered->count(),
+            $perPage,
+            LengthAwarePaginator::resolveCurrentPage(),
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('main.pencairan.sla', [
+            'items' => $items,
+            'filters' => $filters,
+            'summary' => $summary,
+            'activeMenu' => 'sla',
+        ]);
     }
 
     public function history(Request $request)
@@ -315,13 +379,14 @@ class PencairanController extends Controller
     private function detailNavigation(Request $request, PencairanPengajuan $pengajuan): array
     {
         $activeMenu = 'pengajuan';
-        if (Session::get('user_role') === 'admin' && in_array($request->query('menu'), ['transaksi', 'verifikasi', 'history'], true)) {
+        if (Session::get('user_role') === 'admin' && in_array($request->query('menu'), ['transaksi', 'verifikasi', 'sla', 'history'], true)) {
             $activeMenu = $request->query('menu');
         }
         $activeJenis = $pengajuan->jenis;
         $backUrl = match ($activeMenu) {
             'transaksi' => route('pencairan.transaksi', $activeJenis),
             'verifikasi' => route('pencairan.verifikasi'),
+            'sla' => route('pencairan.sla'),
             'history' => route('pencairan.history'),
             default => route('pencairan.pengajuan', [
                 'jenis' => $activeJenis,
