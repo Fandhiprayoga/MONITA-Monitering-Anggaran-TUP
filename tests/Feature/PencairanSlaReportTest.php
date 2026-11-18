@@ -6,6 +6,7 @@ use App\Models\PencairanActor;
 use App\Models\PencairanHistory;
 use App\Models\PencairanPengajuan;
 use App\Services\GoogleSheetService;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,6 +19,7 @@ class PencairanSlaReportTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->travelTo(CarbonImmutable::parse('2026-11-24 13:30:00', config('app.timezone')));
         $this->mock(GoogleSheetService::class)->shouldReceive('getUnitsFromSheet')->andReturn([])
             ->shouldReceive('getPencairanDrkOptions')->andReturn([]);
         $this->admin = PencairanActor::create([
@@ -29,13 +31,19 @@ class PencairanSlaReportTest extends TestCase
         ]);
     }
 
-    private function pengajuan(string $jenis = 'beban', string $status = 'completed', string $unit = 'SIF'): PencairanPengajuan
-    {
-        return PencairanPengajuan::create([
+    private function pengajuan(
+        string $jenis = 'beban',
+        string $status = 'completed',
+        ?string $submitted = '2026-11-12 08:00:00',
+        string $unit = 'SIF',
+        array $attributes = [],
+    ): PencairanPengajuan {
+        return PencairanPengajuan::create($attributes + [
             'jenis' => $jenis, 'status' => $status, 'kode_pp' => $unit, 'nama_pp' => 'Unit '.$unit,
             'created_by_actor_id' => $this->admin->id, 'tahun_anggaran' => 2026, 'triwulan' => 4,
             'nomor_pengajuan' => 'REPORT-'.(PencairanPengajuan::count() + 1),
             'uraian_pengajuan' => 'Kegiatan '.$jenis,
+            'first_submitted_at' => $submitted, 'last_submitted_at' => $submitted,
         ]);
     }
 
@@ -56,10 +64,11 @@ class PencairanSlaReportTest extends TestCase
 
     private function rows(array $filters = [])
     {
-        return $this->get(route('pencairan.sla-report', $filters))->assertOk()->viewData('items')->getCollection();
+        return $this->get(route('pencairan.sla-report', ['tab' => 'detail'] + $filters))
+            ->assertOk()->viewData('items')->getCollection();
     }
 
-    public function test_report_measures_all_four_stages_and_keeps_finished_verification_for_pending_transactions(): void
+    public function test_overview_counts_unique_submissions_and_all_four_stages(): void
     {
         foreach (['imprestfund', 'beban', 'honor'] as $jenis) {
             $p = $this->pengajuan($jenis);
@@ -68,131 +77,172 @@ class PencairanSlaReportTest extends TestCase
             $this->event($p, 'complete', $jenis === 'imprestfund' ? '2026-11-19 10:00:00' : '2026-11-23 23:59:59');
             $p->completion()->create(['completion_date' => '2026-11-16', 'actor_id' => $this->admin->id]);
         }
-        $pending = $this->pengajuan('honor', 'verified');
+        $pending = $this->pengajuan('honor', 'verified', '2026-11-16 08:00:00', attributes: ['verified_at' => '2026-11-19 10:00:00']);
         $this->event($pending, 'submit', '2026-11-16 08:00:00');
         $this->event($pending, 'verify', '2026-11-19 10:00:00');
-        $inProgress = $this->pengajuan('beban', 'submitted');
+        $inProgress = $this->pengajuan('beban', 'submitted', '2026-11-16 08:00:00');
         $this->event($inProgress, 'submit', '2026-11-16 08:00:00');
 
         $response = $this->get(route('pencairan.sla-report'))->assertOk()
-            ->assertViewIs('main.pencairan.sla-report')->assertSee('Report SLA per Tahap')
+            ->assertViewIs('main.pencairan.sla-report')->assertSee('Overview')->assertSee('Detail Pengajuan')
             ->assertSee('Transaksi Imprestfund')->assertSee('Transaksi Beban')->assertSee('Transaksi Honor')
             ->assertSee('data-bs-target="#modalFilterReportSla"', false)
             ->assertSee('data-bs-target="#modalHelpReportSla"', false)
-            ->assertSee(route('pencairan.show', ['pengajuan' => $pending, 'menu' => 'sla-report']));
-        $summary = $response->viewData('summary');
-        $this->assertSame(7, $summary['total']);
-        $this->assertSame(5, $summary['on_time']);
-        $this->assertSame(2, $summary['late']);
-        $this->assertSame(71.4, $summary['compliance']);
+            ->assertDontSee('Durasi Verifikasi');
+        $this->assertSame(['total' => 5, 'tepat_waktu' => 2, 'terlambat' => 2, 'undetermined' => 1], $response->viewData('summary'));
         $stages = $response->viewData('stageSummary');
-        $this->assertSame(4, $stages['verifikasi']['total']);
-        $this->assertSame(2, $stages['transaksi_imprestfund']['target_days']);
-        $this->assertSame(5, $stages['transaksi_beban']['target_days']);
-        $this->assertSame(5, $stages['transaksi_honor']['target_days']);
-        $this->assertSame(2.3, $stages['verifikasi']['average_days']);
-        $imprestfund = $this->rows(['tahap' => 'transaksi_imprestfund'])->sole();
-        $this->assertSame('2026-11-18', $imprestfund['due_date']->toDateString());
-        $this->assertSame(3, $imprestfund['duration_days']);
-        $this->assertSame(1, $imprestfund['overdue_days']);
-        $this->assertSame('terlambat', $imprestfund['result']);
+        $this->assertSame(75.0, $stages['verifikasi']['compliance']);
+        $this->assertSame(1, $stages['verifikasi']['active_overdue']);
+        $this->assertSame(1, $stages['transaksi_honor']['active']);
+        $this->assertSame(0, $stages['transaksi_honor']['active_overdue']);
+        $this->assertSame(100.0, $stages['transaksi_honor']['compliance']);
+        $this->assertSame([2, 2, 5, 5], array_column($stages, 'target_days'));
+
+        $detail = $this->get(route('pencairan.sla-report', ['tab' => 'detail']))->assertOk()
+            ->assertSee('Tgl Verifikasi')->assertSee('Tgl Transaksi')->assertSee('Tgl Selesai')
+            ->assertSee('Durasi Verifikasi')->assertSee('Durasi Transaksi')->assertSee('Masih berjalan — lewat tenggat')
+            ->assertDontSee('Total Pengajuan');
+        $items = $detail->viewData('items');
+        $this->assertSame(5, $items->total());
+        $rows = $items->getCollection()->keyBy('pengajuan.id');
+        $imprestfund = $rows->firstWhere('transaction_stage', 'transaksi_imprestfund');
+        $transaction = $imprestfund['stages']['transaksi_imprestfund'];
+        $this->assertSame('2026-11-16', $imprestfund['pengajuan']->completion->completion_date->toDateString());
+        $this->assertSame('2026-11-19', $transaction['finished_at']->toDateString());
+        $this->assertSame('2026-11-18', $transaction['due_date']->toDateString());
+        $this->assertSame(3, $transaction['duration_days']);
+        $this->assertSame('terlambat', $transaction['result']);
+        $this->assertNull($rows[$pending->id]['stages']['transaksi_honor']);
         foreach (['transaksi_beban', 'transaksi_honor'] as $stage) {
-            $row = $this->rows(['tahap' => $stage])->sole();
-            $this->assertSame('tepat_waktu', $row['result']);
-            $this->assertSame(5, $row['duration_days']);
-            $this->assertSame('2026-11-23', $row['due_date']->toDateString());
+            $row = $rows->first(fn ($row) => $row['transaction_stage'] === $stage && $row['result'] === 'tepat_waktu');
+            $this->assertSame(5, $row['stages'][$stage]['duration_days']);
+            $this->assertSame('2026-11-23', $row['stages'][$stage]['due_date']->toDateString());
         }
     }
 
-    public function test_returns_and_resubmits_do_not_erase_old_results_or_pair_different_cycles(): void
+    public function test_resubmit_keeps_only_last_finished_result_and_reports_the_new_active_cycle(): void
     {
-        $p = $this->pengajuan('beban', 'returned');
+        $p = $this->pengajuan(status: 'submitted', submitted: '2026-11-02 08:00:00', attributes: ['last_submitted_at' => '2026-11-20 08:00:00']);
         $this->event($p, 'submit', '2026-11-02 08:00:00');
-        $v1 = $this->event($p, 'verify', '2026-11-06 09:00:00');
+        $this->event($p, 'verify', '2026-11-06 09:00:00');
         $this->event($p, 'return', '2026-11-06 10:00:00');
         $this->event($p, 'submit', '2026-11-09 08:00:00', 2);
         $v2 = $this->event($p, 'verify', '2026-11-10 09:00:00', 2);
         $this->event($p, 'return', '2026-11-10 10:00:00', 2);
-        $this->event($p, 'submit', '2026-11-12 08:00:00', 3);
-        $this->event($p, 'verify', '2026-11-16 09:00:00', 3);
-        $complete = $this->event($p, 'complete', '2026-11-23 10:00:00', 3);
-        $p->update(['status' => 'completed', 'verified_at' => '2026-11-16', 'last_submitted_at' => '2026-11-12']);
+        $this->event($p, 'submit', '2026-11-20 08:00:00', 3);
 
-        $rows = $this->rows();
-        $this->assertCount(4, $rows);
-        $byEvent = $rows->keyBy(fn ($row) => $row['event']->id);
-        $this->assertSame('terlambat', $byEvent[$v1->id]['result']);
-        $this->assertSame(4, $byEvent[$v1->id]['duration_days']);
-        $this->assertSame('tepat_waktu', $byEvent[$v2->id]['result']);
-        $this->assertSame('2026-11-09', $byEvent[$v2->id]['started_at']->toDateString());
-        $this->assertSame('2026-11-16', $byEvent[$complete->id]['started_at']->toDateString());
-        $this->assertSame(5, $byEvent[$complete->id]['duration_days']);
+        $row = $this->rows()->sole();
+        $verification = $row['stages']['verifikasi'];
+        $this->assertSame($v2->id, $verification['event']->id);
+        $this->assertSame('2026-11-09', $verification['started_at']->toDateString());
+        $this->assertSame(1, $verification['duration_days']);
+        $this->assertSame('2026-11-24', $row['active']['due_date']->toDateString());
+        $response = $this->get(route('pencairan.sla-report'))->assertOk();
+        $this->assertSame(['total' => 1, 'tepat_waktu' => 0, 'terlambat' => 0, 'undetermined' => 1], $response->viewData('summary'));
+        $stage = $response->viewData('stageSummary')['verifikasi'];
+        $this->assertSame(1, $stage['tepat_waktu']);
+        $this->assertSame(0, $stage['terlambat']);
+        $this->assertSame(1, $stage['active']);
+        $this->assertSame(100.0, $stage['compliance']);
+
+        $p->update(['status' => 'completed']);
+        $this->event($p, 'verify', '2026-11-23 09:00:00', 3);
+        $this->event($p, 'complete', '2026-11-24 10:00:00', 3);
+        $transaction = $this->rows()->sole()['stages']['transaksi_beban'];
+        $this->assertSame('2026-11-23', $transaction['started_at']->toDateString());
+        $this->assertSame(1, $transaction['duration_days']);
     }
 
-    public function test_incomplete_mismatched_and_reversed_histories_are_visible_but_excluded_from_compliance(): void
+    public function test_invalid_or_missing_history_is_visible_but_excluded_from_compliance(): void
     {
         $missing = $this->pengajuan();
         $this->event($missing, 'complete', '2026-11-16 10:00:00');
-        $mismatch = $this->pengajuan();
+        $mismatch = $this->pengajuan(status: 'returned');
         $this->event($mismatch, 'submit', '2026-11-12 10:00:00');
         $this->event($mismatch, 'verify', '2026-11-16 10:00:00', 2);
-        $reversed = $this->pengajuan();
+        $reversed = $this->pengajuan(status: 'returned');
         $this->event($reversed, 'submit', '2026-11-17 10:00:00');
         $this->event($reversed, 'verify', '2026-11-16 10:00:00');
-        $good = $this->pengajuan();
+        $good = $this->pengajuan(status: 'returned');
         $this->event($good, 'submit', '2026-11-12 10:00:00');
         $this->event($good, 'verify', '2026-11-16 10:00:00');
 
-        $response = $this->get(route('pencairan.sla-report'))->assertOk()
+        $this->get(route('pencairan.sla-report', ['tab' => 'detail']))->assertOk()
+            ->assertSee('Riwayat selesai tahap tidak tersedia.')
             ->assertSee('Riwayat awal pada siklus yang sama tidak tersedia.')
             ->assertSee('Waktu selesai mendahului waktu mulai.')
-            ->assertSee('tidak masuk perhitungan kepatuhan');
-        $summary = $response->viewData('summary');
-        $this->assertSame(3, $summary['unmeasurable']);
-        $this->assertSame(100.0, $summary['compliance']);
-        $this->assertSame(2.0, $summary['average_days']);
-        $missingResponse = $this->get(route('pencairan.sla-report', ['hasil' => 'data_missing']))->assertOk();
-        $this->assertCount(3, $missingResponse->viewData('items'));
-        $this->assertNull($missingResponse->viewData('summary')['compliance']);
-        $this->assertNull($missingResponse->viewData('summary')['average_days']);
-        $empty = $this->get(route('pencairan.sla-report', ['hasil' => 'terlambat']))->assertOk()
-            ->assertSee('Belum ada tahap selesai untuk filter laporan ini.');
-        $this->assertNull($empty->viewData('summary')['compliance']);
+            ->assertSee('Dikembalikan untuk Perbaikan');
+        $stages = $this->get(route('pencairan.sla-report'))->assertOk()->viewData('stageSummary');
+        $this->assertSame(3, $stages['verifikasi']['data_missing']);
+        $this->assertSame(1, $stages['transaksi_beban']['data_missing']);
+        $this->assertSame(100.0, $stages['verifikasi']['compliance']);
+        $this->assertNull($stages['transaksi_beban']['compliance']);
     }
 
-    public function test_date_filter_uses_whole_finish_days_and_pairs_starts_outside_report_period(): void
+    public function test_no_default_period_and_explicit_submit_date_filters_are_inclusive_in_both_tabs(): void
     {
-        $p = $this->pengajuan('imprestfund', 'completed', 'AKA');
-        $this->event($p, 'submit', '2026-10-29 08:00:00');
-        $this->event($p, 'verify', '2026-10-30 08:00:00');
-        $c = $this->event($p, 'complete', '2026-11-02 23:59:59');
-        $p->completion()->create(['completion_date' => '2026-10-30', 'actor_id' => $this->admin->id]);
-        $other = $this->pengajuan();
-        $this->event($other, 'submit', '2026-11-02 09:00:00');
-        $this->event($other, 'verify', '2026-11-03 00:00:00');
-        $rows = $this->rows(['start_date' => '2026-11-02', 'end_date' => '2026-11-02', 'pp' => 'aka', 'q' => $p->nomor_pengajuan]);
-        $this->assertSame($c->id, $rows->sole()['event']->id);
-        $this->assertSame(1, $rows->sole()['duration_days']);
-        $this->assertSame('2026-10-30', $rows->sole()['started_at']->toDateString());
-        $this->assertCount(0, $this->rows(['end_date' => '2026-10-28']));
-        $this->assertCount(1, $this->rows(['start_date' => '2026-11-03']));
+        $this->travelTo(CarbonImmutable::parse('2026-03-31 13:30:00', config('app.timezone')));
+        $old = $this->pengajuan(status: 'submitted', submitted: '2026-02-27 23:59:59', attributes: ['last_submitted_at' => '2026-03-30 10:00:00']);
+        $first = $this->pengajuan(status: 'returned', submitted: '2026-02-28 00:00:00');
+        $last = $this->pengajuan(status: 'cancelled', submitted: '2026-03-31 23:59:59');
+        $future = $this->pengajuan(status: 'submitted', submitted: '2026-04-01 00:00:00');
+        $this->pengajuan(status: 'draft', submitted: null);
+        $this->event($first, 'submit', '2026-02-28 00:00:00');
+        $this->event($first, 'verify', '2026-04-01 08:00:00');
+
+        $unfiltered = $this->get(route('pencairan.sla-report'))->assertOk()
+            ->assertDontSee('Filter aktif:')
+            ->assertSee('name="start_date" type="date" class="form-control" value=""', false)
+            ->assertSee('name="end_date" type="date" class="form-control" value=""', false)
+            ->assertSee(route('pencairan.sla-report', ['tab' => 'detail']));
+        $this->assertSame(4, $unfiltered->viewData('summary')['total']);
+        $this->assertSame([$future->id, $last->id, $first->id, $old->id], $this->rows()->pluck('pengajuan.id')->all());
+        $this->assertCount(4, $this->rows(['start_date' => '', 'end_date' => '']));
+
+        $dates = ['start_date' => '2026-02-28', 'end_date' => '2026-03-31'];
+        $overview = $this->get(route('pencairan.sla-report', $dates))->assertOk()
+            ->assertSee('Submit awal mulai: 2026-02-28')
+            ->assertSee('Submit awal sampai: 2026-03-31')
+            ->assertSee(route('pencairan.sla-report', $dates + ['tab' => 'detail']));
+
+        $this->assertSame([$last->id, $first->id], $this->rows($dates)->pluck('pengajuan.id')->all());
+        $this->assertSame(2, $overview->viewData('summary')['total']);
+        $this->assertSame(1, $overview->viewData('stageSummary')['verifikasi']['terlambat']);
+        $this->assertSame([$old->id], $this->rows(['end_date' => '2026-02-27'])->pluck('pengajuan.id')->all());
+        $this->assertSame([$future->id], $this->rows(['start_date' => '2026-04-01'])->pluck('pengajuan.id')->all());
     }
 
-    public function test_pagination_preserves_filters_and_summary_counts_all_matching_rows(): void
+    public function test_filters_pagination_and_detail_navigation_are_consistent(): void
     {
         for ($i = 0; $i < 12; $i++) {
-            $p = $this->pengajuan();
-            $this->event($p, 'submit', '2026-11-12 09:00:00');
-            $this->event($p, 'verify', '2026-11-16 09:00:00');
+            $this->pengajuan(status: 'submitted');
         }
-        $response = $this->get(route('pencairan.sla-report', ['tahap' => 'verifikasi', 'per_page' => 10, 'page' => 2]))->assertOk();
-        $this->assertSame(12, $response->viewData('summary')['total']);
-        $items = $response->viewData('items');
+        $this->pengajuan('honor', 'submitted');
+        $this->pengajuan(status: 'submitted', unit: 'OTHER');
+        $this->pengajuan(status: 'submitted', attributes: ['nomor_pengajuan' => 'EXCLUDED', 'uraian_pengajuan' => 'Other']);
+        $filters = [
+            'start_date' => '2026-10-24', 'end_date' => '2026-11-24',
+            'jenis' => 'beban', 'pp' => 'sif', 'q' => 'REPORT-', 'per_page' => 10,
+        ];
+        $overview = $this->get(route('pencairan.sla-report', $filters))->assertOk();
+        $this->assertSame(12, $overview->viewData('summary')['total']);
+        $detail = $this->get(route('pencairan.sla-report', ['tab' => 'detail', 'page' => 2] + $filters))->assertOk();
+        $items = $detail->viewData('items');
         $this->assertCount(2, $items);
         $this->assertSame(12, $items->total());
-        $this->assertStringContainsString('tahap=verifikasi', $items->url(1));
-        $this->assertStringContainsString('per_page=10', $items->url(1));
-        $this->assertGreaterThan($items->getCollection()[1]['event']->id, $items->getCollection()[0]['event']->id);
+        $this->assertGreaterThan($items->getCollection()[1]['pengajuan']->id, $items->getCollection()[0]['pengajuan']->id);
+        $query = $filters + ['tab' => 'detail'];
+        parse_str(parse_url($items->url(1), PHP_URL_QUERY), $paging);
+        $this->assertEquals($query + ['page' => '1'], $paging);
+        $p = $items->getCollection()->first()['pengajuan'];
+        $query['page'] = 2;
+        unset($query['tab']);
+        $url = route('pencairan.show', ['pengajuan' => $p, 'menu' => 'sla-report', 'page' => 2] + $query);
+        $detail->assertSee($url);
+        $backUrl = $this->get($url)->assertOk()->viewData('backUrl');
+        $this->assertSame(route('pencairan.sla-report'), strtok($backUrl, '?'));
+        parse_str(parse_url($backUrl, PHP_URL_QUERY), $backQuery);
+        $this->assertEquals(['tab' => 'detail'] + $query, $backQuery);
     }
 
     public function test_report_menu_and_detail_navigation_are_admin_only(): void
@@ -205,12 +255,13 @@ class PencairanSlaReportTest extends TestCase
         );
         $response->assertSeeInOrder(['Transaksi', 'Report SLA', 'Monitoring SLA', 'History']);
         $this->get(route('pencairan.show', ['pengajuan' => $p, 'menu' => 'sla-report']))
-            ->assertOk()->assertViewHas('backUrl', route('pencairan.sla-report'))
+            ->assertOk()->assertViewHas('backUrl', route('pencairan.sla-report', ['tab' => 'detail']))
             ->assertViewHas('activeMenu', 'sla-report');
         $this->get(route('pencairan.edit', ['pengajuan' => $p, 'menu' => 'sla-report']))
             ->assertOk()->assertViewHas('activeMenu', 'sla-report');
         $this->withSession(['user_role' => 'user', 'user_data' => ['username' => 'user', 'role' => 'user', 'kode_pp' => 'SIF']]);
         $this->get(route('pencairan.sla-report'))->assertForbidden();
+        $this->get(route('pencairan.sla-report', ['tab' => 'detail']))->assertForbidden();
         $this->get(route('pencairan.pengajuan'))->assertOk()->assertDontSee(route('pencairan.sla-report'));
         $this->get(route('pencairan.show', ['pengajuan' => $p, 'menu' => 'sla-report']))
             ->assertOk()->assertViewHas('activeMenu', 'pengajuan');
@@ -220,22 +271,23 @@ class PencairanSlaReportTest extends TestCase
 
     public function test_weekend_finish_after_deadline_is_late_without_inventing_a_business_day(): void
     {
-        $p = $this->pengajuan('imprestfund');
+        $p = $this->pengajuan('imprestfund', submitted: '2026-11-11 08:00:00');
         $this->event($p, 'submit', '2026-11-11 08:00:00');
         $this->event($p, 'verify', '2026-11-11 09:00:00');
         $this->event($p, 'complete', '2026-11-14 08:00:00');
-        $row = $this->rows(['tahap' => 'transaksi_imprestfund'])->sole();
-        $this->assertSame('2026-11-13', $row['due_date']->toDateString());
-        $this->assertSame(2, $row['duration_days']);
-        $this->assertSame(0, $row['overdue_days']);
-        $this->assertSame('terlambat', $row['result']);
-        $this->assertSame(0, $this->rows(['tahap' => 'verifikasi'])->sole()['duration_days']);
+        $row = $this->rows()->sole();
+        $transaction = $row['stages']['transaksi_imprestfund'];
+        $this->assertSame('2026-11-13', $transaction['due_date']->toDateString());
+        $this->assertSame(2, $transaction['duration_days']);
+        $this->assertSame(0, $transaction['overdue_days']);
+        $this->assertSame('terlambat', $transaction['result']);
+        $this->assertSame(0, $row['stages']['verifikasi']['duration_days']);
     }
 
     public function test_invalid_filters_are_reported(): void
     {
         foreach ([
-            ['tahap' => 'unknown'], ['hasil' => 'aman'], ['start_date' => '2026-02-30'],
+            ['tab' => 'unknown'], ['jenis' => 'unknown'], ['start_date' => '2026-02-30'],
             ['start_date' => '2026-11-18', 'end_date' => '2026-11-17'],
             ['per_page' => 0], ['page' => -1], ['pp' => ['SIF']], ['q' => str_repeat('x', 101)],
         ] as $filters) {

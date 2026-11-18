@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\PencairanHistory;
+use App\Models\PencairanPengajuan;
 use Carbon\CarbonImmutable;
 
 class PencairanSlaReportService
@@ -14,7 +15,52 @@ class PencairanSlaReportService
         'transaksi_honor' => 'Transaksi Honor',
     ];
 
+    public const ACTIONS = ['submit', 'verify', 'return', 'cancel', 'complete'];
+
     public function __construct(private PencairanSlaService $sla) {}
+
+    public function submission(PencairanPengajuan $pengajuan, CarbonImmutable $today): array
+    {
+        $transactionStage = 'transaksi_'.$pengajuan->jenis;
+        $activeStage = match ($pengajuan->status) {
+            'submitted' => 'verifikasi',
+            'verified' => $transactionStage,
+            default => null,
+        };
+        $active = $activeStage !== null ? $this->sla->measure($pengajuan, $today) : null;
+        $stages = [
+            'verifikasi' => $this->latestMeasurement($pengajuan, 'verify', in_array($pengajuan->status, ['verified', 'completed'], true)),
+            $transactionStage => $this->latestMeasurement($pengajuan, 'complete', $pengajuan->status === 'completed'),
+        ];
+        $results = array_column($stages, 'result');
+        $result = match (true) {
+            in_array('terlambat', $results, true) => 'terlambat',
+            $pengajuan->status === 'completed' && $results === ['tepat_waktu', 'tepat_waktu'] => 'tepat_waktu',
+            default => 'undetermined',
+        };
+
+        return [
+            'pengajuan' => $pengajuan,
+            'stages' => $stages,
+            'transaction_stage' => $transactionStage,
+            'active_stage' => $activeStage,
+            'active' => $active,
+            'result' => $result,
+        ];
+    }
+
+    private function latestMeasurement(PencairanPengajuan $pengajuan, string $action, bool $expected): ?array
+    {
+        $event = $pengajuan->histories->last(fn (PencairanHistory $history) => $history->action === $action);
+        if ($event) {
+            return $this->measure($pengajuan, $event);
+        }
+
+        return $expected ? [
+            'result' => 'data_missing', 'duration_days' => null, 'finished_at' => null,
+            'problem' => 'Riwayat selesai tahap tidak tersedia.',
+        ] : null;
+    }
 
     public function targetDays(string $stage): int
     {
@@ -28,7 +74,7 @@ class PencairanSlaReportService
         );
     }
 
-    public function measure(PencairanHistory $event): array
+    private function measure(PencairanPengajuan $pengajuan, PencairanHistory $event): array
     {
         if (! in_array($event->action, ['verify', 'complete'], true)) {
             throw new \InvalidArgumentException('Report SLA hanya untuk tahap yang sudah selesai.');
@@ -36,7 +82,7 @@ class PencairanSlaReportService
 
         $pendingSubmit = null;
         $pendingVerify = null;
-        foreach ($event->pengajuan->histories as $history) {
+        foreach ($pengajuan->histories as $history) {
             if ($history->id >= $event->id) {
                 break;
             }
@@ -58,7 +104,7 @@ class PencairanSlaReportService
             }
         }
         $start = $event->action === 'verify' ? $pendingSubmit : $pendingVerify;
-        $stage = $event->action === 'verify' ? 'verifikasi' : 'transaksi_'.$event->pengajuan->jenis;
+        $stage = $event->action === 'verify' ? 'verifikasi' : 'transaksi_'.$pengajuan->jenis;
         $targetDays = $this->targetDays($stage);
         $problem = null;
         if (! $start || (string) $start->revision_no !== (string) $event->revision_no) {

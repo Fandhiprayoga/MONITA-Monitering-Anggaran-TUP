@@ -387,7 +387,7 @@ class PencairanController extends Controller
             'transaksi' => route('pencairan.transaksi', $activeJenis),
             'verifikasi' => route('pencairan.verifikasi'),
             'sla' => route('pencairan.sla'),
-            'sla-report' => route('pencairan.sla-report'),
+            'sla-report' => route('pencairan.sla-report', ['tab' => 'detail'] + $request->only(PencairanSlaReportController::DETAIL_QUERY_KEYS)),
             'history' => route('pencairan.history'),
             default => route('pencairan.pengajuan', [
                 'jenis' => $activeJenis,
