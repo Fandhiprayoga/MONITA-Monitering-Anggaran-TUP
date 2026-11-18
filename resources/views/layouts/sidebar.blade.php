@@ -2,6 +2,7 @@
     $pencairanMenu = $activeMenu ?? match (true) {
         request()->routeIs('pencairan.transaksi') => 'transaksi',
         request()->routeIs('pencairan.sla') => 'sla',
+        request()->routeIs('pencairan.sla-report') => 'sla-report',
         request()->routeIs('pencairan.history') => 'history',
         request()->routeIs('pencairan.verifikasi') => 'verifikasi',
         request()->routeIs('pencairan.pengajuan', 'pencairan.form', 'pencairan.show', 'pencairan.edit') => 'pengajuan',
@@ -206,6 +207,13 @@
                                 </a>
                             </li>
                         </ul>
+                    </li>
+                    <li class="pc-item">
+                        <a class="pc-link {{ $pencairanMenu === 'sla-report' ? 'active' : '' }}"
+                            href="{{ route('pencairan.sla-report') }}">
+                            <span class="pc-micon"><i class="ti ti-report-analytics"></i></span>
+                            <span class="pc-mtext">Report SLA</span>
+                        </a>
                     </li>
                     <li class="pc-item">
                         <a class="pc-link {{ $pencairanMenu === 'sla' ? 'active' : '' }}"

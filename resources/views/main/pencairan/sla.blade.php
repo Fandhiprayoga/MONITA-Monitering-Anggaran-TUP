@@ -153,7 +153,9 @@
                                 </td>
                                 <td class="text-center"><span class="badge {{ $statusClasses[$sla['status']] }}">{{ $statusLabels[$sla['status']] }}</span></td>
                                 <td class="text-center">
-                                    <a class="btn btn-sm btn-outline-primary" href="{{ route('pencairan.show', ['pengajuan' => $pengajuan, 'menu' => 'sla']) }}">Lihat detail</a>
+                                    <a class="btn btn-sm btn-outline-primary" href="{{ route('pencairan.show', ['pengajuan' => $pengajuan, 'menu' => 'sla']) }}" aria-label="Lihat detail pengajuan" title="Lihat detail">
+                                        <i class="ti ti-eye" aria-hidden="true"></i>
+                                    </a>
                                 </td>
                             </tr>
                         @empty

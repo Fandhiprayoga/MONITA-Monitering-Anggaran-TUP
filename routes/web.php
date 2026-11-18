@@ -11,6 +11,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\PengajuanController;
 use App\Http\Controllers\PencairanController;
+use App\Http\Controllers\PencairanSlaReportController;
 use App\Http\Controllers\PencairanWorkflowController;
 use App\Http\Controllers\JenisPenghasilanController;
 use App\Http\Controllers\BankController;
@@ -68,6 +69,7 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
 
         Route::get('/verifikasi', [PencairanController::class, 'verifikasi'])->name('verifikasi');
         Route::get('/monitoring-sla', [PencairanController::class, 'monitoringSla'])->name('sla');
+        Route::get('/report-sla', [PencairanSlaReportController::class, 'index'])->name('sla-report');
         Route::get('/history', [PencairanController::class, 'history'])->name('history');
 
         Route::get('/transaksi/{jenis}', [PencairanController::class, 'transaksi'])

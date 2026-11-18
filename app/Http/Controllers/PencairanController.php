@@ -379,7 +379,7 @@ class PencairanController extends Controller
     private function detailNavigation(Request $request, PencairanPengajuan $pengajuan): array
     {
         $activeMenu = 'pengajuan';
-        if (Session::get('user_role') === 'admin' && in_array($request->query('menu'), ['transaksi', 'verifikasi', 'sla', 'history'], true)) {
+        if (Session::get('user_role') === 'admin' && in_array($request->query('menu'), ['transaksi', 'verifikasi', 'sla', 'sla-report', 'history'], true)) {
             $activeMenu = $request->query('menu');
         }
         $activeJenis = $pengajuan->jenis;
@@ -387,6 +387,7 @@ class PencairanController extends Controller
             'transaksi' => route('pencairan.transaksi', $activeJenis),
             'verifikasi' => route('pencairan.verifikasi'),
             'sla' => route('pencairan.sla'),
+            'sla-report' => route('pencairan.sla-report'),
             'history' => route('pencairan.history'),
             default => route('pencairan.pengajuan', [
                 'jenis' => $activeJenis,

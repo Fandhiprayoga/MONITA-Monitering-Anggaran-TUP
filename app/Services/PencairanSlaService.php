@@ -20,16 +20,10 @@ class PencairanSlaService
             'transaksi' => $pengajuan->verified_at,
             default => null,
         };
-        $targetDays = match (true) {
-            $stage === 'verifikasi' => 2,
-            $stage === 'transaksi' && $pengajuan->jenis === 'imprestfund' => 2,
-            $stage === 'transaksi' => 5,
-            default => null,
-        };
-
-        if ($stage === null || $targetDays === null) {
+        if ($stage === null) {
             throw new \InvalidArgumentException('SLA hanya dapat dihitung untuk pengajuan yang sedang menunggu proses.');
         }
+        $targetDays = $this->targetDays($stage, $pengajuan->jenis);
 
         if ($startedAt === null) {
             return [
@@ -64,6 +58,37 @@ class PencairanSlaService
             'status' => $status,
             'remaining_days' => $remainingDays,
             'overdue_days' => $overdueDays,
+        ];
+    }
+
+    public function targetDays(string $stage, string $jenis): int
+    {
+        return match ($stage) {
+            'verifikasi' => 2,
+            'transaksi' => match ($jenis) {
+                'imprestfund' => 2,
+                'beban', 'honor' => 5,
+                default => throw new \InvalidArgumentException('Jenis transaksi SLA tidak dikenal.'),
+            },
+            default => throw new \InvalidArgumentException('Tahap SLA tidak dikenal.'),
+        };
+    }
+
+    public function completed(CarbonInterface $start, CarbonInterface $end, int $targetDays): array
+    {
+        if ($end->lessThan($start)) {
+            throw new \InvalidArgumentException('Waktu selesai SLA tidak boleh sebelum waktu mulai.');
+        }
+
+        $startDate = CarbonImmutable::instance($start)->startOfDay();
+        $endDate = CarbonImmutable::instance($end)->startOfDay();
+        $dueDate = $this->addBusinessDays($startDate, $targetDays);
+
+        return [
+            'due_date' => $dueDate,
+            'duration_days' => $this->businessDaysBetween($startDate, $endDate),
+            'overdue_days' => $endDate->greaterThan($dueDate) ? $this->businessDaysBetween($dueDate, $endDate) : 0,
+            'result' => $endDate->greaterThan($dueDate) ? 'terlambat' : 'tepat_waktu',
         ];
     }
 
