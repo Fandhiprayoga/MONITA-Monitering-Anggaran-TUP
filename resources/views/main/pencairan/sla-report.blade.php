@@ -105,7 +105,7 @@
         </div>
     </div>
     <div class="modal fade" id="modalHelpReportSla" tabindex="-1" aria-labelledby="modalHelpReportSlaLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalHelpReportSlaLabel">Keterangan Report SLA</h5>
@@ -121,6 +121,15 @@
                         <li>Kartu Tepat Waktu menghitung pengajuan selesai yang memenuhi kedua SLA. Kartu Melewati SLA menghitung pengajuan dengan minimal satu hasil tahap terlambat, meskipun pengajuan belum selesai.</li>
                         <li>Kepatuhan per tahap = tepat waktu ÷ (tepat waktu + melewati SLA). Proses aktif dan riwayat yang tidak dapat dihitung tidak masuk persentase.</li>
                     </ul>
+                    <h6 class="mt-4">Arti “Belum Dapat Disimpulkan”</h6>
+                    <p class="mb-2">Kartu ini menghitung pengajuan yang sudah pernah di-submit, tetapi belum memenuhi syarat Tepat Waktu dan belum memiliki hasil tahap yang tercatat terlambat. Tanpa filter tanggal, semua periode ikut diperiksa.</p>
+                    <ul class="mb-2">
+                        <li>Masih menunggu verifikasi, atau sudah diverifikasi tepat waktu dan masih menunggu transaksi.</li>
+                        <li>Dikembalikan atau dibatalkan setelah submit, tanpa hasil tahap yang tercatat terlambat.</li>
+                        <li>Sudah selesai, tetapi salah satu tahap tidak dapat dihitung karena riwayat tidak lengkap atau tidak valid, dan tahap lainnya tidak tercatat terlambat.</li>
+                    </ul>
+                    <p class="mb-2">Jika verifikasi selesai terlambat, pengajuan masuk kartu <strong>Melewati SLA</strong> meskipun transaksinya belum selesai. Jika tahapnya masih aktif dan sudah lewat tenggat, tabel tahap menandainya sebagai <strong>Masih berjalan — lewat tenggat</strong>, bukan sebagai hasil akhir.</p>
+                    <p class="mb-0">Untuk menelusuri penyebabnya, lihat kolom status dan durasi tiap tahap di tab <strong>Detail Pengajuan</strong>. Riwayat yang bermasalah ditandai <strong>Tidak dapat dihitung</strong> beserta alasannya.</p>
                 </div>
             </div>
         </div>

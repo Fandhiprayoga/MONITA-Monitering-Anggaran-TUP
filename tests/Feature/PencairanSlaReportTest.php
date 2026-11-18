@@ -88,6 +88,9 @@ class PencairanSlaReportTest extends TestCase
             ->assertSee('Transaksi Imprestfund')->assertSee('Transaksi Beban')->assertSee('Transaksi Honor')
             ->assertSee('data-bs-target="#modalFilterReportSla"', false)
             ->assertSee('data-bs-target="#modalHelpReportSla"', false)
+            ->assertSee('Arti “Belum Dapat Disimpulkan”')
+            ->assertSee('Dikembalikan atau dibatalkan setelah submit')
+            ->assertSee('bukan sebagai hasil akhir')
             ->assertDontSee('Durasi Verifikasi');
         $this->assertSame(['total' => 5, 'tepat_waktu' => 2, 'terlambat' => 2, 'undetermined' => 1], $response->viewData('summary'));
         $stages = $response->viewData('stageSummary');
