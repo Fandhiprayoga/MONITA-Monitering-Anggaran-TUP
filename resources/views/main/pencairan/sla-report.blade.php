@@ -114,7 +114,7 @@
                 <div class="modal-body">
                     <ul class="mb-0">
                         <li>Periode memilih pengajuan berdasarkan submit pertama. Draft yang belum pernah di-submit tidak masuk laporan. Hasil tahap tetap ditampilkan jika selesai setelah akhir periode.</li>
-                        <li>Verifikasi: submit sampai verifikasi pada siklus yang sama, target 2 hari kerja. Transaksi: verifikasi sampai selesai di sistem, target 2 hari kerja untuk Imprestfund dan 5 untuk Beban/Honor.</li>
+                        <li>Verifikasi dihitung dari submit sampai verifikasi pada siklus yang sama. Transaksi dihitung dari verifikasi sampai selesai di sistem. Target mengikuti aturan yang berlaku saat masing-masing tahap dimulai.</li>
                         <li>Hari mulai tidak dihitung. Hari kerja Senin–Jumat, belum termasuk kalender libur nasional. Tenggat berlaku sampai akhir tanggalnya.</li>
                         <li>Tanggal transaksi diisi petugas dan bisa berbeda dari tanggal selesai di sistem. Perhitungan SLA memakai tanggal selesai di sistem.</li>
                         <li>Satu pengajuan dihitung maksimal sekali per tahap, dari siklus terakhir yang menyelesaikan tahap itu. Jika submit ulang masih menunggu verifikasi, hasil sebelumnya tetap tampil dan proses baru dicatat sebagai aktif.</li>

@@ -99,7 +99,7 @@ class PencairanSlaReportTest extends TestCase
         $this->assertSame(1, $stages['transaksi_honor']['active']);
         $this->assertSame(0, $stages['transaksi_honor']['active_overdue']);
         $this->assertSame(100.0, $stages['transaksi_honor']['compliance']);
-        $this->assertSame([2, 2, 5, 5], array_column($stages, 'target_days'));
+        $this->assertSame([[2], [2], [5], [5]], array_map('array_keys', array_column($stages, 'targets')));
 
         $detail = $this->get(route('pencairan.sla-report', ['tab' => 'detail']))->assertOk()
             ->assertSee('Tgl Verifikasi')->assertSee('Tgl Transaksi')->assertSee('Tgl Selesai')
@@ -285,6 +285,44 @@ class PencairanSlaReportTest extends TestCase
         $this->assertSame(0, $transaction['overdue_days']);
         $this->assertSame('terlambat', $transaction['result']);
         $this->assertSame(0, $row['stages']['verifikasi']['duration_days']);
+    }
+
+    public function test_scheduled_targets_follow_stage_start_for_both_sla_pages(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-11-15 12:00:00', config('app.timezone')));
+        $this->post(route('settings.sla.store'), [
+            'effective_from' => '2026-11-16',
+            'verifikasi' => 3, 'transaksi_imprestfund' => 4, 'transaksi_beban' => 6, 'transaksi_honor' => 7,
+        ])->assertRedirect(route('settings.sla.index'));
+
+        $this->travelTo(CarbonImmutable::parse('2026-11-24 13:30:00', config('app.timezone')));
+        $completed = $this->pengajuan('imprestfund');
+        $this->event($completed, 'submit', '2026-11-12 08:00:00');
+        $this->event($completed, 'verify', '2026-11-17 09:00:00');
+        $this->event($completed, 'complete', '2026-11-20 09:00:00');
+        $before = $this->pengajuan('honor', 'verified', attributes: ['verified_at' => '2026-11-15 23:59:59']);
+        $after = $this->pengajuan('honor', 'verified', attributes: ['verified_at' => '2026-11-16 00:00:00']);
+        $active = $this->pengajuan('beban', 'submitted', '2026-11-16 00:00:00');
+
+        $detail = $this->rows()->keyBy('pengajuan.id');
+        $verification = $detail[$completed->id]['stages']['verifikasi'];
+        $transaction = $detail[$completed->id]['stages']['transaksi_imprestfund'];
+        $this->assertSame(2, $verification['target_days']);
+        $this->assertSame('terlambat', $verification['result']);
+        $this->assertSame(4, $transaction['target_days']);
+        $this->assertSame('tepat_waktu', $transaction['result']);
+        $this->assertSame(3, $transaction['duration_days']);
+        $this->assertSame(7, $detail[$after->id]['active']['target_days']);
+        $overview = $this->get(route('pencairan.sla-report'))->assertOk()->viewData('stageSummary');
+        $this->assertSame([2, 3], array_keys($overview['verifikasi']['targets']));
+        $this->assertSame([5, 7], array_keys($overview['transaksi_honor']['targets']));
+
+        $monitoring = $this->get(route('pencairan.sla'))->assertOk()->viewData('items')->getCollection()->keyBy('id');
+        $this->assertSame(5, $monitoring[$before->id]->sla_measurement['target_days']);
+        $this->assertSame('2026-11-20', $monitoring[$before->id]->sla_measurement['due_date']->toDateString());
+        $this->assertSame(7, $monitoring[$after->id]->sla_measurement['target_days']);
+        $this->assertSame('2026-11-25', $monitoring[$after->id]->sla_measurement['due_date']->toDateString());
+        $this->assertSame(3, $monitoring[$active->id]->sla_measurement['target_days']);
     }
 
     public function test_invalid_filters_are_reported(): void

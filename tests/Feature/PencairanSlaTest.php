@@ -96,7 +96,7 @@ class PencairanSlaTest extends TestCase
             ->assertSee('aria-label="Bantuan keterangan SLA"', false)
             ->assertSee('Filter monitoring SLA')
             ->assertSee('Keterangan Monitoring SLA')
-            ->assertSee('maksimal 5 hari kerja sejak diverifikasi.')
+            ->assertSee('Target tiap baris mengikuti aturan yang berlaku saat tahap dimulai')
             ->assertSee('class="pc-link active"', false)
             ->assertSee('href="'.route('pencairan.sla').'"', false)
             ->assertSee('Monitoring SLA Pencairan')

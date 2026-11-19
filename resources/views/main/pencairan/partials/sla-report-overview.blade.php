@@ -40,7 +40,7 @@
                 @php($metrics = $stageSummary[$stage])
                 <tr>
                     <th scope="row">{{ $label }}</th>
-                    <td>{{ $metrics['target_days'] }}</td>
+                    <td>{{ $metrics['targets'] ? implode(', ', array_keys($metrics['targets'])) : '—' }}</td>
                     <td>{{ $metrics['tepat_waktu'] }}</td>
                     <td>{{ $metrics['terlambat'] }}</td>
                     <td>
@@ -57,3 +57,4 @@
     </table>
 </div>
 <p class="small text-muted mt-3 mb-0">Proses aktif tidak masuk kepatuhan. Pengajuan yang di-submit ulang dapat memiliki hasil verifikasi sebelumnya sekaligus proses verifikasi yang masih berjalan.</p>
+<p class="small text-muted mb-0">Kolom target menampilkan hari kerja yang dipakai oleh data pada laporan ini. Satu tahap dapat menampilkan beberapa target jika aturan berubah.</p>

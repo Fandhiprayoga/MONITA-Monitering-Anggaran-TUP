@@ -139,7 +139,7 @@
                                 <td>{{ $pengajuan->nama_pp }} <small class="text-muted">({{ $pengajuan->kode_pp }})</small></td>
                                 <td>{{ $sla['started_at']?->format('d/m/Y') ?? '—' }}</td>
                                 <td>
-                                    {{ $sla['target_days'] }} hari kerja
+                                    {{ isset($sla['target_days']) ? $sla['target_days'].' hari kerja' : '—' }}
                                     <div class="small text-muted">{{ $sla['due_date']?->format('d/m/Y') ?? 'Tidak tersedia' }}</div>
                                 </td>
                                 <td>
@@ -242,9 +242,9 @@
                 <div class="modal-body">
                     <h6 class="fw-semibold">Batas waktu proses</h6>
                     <ul class="mb-3">
-                        <li>Verifikasi: maksimal 2 hari kerja sejak pengajuan dikirim.</li>
-                        <li>Transaksi Beban/Honor: maksimal 5 hari kerja sejak diverifikasi.</li>
-                        <li>Pencairan Imprestfund: maksimal 2 hari kerja sejak diverifikasi.</li>
+                        <li>Tenggat verifikasi dihitung sejak pengajuan dikirim pada siklus berjalan.</li>
+                        <li>Tenggat transaksi Imprestfund, Beban, dan Honor dihitung sejak pengajuan diverifikasi.</li>
+                        <li>Target tiap baris mengikuti aturan yang berlaku saat tahap dimulai, bukan target terbaru.</li>
                     </ul>
                     <h6 class="fw-semibold">Arti status</h6>
                     <ul class="list-unstyled mb-3">

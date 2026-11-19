@@ -8,12 +8,7 @@ use Carbon\CarbonImmutable;
 
 class PencairanSlaReportService
 {
-    public const STAGES = [
-        'verifikasi' => 'Verifikasi',
-        'transaksi_imprestfund' => 'Transaksi Imprestfund',
-        'transaksi_beban' => 'Transaksi Beban',
-        'transaksi_honor' => 'Transaksi Honor',
-    ];
+    public const STAGES = PencairanSlaService::STAGES;
 
     public const ACTIONS = ['submit', 'verify', 'return', 'cancel', 'complete'];
 
@@ -62,18 +57,6 @@ class PencairanSlaReportService
         ] : null;
     }
 
-    public function targetDays(string $stage): int
-    {
-        if (! array_key_exists($stage, self::STAGES)) {
-            throw new \InvalidArgumentException('Tahap report SLA tidak dikenal.');
-        }
-
-        return $this->sla->targetDays(
-            $stage === 'verifikasi' ? 'verifikasi' : 'transaksi',
-            $stage === 'verifikasi' ? '' : substr($stage, strlen('transaksi_'))
-        );
-    }
-
     private function measure(PencairanPengajuan $pengajuan, PencairanHistory $event): array
     {
         if (! in_array($event->action, ['verify', 'complete'], true)) {
@@ -105,7 +88,6 @@ class PencairanSlaReportService
         }
         $start = $event->action === 'verify' ? $pendingSubmit : $pendingVerify;
         $stage = $event->action === 'verify' ? 'verifikasi' : 'transaksi_'.$pengajuan->jenis;
-        $targetDays = $this->targetDays($stage);
         $problem = null;
         if (! $start || (string) $start->revision_no !== (string) $event->revision_no) {
             $start = null;
@@ -114,6 +96,7 @@ class PencairanSlaReportService
             $problem = 'Waktu selesai mendahului waktu mulai. Periksa riwayat pengajuan.';
         }
 
+        $targetDays = $problem === null ? $this->sla->targetDays($stage, $start->created_at) : null;
         $measurement = $problem === null
             ? $this->sla->completed($start->created_at, $event->created_at, $targetDays)
             : ['due_date' => null, 'duration_days' => null, 'overdue_days' => null, 'result' => 'data_missing'];

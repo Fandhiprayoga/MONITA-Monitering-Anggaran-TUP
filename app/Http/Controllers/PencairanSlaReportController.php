@@ -68,7 +68,7 @@ class PencairanSlaReportController extends Controller
             $summary = ['total' => 0, 'tepat_waktu' => 0, 'terlambat' => 0, 'undetermined' => 0];
             foreach (PencairanSlaReportService::STAGES as $stage => $label) {
                 $stageSummary[$stage] = [
-                    'target_days' => $report->targetDays($stage),
+                    'targets' => [],
                     'tepat_waktu' => 0, 'terlambat' => 0, 'data_missing' => 0,
                     'active' => 0, 'active_overdue' => 0,
                 ];
@@ -80,16 +80,23 @@ class PencairanSlaReportController extends Controller
                 foreach ($row['stages'] as $stage => $measurement) {
                     if ($measurement !== null) {
                         $stageSummary[$stage][$measurement['result']]++;
+                        if (isset($measurement['target_days'])) {
+                            $stageSummary[$stage]['targets'][$measurement['target_days']] = true;
+                        }
                     }
                 }
                 if ($stage = $row['active_stage']) {
                     $stageSummary[$stage]['active']++;
+                    if ($row['active']['target_days'] !== null) {
+                        $stageSummary[$stage]['targets'][$row['active']['target_days']] = true;
+                    }
                     if ($row['active']['status'] === 'terlambat') {
                         $stageSummary[$stage]['active_overdue']++;
                     }
                 }
             }
             foreach ($stageSummary as &$metrics) {
+                ksort($metrics['targets']);
                 $measured = $metrics['tepat_waktu'] + $metrics['terlambat'];
                 $metrics['compliance'] = $measured > 0 ? round($metrics['tepat_waktu'] / $measured * 100, 1) : null;
             }

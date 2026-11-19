@@ -22,7 +22,9 @@
 
 ## Report SLA per tahap
 
-- Menu admin **Report SLA** (`GET /pencairan/report-sla`, route `pencairan.sla-report`) terpisah dari Monitoring SLA. Empat tahap: Verifikasi (2 hari kerja), Transaksi Imprestfund (2), Transaksi Beban (5), dan Transaksi Honor (5).
+- Menu admin **Report SLA** (`GET /pencairan/report-sla`, route `pencairan.sla-report`) terpisah dari Monitoring SLA. Target awal: Verifikasi (2 hari kerja), Transaksi Imprestfund (2), Transaksi Beban (5), dan Transaksi Honor (5).
+- **Settings → Target SLA** (`GET/POST /settings/target-sla`, admin saja) menjadwalkan empat target sekaligus (1–365 hari kerja). Tanggal efektif unik dan paling awal besok dalam zona waktu aplikasi. Jadwal bersifat append-only dan mencatat akun pembuat; jika belum ada jadwal yang efektif, target awal tetap berlaku.
+- Monitoring SLA dan Report SLA memilih jadwal terakhir yang sudah efektif pada tanggal **mulai tahap**: submit pada siklus yang bersangkutan untuk verifikasi, verifikasi untuk transaksi. Jadwal baru tidak mengubah tenggat tahap lama atau hasil historis. Overview menampilkan semua nilai target yang digunakan dalam data terfilter, dan Detail menampilkan target per tahap.
 - **Overview** menghitung pengajuan unik: Tepat Waktu = pengajuan selesai yang memenuhi kedua SLA; Melewati SLA = minimal satu hasil tahap terlambat; sisanya Belum Dapat Disimpulkan. Tabel merinci hasil dan kepatuhan empat tahap, serta proses aktif dan yang sudah lewat tenggat.
 - Modal **Keterangan Report SLA** menjelaskan bahwa Belum Dapat Disimpulkan mencakup pengajuan yang pernah di-submit dan masih diproses, dikembalikan/dibatalkan, atau selesai dengan riwayat yang tidak dapat dihitung, selama belum ada hasil tahap yang terlambat. Lewat tenggat pada tahap aktif ditampilkan terpisah dari hasil akhir.
 - **Detail Pengajuan** menampilkan satu baris per pengajuan, termasuk yang berjalan, dikembalikan, dan dibatalkan setelah submit. Draft tanpa `first_submitted_at` tidak masuk. Tanggal transaksi berasal dari tanggal proses yang diisi petugas (`completion_date`); tanggal selesai berasal dari aktivitas `complete` di sistem. Durasi verifikasi dan transaksi ditampilkan terpisah.
@@ -30,7 +32,7 @@
 - Tanggal mulai tidak dihitung; hitungan dimulai pada hari kerja berikutnya. Hari kerja Senin-Jumat tanpa kalender libur nasional. Tenggat berlaku sampai akhir tanggalnya. Durasi hari kerja dihitung terpisah dari status keterlambatan: selesai pada akhir pekan setelah tenggat tetap melewati SLA walaupun belum menambah hari kerja terlambat.
 - Kedua tab memakai filter `first_submitted_at` (inklusif, sesuai zona waktu aplikasi), jenis transaksi, unit/PP, dan pencarian nomor/uraian yang sama. Periode memilih pengajuan, bukan membatasi tanggal tahap selesai. Tidak ada batas periode jika kedua tanggal kosong. Satu tanggal saja tetap membatasi dari sisi tersebut. Filter dipertahankan saat berganti tab atau halaman.
 - Kepatuhan per tahap = tepat waktu / (tepat waktu + melewati SLA) x 100%. Proses aktif dan hasil **Tidak dapat dihitung** (riwayat hilang, revisi berbeda, atau waktu terbalik) dikecualikan. Hasil tanpa denominator tidak ditampilkan sebagai 0%.
-- Tidak memerlukan migration atau perubahan workflow. Pengaturan hari libur, snapshot kebijakan SLA, dan ekspor laporan belum termasuk. Tautan detail/edit dari report memakai `menu=sla-report` agar sidebar dan tombol kembali tetap sesuai konteks.
+- Jalankan migration untuk membuat tabel `pencairan_sla_policies`; tidak perlu backfill atau perubahan workflow. Pengaturan hari libur dan ekspor laporan belum termasuk. Tautan detail/edit dari report memakai `menu=sla-report` agar sidebar dan tombol kembali tetap sesuai konteks.
 
 ## Source configuration — mandatory production review
 

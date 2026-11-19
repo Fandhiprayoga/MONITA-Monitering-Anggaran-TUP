@@ -3,11 +3,30 @@
 namespace App\Services;
 
 use App\Models\PencairanPengajuan;
+use App\Models\PencairanSlaPolicy;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Collection;
 
 class PencairanSlaService
 {
+    public const STAGES = [
+        'verifikasi' => 'Verifikasi',
+        'transaksi_imprestfund' => 'Transaksi Imprestfund',
+        'transaksi_beban' => 'Transaksi Beban',
+        'transaksi_honor' => 'Transaksi Honor',
+    ];
+
+    public const INITIAL_TARGETS = [
+        'verifikasi' => 2,
+        'transaksi_imprestfund' => 2,
+        'transaksi_beban' => 5,
+        'transaksi_honor' => 5,
+    ];
+
+    /** @var Collection<int, PencairanSlaPolicy>|null */
+    private ?Collection $policies = null;
+
     public function measure(PencairanPengajuan $pengajuan, ?CarbonInterface $now = null): array
     {
         $stage = match ($pengajuan->status) {
@@ -23,13 +42,11 @@ class PencairanSlaService
         if ($stage === null) {
             throw new \InvalidArgumentException('SLA hanya dapat dihitung untuk pengajuan yang sedang menunggu proses.');
         }
-        $targetDays = $this->targetDays($stage, $pengajuan->jenis);
-
         if ($startedAt === null) {
             return [
                 'stage' => $stage,
                 'started_at' => null,
-                'target_days' => $targetDays,
+                'target_days' => null,
                 'due_date' => null,
                 'status' => 'data_missing',
                 'remaining_days' => null,
@@ -37,6 +54,7 @@ class PencairanSlaService
             ];
         }
 
+        $targetDays = $this->targetDays($stage === 'verifikasi' ? $stage : 'transaksi_'.$pengajuan->jenis, $startedAt);
         $startDate = CarbonImmutable::parse($startedAt)->startOfDay();
         $dueDate = $this->addBusinessDays($startDate, $targetDays);
         $today = CarbonImmutable::instance($now ?? CarbonImmutable::now())->startOfDay();
@@ -61,17 +79,18 @@ class PencairanSlaService
         ];
     }
 
-    public function targetDays(string $stage, string $jenis): int
+    public function targetsOn(CarbonInterface $date): array
     {
-        return match ($stage) {
-            'verifikasi' => 2,
-            'transaksi' => match ($jenis) {
-                'imprestfund' => 2,
-                'beban', 'honor' => 5,
-                default => throw new \InvalidArgumentException('Jenis transaksi SLA tidak dikenal.'),
-            },
-            default => throw new \InvalidArgumentException('Tahap SLA tidak dikenal.'),
-        };
+        $day = CarbonImmutable::instance($date)->setTimezone(config('app.timezone'))->toDateString();
+        $this->policies ??= PencairanSlaPolicy::query()->orderByDesc('effective_from')->get();
+        $policy = $this->policies->first(fn (PencairanSlaPolicy $policy) => $policy->effective_from <= $day);
+
+        return $policy?->only(array_keys(self::STAGES)) ?? self::INITIAL_TARGETS;
+    }
+
+    public function targetDays(string $stage, CarbonInterface $startedAt): int
+    {
+        return $this->targetsOn($startedAt)[$stage] ?? throw new \InvalidArgumentException('Tahap SLA tidak dikenal.');
     }
 
     public function completed(CarbonInterface $start, CarbonInterface $end, int $targetDays): array

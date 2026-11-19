@@ -275,6 +275,13 @@
                             <span class="pc-mtext">Pengaturan</span>
                         </a>
                     </li>
+                    <li class="pc-item">
+                        <a class="pc-link {{ request()->routeIs('settings.sla.*') ? 'active' : '' }}"
+                            href="{{ route('settings.sla.index') }}">
+                            <span class="pc-micon"><i class="ti ti-clock"></i></span>
+                            <span class="pc-mtext">Target SLA</span>
+                        </a>
+                    </li>
 
                 @endif
 
