@@ -152,13 +152,21 @@ class PencairanFormTest extends TestCase
         $xpath = new \DOMXPath($document);
         $rows = $xpath->query('//*[@id="jenis-penghasilan-help-modal"]//tbody/tr');
         $this->assertCount(2, $rows);
-        $this->assertStringContainsString('01', $rows->item(0)->textContent);
-        $this->assertStringContainsString('Honorarium', $rows->item(0)->textContent);
-        $this->assertStringContainsString("Keterangan <khusus>\nBaris kedua", $rows->item(0)->textContent);
+        $headers = $xpath->query('//*[@id="jenis-penghasilan-help-modal"]//thead/tr/th');
+        $this->assertSame(['Kode', 'Keterangan', 'Deskripsi'], array_map(
+            static fn ($header) => trim($header->textContent),
+            iterator_to_array($headers)
+        ));
+        $firstRowCells = $xpath->query('.//td', $rows->item(0));
+        $this->assertCount(3, $firstRowCells);
+        $this->assertSame('01', trim($firstRowCells->item(0)->textContent));
+        $this->assertSame('Honorarium', trim($firstRowCells->item(1)->textContent));
+        $this->assertSame("Keterangan <khusus>\nBaris kedua", trim($firstRowCells->item(2)->textContent));
         $this->assertCount(0, $xpath->query('.//khusus', $rows->item(0)));
-        $this->assertStringContainsString('02', $rows->item(1)->textContent);
-        $this->assertStringContainsString('Jasa', $rows->item(1)->textContent);
-        $this->assertStringNotContainsString('Keterangan', $rows->item(1)->textContent);
+        $secondRowCells = $xpath->query('.//td', $rows->item(1));
+        $this->assertSame('02', trim($secondRowCells->item(0)->textContent));
+        $this->assertSame('Jasa', trim($secondRowCells->item(1)->textContent));
+        $this->assertSame('', trim($secondRowCells->item(2)->textContent));
     }
 
     public function test_imprestfund_explains_manual_subtotal_and_clipboard_order(): void

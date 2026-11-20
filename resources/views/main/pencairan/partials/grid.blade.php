@@ -55,7 +55,7 @@
     @isset($jenisPenghasilanOptions)
         <div class="modal fade" id="jenis-penghasilan-help-modal" tabindex="-1"
             aria-labelledby="jenis-penghasilan-help-title" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="jenis-penghasilan-help-title">Keterangan Kode Jenis Penghasilan</h5>
@@ -66,18 +66,18 @@
                             <div class="table-responsive">
                                 <table class="table table-sm table-bordered mb-0">
                                     <thead>
-                                        <tr><th scope="col">Kode</th><th scope="col">Keterangan</th></tr>
+                                        <tr>
+                                            <th scope="col">Kode</th>
+                                            <th scope="col">Keterangan</th>
+                                            <th scope="col">Deskripsi</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
                                         @foreach ($jenisPenghasilanOptions as $option)
                                             <tr>
                                                 <td>{{ $option['value'] }}</td>
-                                                <td>
-                                                    <div>{{ $option['description'] }}</div>
-                                                    @if ($option['deskripsi'] !== null && $option['deskripsi'] !== '')
-                                                        <div class="text-muted" style="white-space: pre-line">{{ $option['deskripsi'] }}</div>
-                                                    @endif
-                                                </td>
+                                                <td>{{ $option['description'] }}</td>
+                                                <td class="text-muted" style="white-space: pre-line">{{ $option['deskripsi'] ?? '' }}</td>
                                             </tr>
                                         @endforeach
                                     </tbody>
