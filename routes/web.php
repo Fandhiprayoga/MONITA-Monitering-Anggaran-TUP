@@ -71,6 +71,7 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
         Route::get('/verifikasi', [PencairanController::class, 'verifikasi'])->name('verifikasi');
         Route::get('/monitoring-sla', [PencairanController::class, 'monitoringSla'])->name('sla');
         Route::get('/report-sla', [PencairanSlaReportController::class, 'index'])->name('sla-report');
+        Route::get('/report-sla/export', [PencairanSlaReportController::class, 'export'])->name('sla-report.export');
         Route::get('/history', [PencairanController::class, 'history'])->name('history');
 
         Route::get('/transaksi/{jenis}', [PencairanController::class, 'transaksi'])

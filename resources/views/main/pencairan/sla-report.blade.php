@@ -117,6 +117,7 @@
                         <li>Verifikasi dihitung dari submit sampai verifikasi pada siklus yang sama. Transaksi dihitung dari verifikasi sampai selesai di sistem. Target mengikuti aturan yang berlaku saat masing-masing tahap dimulai.</li>
                         <li>Hari mulai tidak dihitung. Hari kerja Senin–Jumat, belum termasuk kalender libur nasional. Tenggat berlaku sampai akhir tanggalnya.</li>
                         <li>Untuk kebutuhan pelaporan, durasi tahap 0 hari kerja yang tepat waktu ditampilkan sebagai 1 hari kerja. Penyesuaian ini hanya untuk tampilan dan tidak mengubah perhitungan maupun hasil SLA.</li>
+                        <li>Export CSV pada tab Detail memuat seluruh pengajuan sesuai filter aktif, termasuk yang berada di halaman lain. Kolom durasi mengikuti angka yang ditampilkan di Detail.</li>
                         <li>Tanggal transaksi diisi petugas dan bisa berbeda dari tanggal selesai di sistem. Perhitungan SLA memakai tanggal selesai di sistem.</li>
                         <li>Satu pengajuan dihitung maksimal sekali per tahap, dari siklus terakhir yang menyelesaikan tahap itu. Jika submit ulang masih menunggu verifikasi, hasil sebelumnya tetap tampil dan proses baru dicatat sebagai aktif.</li>
                         <li>Kartu Tepat Waktu menghitung pengajuan selesai yang memenuhi kedua SLA. Kartu Melewati SLA menghitung pengajuan dengan minimal satu hasil tahap terlambat, meskipun pengajuan belum selesai.</li>

@@ -265,11 +265,123 @@ class PencairanSlaReportTest extends TestCase
         $this->withSession(['user_role' => 'user', 'user_data' => ['username' => 'user', 'role' => 'user', 'kode_pp' => 'SIF']]);
         $this->get(route('pencairan.sla-report'))->assertForbidden();
         $this->get(route('pencairan.sla-report', ['tab' => 'detail']))->assertForbidden();
+        $this->get(route('pencairan.sla-report.export'))->assertForbidden();
         $this->get(route('pencairan.pengajuan'))->assertOk()->assertDontSee(route('pencairan.sla-report'));
         $this->get(route('pencairan.show', ['pengajuan' => $p, 'menu' => 'sla-report']))
             ->assertOk()->assertViewHas('activeMenu', 'pengajuan');
         $this->flushSession();
         $this->get(route('pencairan.sla-report'))->assertRedirect(route('login'));
+        $this->get(route('pencairan.sla-report.export'))->assertRedirect(route('login'));
+    }
+
+    private function csvRows(string $csv): array
+    {
+        $this->assertStringStartsWith("\xEF\xBB\xBF", $csv);
+        $stream = fopen('php://temp', 'w+b');
+        fwrite($stream, substr($csv, 3));
+        rewind($stream);
+        $header = fgetcsv($stream, 0, ',', '"', '');
+        $rows = [];
+        while (($fields = fgetcsv($stream, 0, ',', '"', '')) !== false) {
+            $rows[] = array_combine($header, $fields);
+        }
+        fclose($stream);
+
+        return $rows;
+    }
+
+    public function test_csv_export_uses_all_active_filters_and_ignores_pagination(): void
+    {
+        for ($i = 0; $i < 12; $i++) {
+            $this->pengajuan(status: 'submitted');
+        }
+        $this->pengajuan('honor', 'submitted');
+        $this->pengajuan(status: 'submitted', unit: 'OTHER');
+        $this->pengajuan(status: 'submitted', attributes: ['nomor_pengajuan' => 'EXCLUDED', 'uraian_pengajuan' => 'Other']);
+        $this->pengajuan(status: 'submitted', submitted: '2026-10-23 23:59:59');
+        $this->pengajuan(status: 'submitted', submitted: '2026-11-25 00:00:00');
+        $filters = [
+            'start_date' => '2026-10-24', 'end_date' => '2026-11-24',
+            'jenis' => 'beban', 'pp' => 'sif', 'q' => 'REPORT-',
+        ];
+        $detail = $this->get(route('pencairan.sla-report', ['tab' => 'detail', 'per_page' => 10, 'page' => 2] + $filters))
+            ->assertOk()->assertSee(route('pencairan.sla-report.export', $filters));
+        $this->assertSame(12, $detail->viewData('items')->total());
+        $this->get(route('pencairan.sla-report'))->assertOk()->assertDontSee(route('pencairan.sla-report.export'));
+
+        $response = $this->get(route('pencairan.sla-report.export', $filters + ['per_page' => 10, 'page' => 2]))->assertOk();
+        $this->assertStringContainsString('text/csv', $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('report-sla-detail.csv', $response->headers->get('Content-Disposition'));
+        $rows = $this->csvRows($response->streamedContent());
+        $this->assertCount(12, $rows);
+        $this->assertSame('REPORT-12', $rows[0]['Nomor Pengajuan']);
+        $this->assertSame('REPORT-1', $rows[11]['Nomor Pengajuan']);
+        $this->assertSame('Masih berjalan — lewat tenggat', $rows[0]['Proses Verifikasi Aktif']);
+        $this->assertSame('2', $rows[0]['Target Verifikasi Aktif (hari kerja)']);
+        $this->assertSame('', $rows[0]['Durasi Verifikasi (hari kerja)']);
+
+        $this->get(route('pencairan.sla-report.export', ['start_date' => '2026-11-24', 'end_date' => '2026-11-23']))
+            ->assertSessionHasErrors('end_date');
+        $this->assertSame([], $this->csvRows($this->get(route('pencairan.sla-report.export', ['q' => 'NOT-FOUND']))
+            ->assertOk()->streamedContent()));
+    }
+
+    public function test_csv_export_matches_report_durations_and_preserves_safe_text(): void
+    {
+        $p = $this->pengajuan('imprestfund', submitted: '2026-11-13 08:00:00', attributes: [
+            'nomor_pengajuan' => '=1+1',
+            'uraian_pengajuan' => "  +formula, \"kutipan\"\nbaris kedua",
+            'nama_pp' => '@Unit',
+        ]);
+        $this->event($p, 'submit', '2026-11-13 08:00:00');
+        $this->event($p, 'verify', '2026-11-13 09:00:00');
+        $this->event($p, 'complete', '2026-11-15 10:00:00');
+        $p->completion()->create(['completion_date' => '2026-11-14', 'actor_id' => $this->admin->id]);
+        $missing = $this->pengajuan(status: 'completed');
+        $this->event($missing, 'complete', '2026-11-16 10:00:00');
+
+        $rows = $this->csvRows($this->get(route('pencairan.sla-report.export'))->assertOk()->streamedContent());
+        $this->assertCount(2, $rows);
+        $row = $rows[0];
+        $this->assertSame("'=1+1", $row['Nomor Pengajuan']);
+        $this->assertSame("'  +formula, \"kutipan\"\nbaris kedua", $row['Uraian Pengajuan']);
+        $this->assertSame("'@Unit", $row['Nama Unit']);
+        $this->assertSame('13/11/2026', $row['Tgl Pengajuan']);
+        $this->assertSame('13/11/2026', $row['Tgl Verifikasi']);
+        $this->assertSame('14/11/2026', $row['Tgl Transaksi']);
+        $this->assertSame('15/11/2026', $row['Tgl Selesai']);
+        foreach (['Verifikasi', 'Transaksi'] as $stage) {
+            $this->assertSame('1', $row["Durasi $stage (hari kerja)"]);
+            $this->assertSame('Tepat waktu', $row["Hasil $stage"]);
+            $this->assertSame('2', $row["Target $stage (hari kerja)"]);
+        }
+        $this->assertSame('Tidak dapat dihitung', $rows[1]['Hasil Transaksi']);
+        $this->assertSame('', $rows[1]['Durasi Transaksi (hari kerja)']);
+        $this->assertSame('Riwayat awal pada siklus yang sama tidak tersedia.', $rows[1]['Keterangan Transaksi']);
+    }
+
+    public function test_csv_export_preserves_order_across_chunks_and_includes_active_and_previous_results(): void
+    {
+        for ($i = 0; $i < 205; $i++) {
+            $this->pengajuan(status: 'submitted');
+        }
+        $p = $this->pengajuan('imprestfund', 'submitted', '2026-11-02 08:00:00', attributes: [
+            'last_submitted_at' => '2026-11-20 08:00:00',
+        ]);
+        $this->event($p, 'submit', '2026-11-02 08:00:00');
+        $this->event($p, 'verify', '2026-11-06 09:00:00');
+        $this->event($p, 'return', '2026-11-06 10:00:00');
+        $this->event($p, 'submit', '2026-11-20 08:00:00', 2);
+
+        $rows = $this->csvRows($this->get(route('pencairan.sla-report.export'))->assertOk()->streamedContent());
+        $this->assertCount(206, $rows);
+        $this->assertSame('REPORT-205', $rows[0]['Nomor Pengajuan']);
+        $this->assertSame('REPORT-1', $rows[204]['Nomor Pengajuan']);
+        $this->assertSame('REPORT-206', $rows[205]['Nomor Pengajuan']);
+        $this->assertSame('4', $rows[205]['Durasi Verifikasi (hari kerja)']);
+        $this->assertSame('Melewati SLA', $rows[205]['Hasil Verifikasi']);
+        $this->assertSame('Masih berjalan', $rows[205]['Proses Verifikasi Aktif']);
+        $this->assertSame('2', $rows[205]['Target Verifikasi Aktif (hari kerja)']);
     }
 
     public function test_weekend_finish_after_deadline_is_late_without_inventing_a_business_day(): void

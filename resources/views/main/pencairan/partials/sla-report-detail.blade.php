@@ -10,7 +10,12 @@
             @endforeach
         </select>
     </form>
-    <small class="text-muted">{{ $items->total() }} pengajuan</small>
+    <div class="d-flex align-items-center gap-3">
+        <small class="text-muted">{{ $items->total() }} pengajuan</small>
+        <a class="btn btn-outline-primary btn-sm" href="{{ route('pencairan.sla-report.export', \Illuminate\Support\Arr::except($filterQuery, ['tab', 'per_page', 'page'])) }}">
+            <i class="ti ti-download me-1" aria-hidden="true"></i>Export CSV
+        </a>
+    </div>
 </div>
 <div class="table-responsive">
     <table class="table table-bordered align-middle mb-0" aria-label="Detail Pengajuan Report SLA">

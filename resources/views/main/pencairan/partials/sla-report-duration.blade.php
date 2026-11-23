@@ -1,18 +1,14 @@
 @php
-    $resultBadges = [
-        'tepat_waktu' => ['Tepat waktu', 'text-bg-success'],
-        'terlambat' => ['Melewati SLA', 'text-bg-danger'],
-        'data_missing' => ['Tidak dapat dihitung', 'text-bg-secondary'],
+    $resultClasses = [
+        'tepat_waktu' => 'text-bg-success',
+        'terlambat' => 'text-bg-danger',
+        'data_missing' => 'text-bg-secondary',
     ];
-    $duration = $measurement['duration_days'] ?? null;
-    if ($duration === 0 && $measurement['result'] === 'tepat_waktu') {
-        $duration = 1;
-    }
+    $duration = \App\Services\PencairanSlaReportPresentation::duration($measurement);
 @endphp
 <div class="text-nowrap">{{ $duration !== null ? $duration.' hari kerja' : '—' }}</div>
 @if ($measurement)
-    @php([$label, $class] = $resultBadges[$measurement['result']])
-    <span class="badge text-wrap {{ $class }}">{{ $label }}</span>
+    <span class="badge text-wrap {{ $resultClasses[$measurement['result']] }}">{{ \App\Services\PencairanSlaReportPresentation::resultLabel($measurement['result']) }}</span>
     @if (isset($measurement['target_days']))
         <small class="d-block text-muted text-nowrap">Target: {{ $measurement['target_days'] }} hari kerja</small>
     @endif
@@ -22,11 +18,7 @@
 @endif
 @if ($active)
     <small class="d-block {{ $active['status'] === 'terlambat' ? 'text-danger' : 'text-muted' }}">
-        @switch($active['status'])
-            @case('terlambat') Masih berjalan — lewat tenggat @break
-            @case('data_missing') Masih berjalan — waktu mulai tidak tersedia @break
-            @default Masih berjalan
-        @endswitch
+        {{ \App\Services\PencairanSlaReportPresentation::activeLabel($active['status']) }}
     </small>
     @if (isset($active['target_days']))
         <small class="d-block text-muted text-nowrap">Target aktif: {{ $active['target_days'] }} hari kerja</small>
