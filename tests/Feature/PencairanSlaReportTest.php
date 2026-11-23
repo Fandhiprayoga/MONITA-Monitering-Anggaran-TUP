@@ -287,6 +287,51 @@ class PencairanSlaReportTest extends TestCase
         $this->assertSame(0, $row['stages']['verifikasi']['duration_days']);
     }
 
+    public function test_detail_displays_zero_day_on_time_stages_as_one_without_changing_sla_results(): void
+    {
+        $p = $this->pengajuan('imprestfund', submitted: '2026-11-13 08:00:00');
+        $this->event($p, 'submit', '2026-11-13 08:00:00');
+        $this->event($p, 'verify', '2026-11-13 09:00:00');
+        $this->event($p, 'complete', '2026-11-15 10:00:00');
+
+        $response = $this->get(route('pencairan.sla-report', ['tab' => 'detail']))->assertOk()
+            ->assertSee('durasi tahap 0 hari kerja yang tepat waktu ditampilkan sebagai 1 hari kerja')
+            ->assertDontSee('<div class="text-nowrap">0 hari kerja</div>', false);
+        $this->assertSame(2, substr_count($response->getContent(), '<div class="text-nowrap">1 hari kerja</div>'));
+        $row = $response->viewData('items')->getCollection()->sole();
+        foreach (['verifikasi', 'transaksi_imprestfund'] as $stage) {
+            $this->assertSame(0, $row['stages'][$stage]['duration_days']);
+            $this->assertSame('tepat_waktu', $row['stages'][$stage]['result']);
+        }
+        $this->assertSame('2026-11-17', $row['stages']['verifikasi']['due_date']->toDateString());
+        $this->assertSame('2026-11-17', $row['stages']['transaksi_imprestfund']['due_date']->toDateString());
+        $overview = $this->get(route('pencairan.sla-report'))->assertOk();
+        $this->assertSame(['total' => 1, 'tepat_waktu' => 1, 'terlambat' => 0, 'undetermined' => 0], $overview->viewData('summary'));
+        $this->assertSame(100.0, $overview->viewData('stageSummary')['verifikasi']['compliance']);
+        $this->assertSame(100.0, $overview->viewData('stageSummary')['transaksi_imprestfund']['compliance']);
+    }
+
+    public function test_duration_display_only_adjusts_zero_day_on_time_results(): void
+    {
+        $view = 'main.pencairan.partials.sla-report-duration';
+        foreach ([1, 2] as $days) {
+            $this->view($view, [
+                'measurement' => ['duration_days' => $days, 'result' => 'tepat_waktu', 'problem' => null],
+                'active' => null,
+            ])->assertSee($days.' hari kerja');
+        }
+        $this->view($view, [
+            'measurement' => ['duration_days' => 0, 'result' => 'terlambat', 'problem' => null],
+            'active' => null,
+        ])->assertSee('0 hari kerja')->assertSee('Melewati SLA');
+        $this->view($view, [
+            'measurement' => ['duration_days' => null, 'result' => 'data_missing', 'problem' => 'Riwayat tidak tersedia.'],
+            'active' => null,
+        ])->assertSee('—')->assertDontSee('1 hari kerja');
+        $this->view($view, ['measurement' => null, 'active' => null])
+            ->assertSee('—')->assertDontSee('1 hari kerja');
+    }
+
     public function test_scheduled_targets_follow_stage_start_for_both_sla_pages(): void
     {
         $this->travelTo(CarbonImmutable::parse('2026-11-15 12:00:00', config('app.timezone')));

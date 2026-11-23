@@ -4,8 +4,12 @@
         'terlambat' => ['Melewati SLA', 'text-bg-danger'],
         'data_missing' => ['Tidak dapat dihitung', 'text-bg-secondary'],
     ];
+    $duration = $measurement['duration_days'] ?? null;
+    if ($duration === 0 && $measurement['result'] === 'tepat_waktu') {
+        $duration = 1;
+    }
 @endphp
-<div class="text-nowrap">{{ isset($measurement['duration_days']) ? $measurement['duration_days'].' hari kerja' : '—' }}</div>
+<div class="text-nowrap">{{ $duration !== null ? $duration.' hari kerja' : '—' }}</div>
 @if ($measurement)
     @php([$label, $class] = $resultBadges[$measurement['result']])
     <span class="badge text-wrap {{ $class }}">{{ $label }}</span>
