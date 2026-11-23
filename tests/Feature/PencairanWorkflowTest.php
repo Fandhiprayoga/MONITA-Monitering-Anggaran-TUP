@@ -103,6 +103,56 @@ class PencairanWorkflowTest extends TestCase
     public static function kinds(): array { return [['imprestfund'], ['beban'], ['honor']]; }
     public static function readonlySimkugKinds(): array { return [['beban'], ['honor']]; }
 
+    #[DataProvider('kinds')]
+    public function test_closed_submissions_block_user_changes_but_allow_admin_and_resume_when_open(string $jenis): void
+    {
+        $draft = $this->draft($jenis);
+        $returned = $this->draft($jenis);
+        $returned->update(['status' => 'returned']);
+        $submitted = $this->submitted($jenis);
+        $this->login('admin', '', 'admin');
+        $this->post(route('settings.pencairan.update'), ['status' => 'closed'])->assertRedirect();
+        $this->login();
+        foreach ([$draft, $returned] as $item) {
+            $this->get(route('pencairan.show', $item))->assertOk()->assertSee('Pengajuan pencairan anggaran sedang ditutup')
+                ->assertDontSee('Edit / Submit');
+            $this->get(route('pencairan.edit', $item))->assertForbidden();
+            $this->patchJson('/_workflow/'.$item->uuid, ['lock_version' => 0])->assertForbidden();
+            $this->action($item, 'submit')->assertForbidden();
+            $this->assertSame(0, $item->fresh()->lock_version);
+        }
+        $this->postJson('/_workflow', ['jenis' => $jenis])->assertForbidden();
+        $this->login('admin', '', 'admin');
+        $adminDraft = $this->postJson('/_workflow', ['jenis' => $jenis, 'unit_kode_pp' => 'PP01',
+            'drk_id' => str_repeat('a', 64), 'uraian_pengajuan' => 'Admin', 'details' => [$this->row($jenis)]])
+            ->assertCreated();
+        $adminItem = PencairanPengajuan::where('uuid', $adminDraft->json('uuid'))->firstOrFail();
+        $this->patchJson('/_workflow/'.$adminItem->uuid, ['lock_version' => 0, 'jenis' => $jenis,
+            'drk_id' => str_repeat('a', 64), 'uraian_pengajuan' => 'Admin diperbarui', 'details' => [$this->row($jenis)]])->assertOk();
+        $this->action($adminItem, 'submit')->assertOk();
+        $this->action($submitted, 'verify')->assertOk();
+        $this->post(route('settings.pencairan.update'), ['status' => 'open'])->assertRedirect();
+        $this->login();
+        $this->get(route('pencairan.edit', $draft))->assertOk();
+        $this->action($draft, 'submit')->assertOk();
+    }
+
+    public function test_closure_during_submit_is_rechecked_before_transaction_writes(): void
+    {
+        $draft = $this->draft();
+        $options = $this->options;
+        $this->mock(GoogleSheetService::class, function ($mock) use ($options) {
+            $mock->shouldReceive('getPencairanDrkOptions')->once()->andReturnUsing(function () use ($options) {
+                DB::table('pencairan_submission_settings')->where('id', 1)->update(['is_open' => false]);
+                return $options;
+            });
+        });
+        $this->action($draft, 'submit')->assertForbidden();
+        $this->assertSame('draft', $draft->fresh()->status);
+        $this->assertSame(0, $draft->fresh()->lock_version);
+        $this->assertDatabaseCount('pengajuan_revisions', 0);
+    }
+
     public function test_detail_displays_effective_subtotal_without_changing_automatic_edit_values(): void
     {
         $p = $this->draft('imprestfund', [

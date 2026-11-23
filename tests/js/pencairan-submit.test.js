@@ -33,6 +33,7 @@ test('save and submit retain the originating menu in edit and detail URLs', asyn
                     json: async () => ({ uuid: 'submission', lock_version: 2, redirect_url: '/pencairan/pengajuan/submission' }),
                 };
             });
+
             for (const [name, value] of Object.entries({
                 document: { getElementById: () => message },
                 window: {
@@ -65,4 +66,45 @@ test('save and submit retain the originating menu in edit and detail URLs', asyn
             assert.equal(message.className, 'alert alert-info');
         });
     }
+});
+
+test('a closure error keeps unsaved form input and displays the server message', async (t) => {
+    const events = {};
+    const message = {};
+    const input = { value: 'Isian yang belum tersimpan' };
+    const button = { addEventListener: (_, handler) => { events.save = handler; } };
+    const fields = {
+        '#pilih-drk': { disabled: false, value: 'drk' },
+        '#uraian-pengajuan': input,
+        '[name="_token"]': { value: 'csrf' },
+        '[data-grid-body]': { addEventListener() {} },
+        '[data-save-draft]': button,
+    };
+    const form = {
+        elements: { namedItem: () => null },
+        dataset: { jenis: 'beban' },
+        querySelector: (selector) => fields[selector],
+        querySelectorAll: (selector) => selector === 'button' ? [button] : [],
+        addEventListener: (event, handler) => { events[event] = handler; },
+    };
+    const closureMessage = 'Pengajuan pencairan anggaran sedang ditutup. Silakan hubungi admin untuk informasi lebih lanjut.';
+    t.mock.method(globalThis, 'fetch', async () => ({ ok: false, json: async () => ({ message: closureMessage }) }));
+    for (const [name, value] of Object.entries({
+        document: { getElementById: () => message },
+        window: { addEventListener() {}, location: { href: 'http://localhost/form' } },
+    })) {
+        const descriptor = Object.getOwnPropertyDescriptor(globalThis, name);
+        Object.defineProperty(globalThis, name, { configurable: true, value });
+        t.after(() => {
+            if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+            else delete globalThis[name];
+        });
+    }
+    mountSubmission(form, { rows: () => [{ nominal: '100' }] }, null, '/pencairan/pengajuan');
+    events.input();
+    await events.save();
+    assert.equal(message.className, 'alert alert-danger');
+    assert.equal(message.textContent, closureMessage);
+    assert.equal(input.value, 'Isian yang belum tersimpan');
+    assert.equal(button.disabled, false);
 });

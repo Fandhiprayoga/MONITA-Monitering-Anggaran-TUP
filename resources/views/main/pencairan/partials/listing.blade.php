@@ -50,7 +50,7 @@
                     @if($advancedCount)<span class="badge text-bg-primary ms-1">{{ $advancedCount }}</span>@endif
                 </button>
                 @if ($mode === 'pengajuan' && (session('user_data.role', session('user_role')) === 'admin' || trim((string) session('user_data.kode_pp', '')) !== ''))
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPilihForm">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPilihForm" @disabled(!$submissionOpen && !$submissionAdmin)>
                     <i class="ti ti-plus me-1"></i> Tambah Pengajuan
                 </button>
                 @endif
@@ -58,6 +58,16 @@
         </div>
         <div class="card-body">
             @include('main.pencairan.partials.feedback')
+            @if ($mode === 'pengajuan' && !$submissionOpen)
+                <div class="alert alert-warning" role="status">
+                    <strong>Pengajuan sedang ditutup.</strong>
+                    @if ($submissionAdmin)
+                        Pengguna biasa tidak dapat mengajukan. Admin tetap dapat membuat dan mengirim pengajuan.
+                    @else
+                        {{ \App\Services\PencairanSubmissionSettings::CLOSED_MESSAGE }}
+                    @endif
+                </div>
+            @endif
             @if($activeFilters)
             <div class="d-flex flex-wrap align-items-center gap-2 mb-3" aria-label="Filter aktif">
                 <small class="text-muted">Filter aktif:</small>

@@ -13,6 +13,7 @@ use App\Http\Controllers\PengajuanController;
 use App\Http\Controllers\PencairanController;
 use App\Http\Controllers\PencairanSlaReportController;
 use App\Http\Controllers\PencairanSlaSettingsController;
+use App\Http\Controllers\PencairanSubmissionSettingsController;
 use App\Http\Controllers\PencairanWorkflowController;
 use App\Http\Controllers\JenisPenghasilanController;
 use App\Http\Controllers\BankController;
@@ -113,6 +114,8 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
     Route::post('/settings/update', [SettingsController::class, 'update'])->name('settings.update');
     Route::get('/settings/target-sla', [PencairanSlaSettingsController::class, 'index'])->name('settings.sla.index');
     Route::post('/settings/target-sla', [PencairanSlaSettingsController::class, 'store'])->name('settings.sla.store');
+    Route::get('/settings/pengajuan-pencairan', [PencairanSubmissionSettingsController::class, 'index'])->name('settings.pencairan.index');
+    Route::post('/settings/pengajuan-pencairan', [PencairanSubmissionSettingsController::class, 'update'])->name('settings.pencairan.update');
 
     Route::prefix('export')->group(function () {
     Route::get('/laporan-triwulan/{tw}', [ExportController::class, 'laporanTriwulan'])->name('export.laporan-triwulan');

@@ -367,6 +367,7 @@ class PencairanService
     public function store(Request $request): array
     {
         $actor = $this->actor($request);
+        app(PencairanSubmissionSettings::class)->requireAllowed($actor);
         abort_unless($actor['role'] === 'admin' || $actor['kode_pp'] !== '', 403, 'PP akun belum tersedia untuk membuat pengajuan.');
         $data = $this->validatePayload($request, 'store');
         $unit = $this->submissionUnit($actor, $data['unit_kode_pp'] ?? null);
@@ -376,6 +377,7 @@ class PencairanService
             'uraian_pengajuan' => $data['uraian_pengajuan'] ?? null, 'lock_version' => 0, 'revision_no' => 0] + $totals);
         $p->header_snapshot = $this->drk($p, false);
         return DB::transaction(function () use ($p, $records, $actor) {
+            app(PencairanSubmissionSettings::class)->requireAllowed($actor, true);
             // A retry must insert a fresh model, not reuse an instance marked persisted before rollback.
             $draft = clone $p;
             $local = $this->localActor($actor);
@@ -424,6 +426,9 @@ class PencairanService
     private function act(Request $request, PencairanPengajuan $p, string $operation): array
     {
         $actor = $this->authorize($request, $p);
+        if (in_array($operation, ['update', 'submit'], true)) {
+            app(PencairanSubmissionSettings::class)->requireAllowed($actor);
+        }
         $data = $this->validatePayload($request, $operation);
         $hash = in_array($operation, ['submit', 'complete'], true) ? $this->payloadHash($request, $operation) : null;
         if ($response = $this->retryResponse($p, $actor, $operation, $data, $hash)) { return $response; }
@@ -461,6 +466,9 @@ class PencairanService
         $uploads = [];
         try {
             return DB::transaction(function () use ($request, $p, $operation, $actor, $data, $hash, $records, $totals, $drk, &$uploads) {
+                if (in_array($operation, ['update', 'submit'], true)) {
+                    app(PencairanSubmissionSettings::class)->requireAllowed($actor, true);
+                }
                 // Compensate storage from a rolled-back deadlock attempt before retrying.
                 foreach ($uploads as [$disk, $path]) { Storage::disk($disk)->delete($path); }
                 $uploads = [];

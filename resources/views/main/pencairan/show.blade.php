@@ -40,6 +40,9 @@
 <div class="card"><div class="card-header d-flex justify-content-between"><h5>{{ $pengajuan->nomor_pengajuan ?? 'Draft #'.$pengajuan->id }} — {{ $pengajuan->jenisLabel() }}</h5><span class="badge {{ $pengajuan->statusBadgeClass() }}">{{ $pengajuan->statusLabel() }}</span></div>
 <div class="card-body">
     @include('main.pencairan.partials.feedback')
+    @if (!$submissionAllowed && in_array($pengajuan->status, ['draft', 'returned']))
+        <div class="alert alert-warning" role="status">{{ \App\Services\PencairanSubmissionSettings::CLOSED_MESSAGE }}</div>
+    @endif
     <ul class="nav nav-tabs mb-3" id="pengajuan-tabs-{{ $pengajuan->id }}" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link {{ $simkugActive ? '' : 'active' }}" id="pengajuan-detail-tab-{{ $pengajuan->id }}" data-bs-toggle="tab" data-bs-target="#pengajuan-detail-{{ $pengajuan->id }}" type="button" role="tab" aria-controls="pengajuan-detail-{{ $pengajuan->id }}" aria-selected="{{ $simkugActive ? 'false' : 'true' }}">Detail</button>
@@ -138,7 +141,7 @@
     </div>
     <div class="d-flex flex-wrap align-items-center gap-2 mt-3" data-workflow-actions>
         <a href="{{ $backUrl }}" class="btn btn-outline-secondary">Kembali ke Daftar</a>
-        @if($ownPp && in_array($pengajuan->status,['draft','returned']))
+        @if($submissionAllowed && $ownPp && in_array($pengajuan->status,['draft','returned']))
             <a href="{{ route('pencairan.edit', ['pengajuan' => $pengajuan, 'menu' => $activeMenu]) }}" class="btn btn-primary">Edit / Submit</a>
         @endif
         @if($actor['role'] === 'admin' && in_array($pengajuan->status, ['submitted', 'verified', 'completed'], true))

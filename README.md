@@ -32,6 +32,21 @@ Tujuan utama sistem MONITA adalah mencapai efisiensi, akurasi, dan transparansi 
 - **Keamanan Login**: Implementasi CAPTCHA untuk mencegah akses tidak sah
 - **Pengaturan Tahun Anggaran**: Mengelola koneksi ke Google Sheets ID untuk tahun anggaran yang berbeda-beda
 
+### Pengaturan pengajuan pencairan (admin)
+
+Menu **Settings > Pengaturan Pengajuan** memungkinkan admin membuka atau menutup
+pengajuan untuk semua formulir Imprestfund, Beban, dan Honor. Status awal adalah
+buka. Saat ditutup, pengguna biasa tidak dapat membuat, mengedit, menyimpan,
+atau mengirim draft maupun pengajuan yang dikembalikan; daftar dan detail tetap
+tersedia. Pembatalan draft tetap tersedia. Admin tetap dapat mengajukan dan
+memproses pengajuan yang sudah masuk.
+
+Setiap perubahan status dicatat dengan status sebelumnya, status baru, waktu
+Asia/Jakarta, dan username admin. Permintaan dengan status yang sama tidak
+menambah riwayat. Jika pengajuan ditutup saat formulir terbuka, penyimpanan atau
+pengiriman ditolak dengan pesan dan isian yang belum tersimpan tetap di halaman.
+Jalankan `php artisan migrate` saat menerapkan fitur ini.
+
 ### History pencairan (admin)
 
 Menu **Pencairan Anggaran > History** (`/pencairan/history`) hanya dapat diakses
@@ -71,8 +86,8 @@ tautan dengan ejaan lama tidak dialihkan. Setelah pembaruan, muat ulang halaman
 formulir yang sudah terbuka agar memakai kode frontend terbaru.
 
 Form Imprestfund, Beban, dan Honor menggunakan header bersama dan rincian sesuai jenis.
-Halaman ini belum menyimpan data ke backend; perubahan hilang saat halaman dimuat
-ulang. Pilih DRK menampilkan hanya data unit (Kode PP) akun yang login untuk
+Perubahan perlu disimpan sebagai draft atau dikirim sebelum halaman ditinggalkan.
+Pilih DRK menampilkan hanya data unit (Kode PP) akun yang login untuk
 triwulan kalender berjalan, dari `RAW Data TW I/II/III/IV!B2:N3000`.
 DRK TUP yang sama dengan akun berbeda tetap menjadi opsi terpisah.
 Kolom Cari DRK memfilter pilihan berdasarkan kode DRK, kode/nama akun, uraian,
@@ -89,8 +104,8 @@ Saldo Awal memakai Anggaran, Anggaran Terpakai memakai Realisasi, dan Saldo Terk
 memakai Saldo dari sheet. Uraian DRK tetap memakai kolom G.
 Kegagalan memuat data ditampilkan sebagai
 pesan error; unit tanpa DRK mendapatkan pemberitahuan, bukan saldo nol buatan.
-Tombol Simpan sebagai Draft dan Submit Pengajuan ditampilkan pada semua form,
-tetapi masih dinonaktifkan sampai penyimpanan backend tersedia.
+Tombol Simpan sebagai Draft dan Submit Pengajuan tersedia pada semua form selama
+pengajuan dibuka, dan tetap tersedia untuk admin saat pengajuan ditutup.
 
 - Imprestfund: subtotal otomatis = volume x tarif, ditampilkan sebagai petunjuk
   pada sel Subtotal kosong. Input/paste Subtotal mengganti nilai otomatis;

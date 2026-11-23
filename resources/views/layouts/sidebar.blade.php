@@ -276,6 +276,13 @@
                         </a>
                     </li>
                     <li class="pc-item">
+                        <a class="pc-link {{ request()->routeIs('settings.pencairan.*') ? 'active' : '' }}"
+                            href="{{ route('settings.pencairan.index') }}">
+                            <span class="pc-micon"><i class="ti ti-lock"></i></span>
+                            <span class="pc-mtext">Pengaturan Pengajuan</span>
+                        </a>
+                    </li>
+                    <li class="pc-item">
                         <a class="pc-link {{ request()->routeIs('settings.sla.*') ? 'active' : '' }}"
                             href="{{ route('settings.sla.index') }}">
                             <span class="pc-micon"><i class="ti ti-clock"></i></span>

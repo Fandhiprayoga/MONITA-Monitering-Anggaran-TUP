@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Session;
 use App\Services\GoogleSheetService;
 use App\Services\PencairanService;
+use App\Services\PencairanSubmissionSettings;
 use App\Services\PencairanSlaService;
 use App\Models\Bank;
 use App\Models\JenisPenghasilan;
@@ -21,8 +22,12 @@ class PencairanController extends Controller
         return $this->listing($request, 'Pengajuan Pencairan Anggaran', 'pengajuan');
     }
 
-    public function form(string $jenis)
+    public function form(Request $request, string $jenis)
     {
+        $actor = ['role' => $request->session()->get('user_data.role', $request->session()->get('user_role'))];
+        if (!app(PencairanSubmissionSettings::class)->allowed($actor)) {
+            return response()->view('main.pencairan.submission-closed', [], 403);
+        }
         $kodePp = trim((string) Session::get('user_data.kode_pp', ''));
         $canChooseUnit = Session::get('user_data.role', Session::get('user_role')) === 'admin';
         abort_if(!$canChooseUnit && $kodePp === '', 403, 'Unit akun belum tersedia. Silakan login kembali.');
@@ -243,6 +248,8 @@ class PencairanController extends Controller
             : $query->paginate((int) $perPage);
 
         return view($view, ['items' => $items->withQueryString(), 'perPage' => $perPage,
+            'submissionOpen' => $mode === 'pengajuan' ? app(PencairanSubmissionSettings::class)->isOpen() : true,
+            'submissionAdmin' => $actor['role'] === 'admin',
             'title' => $title, 'mode' => $mode, 'tab' => $tab,
             'statusFilter' => $status, 'allowedStatuses' => $allowedStatuses]);
     }
@@ -319,7 +326,8 @@ class PencairanController extends Controller
             'kode_drk' => $headerSnapshot['kode_drk'] ?? '',
             'nama_drk' => $headerSnapshot['uraian_drk'] ?? '',
         ];
-        return view('main.pencairan.show', compact('pengajuan', 'actor', 'pending', 'displayRows', 'headerSnapshot', 'simkugData', 'jenisPphByCode')
+        $submissionAllowed = app(PencairanSubmissionSettings::class)->allowed($actor);
+        return view('main.pencairan.show', compact('pengajuan', 'actor', 'pending', 'displayRows', 'headerSnapshot', 'simkugData', 'jenisPphByCode', 'submissionAllowed')
             + $this->detailNavigation($request, $pengajuan));
     }
 
@@ -327,6 +335,9 @@ class PencairanController extends Controller
     {
         $service = app(PencairanService::class);
         $actor = $service->authorize($request, $pengajuan);
+        if (!app(PencairanSubmissionSettings::class)->allowed($actor)) {
+            return response()->view('main.pencairan.submission-closed', [], 403);
+        }
         $adminStatusEdit = $actor['role'] === 'admin' && in_array($pengajuan->status, ['submitted', 'verified', 'completed'], true);
         $canEdit = $adminStatusEdit
             || (in_array($pengajuan->status, ['draft', 'returned'], true)
