@@ -78,7 +78,7 @@
     </section>
     @if($showSimkug)
         <section class="tab-pane fade {{ $simkugActive ? 'show active' : '' }}" id="pengajuan-simkug-{{ $pengajuan->id }}" role="tabpanel" aria-labelledby="pengajuan-simkug-tab-{{ $pengajuan->id }}" tabindex="0" data-simkug-panel>
-            @include('main.pencairan.partials.detail-header')
+            @include('main.pencairan.partials.detail-header', ['simkugHeader' => true])
             @if($pengajuan->jenis === 'imprestfund')
                 @include('main.pencairan.partials.simkug-imprestfund')
             @else
@@ -193,9 +193,11 @@
 <script type="module">
     import { mountReadOnlySpreadsheetGrid, mountSimkugCopyAll } from "{{ asset('js/monita/pencairan-detail-grid.js') }}";
     import { mountSimkugCopy } from "{{ asset('js/monita/pencairan-simkug.js') }}";
+    import { mountSimkugHeaderCopy } from "{{ asset('js/monita/pencairan-simkug-header.js') }}";
     import { mountSimkugImprestfund } from "{{ asset('js/monita/pencairan-simkug-imprestfund.js') }}";
     document.querySelectorAll('[data-detail-grid]').forEach(mountReadOnlySpreadsheetGrid);
     document.querySelectorAll('[data-simkug-panel]').forEach(mountSimkugCopy);
+    document.querySelectorAll('[data-simkug-panel]').forEach(mountSimkugHeaderCopy);
     document.querySelectorAll('[data-simkug-panel]').forEach(mountSimkugCopyAll);
     document.querySelectorAll('[data-simkug-imprestfund]').forEach(mountSimkugImprestfund);
 </script>

@@ -252,7 +252,21 @@ class PencairanWorkflowTest extends TestCase
         $this->assertSame(1, $detailHeaders->length);
         $this->assertSame(1, $simkugHeaders->length);
         $detailHeader = $document->saveHTML($detailHeaders->item(0));
-        $this->assertSame($detailHeader, $document->saveHTML($simkugHeaders->item(0)));
+        $this->assertSame(0, $xpath->query('.//button[@data-header-copy]', $detailHeaders->item(0))->length);
+        $this->assertSame(1, $xpath->query('.//*[@data-header-copy-status and @role="status"]', $simkugHeaders->item(0))->length);
+        $summary = $xpath->query('./p[1]', $simkugHeaders->item(0))->item(0);
+        $this->assertSame('PP Satu (PP01) · 2026 / TW 4', trim($summary->textContent));
+        $this->assertSame(0, $xpath->query('.//button[@data-header-copy]', $summary)->length);
+        foreach ([
+            'Uraian Pengajuan' => "Narasi \"SIMKUG\" & <uji>\nBaris kedua",
+            'Kode akun' => '001',
+            'Nominal' => '100',
+        ] as $label => $value) {
+            $buttons = $xpath->query('.//button[@data-header-copy and @aria-label="Salin '.$label.'"]', $simkugHeaders->item(0));
+            $this->assertGreaterThanOrEqual(1, $buttons->length, $label);
+            $values = $xpath->query('./span[@data-header-copy-value]', $buttons->item(0)->parentNode);
+            $this->assertSame($value, $values->item(0)->textContent, $label);
+        }
         foreach (['PP Satu', '2026', 'TW 4', 'Uraian Pengajuan', 'Kode akun', '001', '8910', 'SIM1', 'Nominal: Rp'] as $value) {
             $this->assertStringContainsString($value, $detailHeader);
         }
