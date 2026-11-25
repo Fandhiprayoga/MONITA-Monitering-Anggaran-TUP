@@ -42,14 +42,24 @@ class GoogleSheetService
             throw new \RuntimeException('Sumber spreadsheet anggaran belum dikonfigurasi.');
         }
 
+        return $this->unitDrkOptionsFromRows($kodePp, $this->pencairanRows($triwulan));
+    }
+
+    private function pencairanRows(int $triwulan): array
+    {
         $range = 'RAW Data TW '.$this->toRoman($triwulan).'!B2:N';
         $response = $this->service->spreadsheets_values->get(
             $this->spreadsheetId,
             $range,
             ['valueRenderOption' => 'UNFORMATTED_VALUE']
         );
+        return $response->getValues() ?? [];
+    }
+
+    private function unitDrkOptionsFromRows(string $kodePp, array $rows): array
+    {
         $options = [];
-        foreach ($response->getValues() ?? [] as $index => $row) {
+        foreach ($rows as $index => $row) {
             if (strtoupper(trim((string) ($row[0] ?? ''))) !== strtoupper(trim($kodePp))) {
                 continue;
             }
@@ -80,6 +90,14 @@ class GoogleSheetService
     /** Fresh, explicitly year-bound lookup. Never reads cache or falls back to another year. */
     public function getPencairanDrkOptions(string $kodePp, int $triwulan, int $year): array
     {
+        return $this->getPencairanDrkOptionsForUnits([$kodePp], $triwulan, $year)[$kodePp];
+    }
+
+    public function getPencairanDrkOptionsForUnits(array $units, int $triwulan, int $year): array
+    {
+        if ($triwulan < 1 || $triwulan > 4 || array_filter($units, fn ($unit) => trim((string) $unit) === '')) {
+            throw new \InvalidArgumentException('Unit atau triwulan tidak valid.');
+        }
         $id = $year === (int) config('pencairan.source_year')
             ? config('pencairan.source_spreadsheet_id')
             : (config('pencairan.archive_spreadsheet_ids', [])[$year] ?? null);
@@ -87,10 +105,19 @@ class GoogleSheetService
         $previous = $this->spreadsheetId;
         try {
             $this->spreadsheetId = $id;
-            $options = $this->getUnitDrkOptions($kodePp, $triwulan);
+            $rows = $this->pencairanRows($triwulan);
         } finally {
             $this->spreadsheetId = $previous;
         }
+        $result = [];
+        foreach ($units as $kodePp) {
+            $result[$kodePp] = $this->normalizePencairanOptions($kodePp, $this->unitDrkOptionsFromRows($kodePp, $rows));
+        }
+        return $result;
+    }
+
+    private function normalizePencairanOptions(string $kodePp, array $options): array
+    {
         $options = array_values(array_filter($options, fn ($option) => in_array(
             strtoupper(trim((string) ($option['tipe'] ?? ''))),
             ['OPERASIONAL', 'BANG'],

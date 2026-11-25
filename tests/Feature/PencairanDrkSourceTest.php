@@ -79,6 +79,18 @@ class PencairanDrkSourceTest extends TestCase
         );
     }
 
+    public function test_bulk_options_fetch_each_quarter_once_and_keep_unit_boundaries(): void
+    {
+        $other = $this->row('002', 'BANG', 'DRK-OTHER');
+        $other[0] = 'PP02';
+        $service = $this->service([['current', [$this->row(), $other]]]);
+        $options = $service->getPencairanDrkOptionsForUnits(['PP01', 'PP02', 'PP03'], 4, 2026);
+        $this->assertSame(['DRK-1'], array_column($options['PP01'], 'drk_tup'));
+        $this->assertSame(['DRK-OTHER'], array_column($options['PP02'], 'drk_tup'));
+        $this->assertSame([], $options['PP03']);
+        $this->assertNotSame($options['PP01'][0]['id'], $options['PP02'][0]['id']);
+    }
+
     public function test_missing_and_malformed_source_balances_are_never_replaced_by_zero(): void
     {
         $missing = array_slice($this->row(), 0, 6);

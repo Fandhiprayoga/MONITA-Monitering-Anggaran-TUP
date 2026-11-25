@@ -12,6 +12,7 @@ use App\Http\Controllers\ExportController;
 use App\Http\Controllers\PengajuanController;
 use App\Http\Controllers\PencairanController;
 use App\Http\Controllers\PencairanDashboardController;
+use App\Http\Controllers\PencairanAdminDashboardController;
 use App\Http\Controllers\PencairanSlaReportController;
 use App\Http\Controllers\PencairanSlaSettingsController;
 use App\Http\Controllers\PencairanSubmissionSettingsController;
@@ -53,6 +54,7 @@ Route::middleware(['auth.spreadsheet'])->group(function () {
 
     Route::prefix('pencairan')->name('pencairan.')->group(function () {
         Route::get('/dashboard', [PencairanDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard-admin', [PencairanAdminDashboardController::class, 'index'])->name('dashboard-admin');
         Route::get('/pengajuan', [PencairanController::class, 'pengajuan'])->name('pengajuan');
         Route::get('/drk-options', [PencairanController::class, 'drkOptions'])->middleware('throttle:60,1')->name('drk-options');
         Route::get('/pengajuan/{pengajuan}', [PencairanController::class, 'show'])->whereUuid('pengajuan')->name('show');

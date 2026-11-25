@@ -36,6 +36,15 @@
                         <span class="pc-mtext">Dashboard</span>
                     </a>
                 </li>
+                @if($userRole === 'admin')
+                    <li class="pc-item">
+                        <a href="{{ route('pencairan.dashboard-admin') }}"
+                            class="pc-link {{ request()->routeIs('pencairan.dashboard-admin') ? 'active' : '' }}">
+                            <span class="pc-micon"><i class="ti ti-chart-bar"></i></span>
+                            <span class="pc-mtext">Dashboard Pencairan Admin</span>
+                        </a>
+                    </li>
+                @endif
 
                 <!-- Detail Anggaran Unit -->
                 <li class="pc-item pc-caption">

@@ -11,7 +11,7 @@ class PencairanDashboardService
 {
     public function __construct(private GoogleSheetService $sheets) {}
 
-    public function calculate(array $actor, string $unit, int $year, array $quarters): array
+    public function calculate(array $actor, string $unit, int $year, array $quarters, ?array $optionsByQuarter = null): array
     {
         $records = PencairanPengajuan::forActor($actor)
             ->withoutDummy()
@@ -38,7 +38,7 @@ class PencairanDashboardService
         $rows = [];
         $seen = [];
         foreach ($quarters as $quarter) {
-            foreach ($this->sheets->getPencairanDrkOptions($unit, $quarter, $year) as $option) {
+            foreach ($optionsByQuarter === null ? $this->sheets->getPencairanDrkOptions($unit, $quarter, $year) : $optionsByQuarter[$quarter] as $option) {
                 $id = $option['id'];
                 if (isset($seen[$quarter][$id])) {
                     throw new DomainException("DRK duplikat pada sumber anggaran TW{$quarter}. Hubungi administrator untuk memeriksa spreadsheet.");
