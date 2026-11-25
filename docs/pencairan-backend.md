@@ -2,6 +2,10 @@
 
 ## Integration contract
 
+- Dashboard Pencairan berada di atas menu Pengajuan. Pengguna hanya dapat melihat PP sesi; admin memilih unit dari sheet users. Tahun yang tersedia adalah tahun berjalan dan tahun yang memiliki pengajuan yang dapat diakses; tanpa arsip spreadsheet tahun terkait dashboard menampilkan kegagalan, bukan memakai tahun lain.
+- Tab TW menggunakan periode pengajuan yang tersimpan dan status saat ini. Tahunan menjumlahkan saldo awal empat TW dan menggabungkan DRK berdasarkan PP, DRK TUP, akun, dan jenis. Hanya DRK BANG/OPERASIONAL ditampilkan. Selesai adalah bruto `completed`, proses adalah bruto `submitted`/`verified`, dan saldo adalah pagu dikurangi keduanya; ini bukan konfirmasi pembayaran eksternal. Total pengajuan mencakup ketiga status tersebut dan `returned`, tetapi tidak mencakup `draft`/`cancelled`. DRK duplikat, saldo awal tidak valid, serta pengajuan aktif/selesai yang tidak cocok dengan sumber menghasilkan kesalahan, bukan total parsial. Grafik tidak ditampilkan jika komponennya negatif atau pagu tidak positif.
+- Pengajuan dengan `header_snapshot.dummy` bernilai boolean `true` tidak dimasukkan ke tahun tersedia maupun seluruh perhitungan dashboard. Data dummy tetap tersimpan dan fitur pengajuan lainnya tidak berubah; data yang tidak bertanda dummy tetap diperiksa kecocokan DRK-nya.
+
 - Keterangan di bawah pilihan DRK menampilkan `N DRK ditemukan`, diperbarui saat daftar unit/pencarian berubah (termasuk `0 DRK ditemukan`). Detail teknis kolom spreadsheet tidak ditampilkan pada bantuan Unit/DRK; pesan pemuatan dan kegagalan sumber tetap ditampilkan.
 
 - Pilihan Unit pada form baru admin dan pilihan DRK pada semua form baru/edit menggunakan Select2 dengan pencarian dan bahasa Indonesia. Aset Select2 dimuat dari CDN setelah jQuery dari layout. Pilihan DRK mengisi header/saldo melalui handler yang sama; pergantian unit mereset pilihan dan memperbarui opsi Select2. Kolom Cari DRK terpisah disembunyikan saat Select2 aktif; jika aset gagal dimuat, peringatan tampil dan select biasa serta kolom Cari DRK tetap dapat digunakan.

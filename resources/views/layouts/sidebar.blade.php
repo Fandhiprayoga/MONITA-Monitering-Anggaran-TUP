@@ -5,6 +5,7 @@
         request()->routeIs('pencairan.sla-report') => 'sla-report',
         request()->routeIs('pencairan.history') => 'history',
         request()->routeIs('pencairan.verifikasi') => 'verifikasi',
+        request()->routeIs('pencairan.dashboard') => 'dashboard',
         request()->routeIs('pencairan.pengajuan', 'pencairan.form', 'pencairan.show', 'pencairan.edit') => 'pengajuan',
         default => null,
     };
@@ -159,6 +160,14 @@
                 <li class="pc-item pc-caption">
                     <label>Pencairan Anggaran</label>
                     <i class="ti ti-wallet"></i>
+                </li>
+
+                <li class="pc-item">
+                    <a class="pc-link {{ $pencairanMenu === 'dashboard' ? 'active' : '' }}"
+                        href="{{ route('pencairan.dashboard') }}">
+                        <span class="pc-micon"><i class="ti ti-chart-bar"></i></span>
+                        <span class="pc-mtext">Dashboard Pencairan</span>
+                    </a>
                 </li>
 
                 <!-- Pengajuan -->

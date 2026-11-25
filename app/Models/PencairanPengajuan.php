@@ -84,6 +84,13 @@ class PencairanPengajuan extends Model
         return $actor['role'] === 'admin' ? $query : $query->where('kode_pp', $actor['kode_pp']);
     }
 
+    public function scopeWithoutDummy(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $query) => $query
+            ->whereNull('header_snapshot->dummy')
+            ->orWhere('header_snapshot->dummy', '!=', true));
+    }
+
     /** Status akhir: pengajuan tidak lagi berjalan. */
     public const STATUS_AKTIF = ['draft', 'submitted', 'returned', 'verified'];
     public const STATUS_NONAKTIF = ['completed', 'cancelled'];

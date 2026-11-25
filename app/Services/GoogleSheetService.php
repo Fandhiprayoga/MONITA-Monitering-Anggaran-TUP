@@ -42,7 +42,7 @@ class GoogleSheetService
             throw new \RuntimeException('Sumber spreadsheet anggaran belum dikonfigurasi.');
         }
 
-        $range = 'RAW Data TW '.$this->toRoman($triwulan).'!B2:N3000';
+        $range = 'RAW Data TW '.$this->toRoman($triwulan).'!B2:N';
         $response = $this->service->spreadsheets_values->get(
             $this->spreadsheetId,
             $range,

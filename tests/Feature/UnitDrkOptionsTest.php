@@ -12,6 +12,25 @@ use Tests\TestCase;
 
 class UnitDrkOptionsTest extends TestCase
 {
+    public function test_drk_options_include_rows_beyond_3000(): void
+    {
+        $values = array_fill(0, 3000, []);
+        $values[] = ['TEST', 'BANG', 'DRK-LATE', '001', 'Akun', 'Uraian', 100, 0, 100];
+        $resource = Mockery::mock(SpreadsheetsValues::class);
+        $resource->shouldReceive('get')->once()->with(
+            'test-sheet', 'RAW Data TW IV!B2:N', ['valueRenderOption' => 'UNFORMATTED_VALUE']
+        )->andReturn(new ValueRange(['values' => $values]));
+        $sheets = new Sheets();
+        $sheets->spreadsheets_values = $resource;
+        $reflection = new ReflectionClass(GoogleSheetService::class);
+        $service = $reflection->newInstanceWithoutConstructor();
+        $reflection->getProperty('service')->setValue($service, $sheets);
+        $reflection->getProperty('spreadsheetId')->setValue($service, 'test-sheet');
+
+        $options = $service->getUnitDrkOptions('TEST', 4);
+        $this->assertSame('DRK-LATE', $options[0]['drk_tup']);
+    }
+
     public function test_drk_options_filter_unit_and_preserve_account_rows_and_sheet_balances(): void
     {
         $values = [
@@ -23,7 +42,7 @@ class UnitDrkOptionsTest extends TestCase
         $resource = Mockery::mock(SpreadsheetsValues::class);
         $resource->shouldReceive('get')->once()->with(
             'test-sheet',
-            'RAW Data TW IV!B2:N3000',
+            'RAW Data TW IV!B2:N',
             ['valueRenderOption' => 'UNFORMATTED_VALUE']
         )->andReturn(new ValueRange(['values' => $values]));
         $sheets = new Sheets();

@@ -16,7 +16,7 @@ class PencairanDrkSourceTest extends TestCase
         config(['pencairan.source_year' => 2026, 'pencairan.source_spreadsheet_id' => 'current', 'pencairan.archive_spreadsheet_ids' => [2025 => 'archive']]);
         $resource = Mockery::mock(SpreadsheetsValues::class);
         foreach ($responses as [$id, $rows]) {
-            $resource->shouldReceive('get')->once()->with($id, 'RAW Data TW IV!B2:N3000', ['valueRenderOption' => 'UNFORMATTED_VALUE'])->andReturn(new ValueRange(['values' => $rows]));
+            $resource->shouldReceive('get')->once()->with($id, 'RAW Data TW IV!B2:N', ['valueRenderOption' => 'UNFORMATTED_VALUE'])->andReturn(new ValueRange(['values' => $rows]));
         }
         $sheets = new Sheets(); $sheets->spreadsheets_values = $resource;
         $reflection = new \ReflectionClass(GoogleSheetService::class);
