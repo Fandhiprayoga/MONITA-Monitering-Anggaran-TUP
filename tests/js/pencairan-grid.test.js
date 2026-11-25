@@ -194,10 +194,14 @@ test('Honor still validates recipient and identity', () => {
     assert.ok(calculateRow('honor', { ...honor, identitas: '12345678901234567' }, honorOptions).errors.identitas);
 });
 
-test('Short numeric identities are padded to 16 digits without changing passport values', () => {
+test('Short alphanumeric identities are padded to 16 characters', () => {
     assert.equal(normalizeIdentity('123456'), '0000000000123456');
     assert.equal(normalizeIdentity('0012345678901234'), '0012345678901234');
-    assert.equal(normalizeIdentity('AB123456'), 'AB123456');
+    assert.equal(normalizeIdentity('C1234567A'), '0000000C1234567A');
+    assert.equal(normalizeIdentity('  00c1234567A  '), '0000000c1234567A');
+    assert.equal(normalizeIdentity('123456789012345A'), '123456789012345A');
+    assert.equal(normalizeIdentity('1234567890123456A'), '1234567890123456A');
+    assert.equal(normalizeIdentity('AB-123456'), 'AB-123456');
     assert.equal(normalizeIdentity(''), '');
 });
 

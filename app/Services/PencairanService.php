@@ -238,6 +238,8 @@ class PencairanService
                 $identity = trim($raw['identitas']);
                 if ($identity !== '' && ctype_digit($identity)) {
                     if (strlen($identity) > 16) { PencairanDecimal::invalid("details.$index.identitas", 'No KTP harus tepat 16 digit.'); }
+                }
+                if (preg_match('/^[a-zA-Z0-9]+$/D', $identity)) {
                     $raw['identitas'] = str_pad($identity, 16, '0', STR_PAD_LEFT);
                 }
                 if ($raw['kode_jenis'] !== '' && isset($numbers['nominal'], $jenisPenghasilanByCode[$raw['kode_jenis']])) {

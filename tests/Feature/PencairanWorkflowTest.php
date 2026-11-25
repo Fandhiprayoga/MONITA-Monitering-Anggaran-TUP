@@ -914,6 +914,21 @@ class PencairanWorkflowTest extends TestCase
         $this->assertSame('5.00', $p->fresh()->total_pajak);
     }
 
+    public function test_honor_alphanumeric_identity_is_padded_and_preserved_on_save_and_submit(): void
+    {
+        $row = $this->row('honor');
+        $row['identitas'] = 'C1234567A';
+        $p = $this->draft('honor', [$row]);
+
+        $this->assertSame('0000000C1234567A', $p->detailRows()[0]['identitas']);
+        $this->assertDatabaseHas('pengajuan_honor_details', [
+            'pengajuan_id' => $p->id,
+            'nomor_identitas' => '0000000C1234567A',
+        ]);
+        $this->action($p, 'submit')->assertOk();
+        $this->assertSame('0000000C1234567A', $p->fresh()->detailRows()[0]['identitas']);
+    }
+
     public function test_honor_tax_is_recalculated_server_side_instead_of_trusting_pasted_value(): void
     {
         $row = $this->row('honor');

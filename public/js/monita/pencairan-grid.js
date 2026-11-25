@@ -35,7 +35,7 @@ export const schemas = {
 
 export function normalizeIdentity(value) {
     const text = String(value ?? '').trim();
-    return /^\d+$/.test(text) && text.length < 16 ? text.padStart(16, '0') : text;
+    return /^[a-zA-Z0-9]+$/.test(text) && text.length < 16 ? text.padStart(16, '0') : text;
 }
 
 export function parseAmount(value) {
