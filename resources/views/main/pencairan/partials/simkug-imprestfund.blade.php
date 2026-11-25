@@ -16,6 +16,10 @@
         @csrf
         @method('PATCH')
         <input type="hidden" name="lock_version" value="{{ $pengajuan->lock_version }}">
+        <div class="mb-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" data-simkug-copy-all>Salin Semua Data</button>
+            <span class="small ms-2" role="status" aria-live="polite" data-simkug-copy-all-status></span>
+        </div>
         <div class="table-responsive border rounded spreadsheet-viewport">
             <table class="table table-bordered align-middle mb-0 spreadsheet-grid" role="grid" aria-label="Data SIMKUG Imprestfund" aria-multiselectable="true">
                 <thead class="table-light"><tr>

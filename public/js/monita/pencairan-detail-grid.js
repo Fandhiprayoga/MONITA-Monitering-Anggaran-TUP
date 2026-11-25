@@ -1,5 +1,40 @@
 import { parseTsv, toTsv } from './pencairan-grid.js';
 
+function gridValues(rows, left = 0, right = Infinity) {
+    return rows.map((row) => [...row.querySelectorAll('[data-grid-cell]')]
+        .slice(left, right + 1)
+        .map((cell) => cell.querySelector('input, textarea, select')?.value ?? cell.textContent.trim()));
+}
+
+export function mountSimkugCopyAll(panel) {
+    const button = panel.querySelector('[data-simkug-copy-all]');
+    const status = panel.querySelector('[data-simkug-copy-all-status]');
+    const table = panel.querySelector('table[role="grid"]');
+    const rows = [...table.querySelectorAll('tr[data-grid-row]')];
+    if (!rows.length) {
+        button.disabled = true;
+        return;
+    }
+
+    button.addEventListener('click', async () => {
+        status.textContent = '';
+        button.disabled = true;
+        try {
+            if (!navigator.clipboard?.writeText) throw new Error('Clipboard tidak tersedia.');
+            await navigator.clipboard.writeText(toTsv(gridValues(rows)));
+            status.classList.remove('text-danger');
+            status.classList.add('text-success');
+            status.textContent = 'Seluruh data tabel disalin tanpa header.';
+        } catch (error) {
+            status.classList.remove('text-success');
+            status.classList.add('text-danger');
+            status.textContent = 'Gagal menyalin otomatis. Pilih seluruh tabel lalu tekan Ctrl+C atau Cmd+C.';
+        } finally {
+            button.disabled = false;
+        }
+    });
+}
+
 export function mountReadOnlySpreadsheetGrid(table) {
     mountSpreadsheetGrid(table, false);
 }
@@ -217,10 +252,7 @@ function mountSpreadsheetGrid(table, editable, notify) {
         if (event.target === editing) return;
         if (!selection || !event.clipboardData) return;
         event.preventDefault();
-        const values = rows.slice(selection.top, selection.bottom + 1).map((row) => {
-            const cells = [...row.querySelectorAll('[data-grid-cell]')];
-            return cells.slice(selection.left, selection.right + 1).map((cell) => controlFor(cell)?.value ?? cell.textContent.trim());
-        });
+        const values = gridValues(rows.slice(selection.top, selection.bottom + 1), selection.left, selection.right);
         event.clipboardData.setData('text/plain', toTsv(values));
     });
 

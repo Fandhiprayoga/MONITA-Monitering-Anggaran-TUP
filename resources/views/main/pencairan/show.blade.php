@@ -191,11 +191,12 @@
 @endsection
 @push('scripts')
 <script type="module">
-    import { mountReadOnlySpreadsheetGrid } from "{{ asset('js/monita/pencairan-detail-grid.js') }}";
+    import { mountReadOnlySpreadsheetGrid, mountSimkugCopyAll } from "{{ asset('js/monita/pencairan-detail-grid.js') }}";
     import { mountSimkugCopy } from "{{ asset('js/monita/pencairan-simkug.js') }}";
     import { mountSimkugImprestfund } from "{{ asset('js/monita/pencairan-simkug-imprestfund.js') }}";
     document.querySelectorAll('[data-detail-grid]').forEach(mountReadOnlySpreadsheetGrid);
     document.querySelectorAll('[data-simkug-panel]').forEach(mountSimkugCopy);
+    document.querySelectorAll('[data-simkug-panel]').forEach(mountSimkugCopyAll);
     document.querySelectorAll('[data-simkug-imprestfund]').forEach(mountSimkugImprestfund);
 </script>
 @endpush

@@ -213,6 +213,8 @@ class PencairanWorkflowTest extends TestCase
         $xpath = new \DOMXPath($document);
         $panel = '//section[@data-simkug-panel]';
         $this->assertSame(1, $xpath->query($panel)->length);
+        $this->assertSame(1, $xpath->query($panel.'//button[@data-simkug-copy-all]')->length);
+        $this->assertSame(0, $xpath->query('//section[@id="pengajuan-detail-'.$p->id.'"]//button[@data-simkug-copy-all]')->length);
         $this->assertSame(0, $xpath->query($panel.'//details | '.$panel.'//button[@data-simkug-copy]')->length);
         $detailCells = $xpath->query('//section[@id="pengajuan-detail-'.$p->id.'"]//td[@data-grid-cell]');
         $simkugCells = $xpath->query($panel.'//td[@data-grid-cell]');
@@ -304,6 +306,7 @@ class PencairanWorkflowTest extends TestCase
         $details = $p->detailRows();
         $response = $this->get(route('pencairan.show', $p))->assertOk()->assertSee('Simpan Data SIMKUG')
             ->assertDontSee('Salin baris ke SIMKUG')->assertDontSee('data-simkug-row', false)
+            ->assertSee('data-simkug-copy-all', false)
             ->assertSee('data-editable="true"', false)
             ->assertSee('Kolom selain D/C berasal dari data pengajuan', false);
         $document = new \DOMDocument();
@@ -445,6 +448,7 @@ class PencairanWorkflowTest extends TestCase
         $response = $this->get(route('pencairan.show', ['pengajuan' => $p, 'menu' => 'transaksi', 'tab' => 'simkug']))
             ->assertOk()->assertSee('>SIMKUG</button>', false)
             ->assertSee('id="pengajuan-simkug-'.$p->id.'"', false)
+            ->assertSee('data-simkug-copy-all', false)
             ->assertDontSee('Simpan Data SIMKUG');
         if ($jenis === 'imprestfund') {
             $response->assertSee('data-editable="false"', false)
