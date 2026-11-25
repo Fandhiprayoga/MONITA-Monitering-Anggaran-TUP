@@ -125,29 +125,36 @@
                 <h5 class="mb-1">Detail Anggaran Unit</h5>
                 <p class="text-muted mb-0">DRK jenis BANG dan OPERASIONAL{{ $period === 'tahunan' ? ', digabung per DRK, akun dan jenis.' : '.' }}</p>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>DRK</th><th>Akun</th><th>Jenis</th><th>Uraian DRK</th>
-                            <th class="text-end">Saldo Awal</th><th class="text-end">Realisasi</th>
-                            <th class="text-end">Dalam Proses</th><th class="text-end">Saldo Terkini</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($data['rows'] as $row)
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered align-middle mb-0">
+                        <thead class="bg-secondary text-center">
                             <tr>
-                                <td>{{ $row['drk'] }}</td><td>{{ $row['akun'] }}</td><td>{{ $row['tipe'] }}</td><td>{{ $row['uraian'] }}</td>
-                                <td class="text-end text-nowrap">{{ $rupiah($row['pagu']) }}</td>
-                                <td class="text-end text-nowrap">{{ $rupiah($row['realisasi']) }}</td>
-                                <td class="text-end text-nowrap">{{ $rupiah($row['proses']) }}</td>
-                                <td class="text-end text-nowrap">{{ $rupiah($row['saldo']) }}</td>
+                                <th class="text-white" scope="col">DRK</th>
+                                <th class="text-white" scope="col">Akun</th>
+                                <th class="text-white" scope="col">Jenis</th>
+                                <th class="text-white" scope="col">Uraian DRK</th>
+                                <th class="text-white" scope="col">Saldo Awal</th>
+                                <th class="text-white" scope="col">Realisasi</th>
+                                <th class="text-white" scope="col">Dalam Proses</th>
+                                <th class="text-white" scope="col">Saldo Terkini</th>
                             </tr>
-                        @empty
-                            <tr><td colspan="8" class="text-center text-muted py-4">Tidak ada DRK BANG atau OPERASIONAL untuk periode ini.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @forelse ($data['rows'] as $row)
+                                <tr>
+                                    <td>{{ $row['drk'] }}</td><td>{{ $row['akun'] }}</td><td>{{ $row['tipe'] }}</td><td>{{ $row['uraian'] }}</td>
+                                    <td class="text-end text-nowrap">{{ $rupiah($row['pagu']) }}</td>
+                                    <td class="text-end text-nowrap">{{ $rupiah($row['realisasi']) }}</td>
+                                    <td class="text-end text-nowrap">{{ $rupiah($row['proses']) }}</td>
+                                    <td class="text-end text-nowrap">{{ $rupiah($row['saldo']) }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="8" class="text-center text-muted py-4">Tidak ada DRK BANG atau OPERASIONAL untuk periode ini.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     @endif

@@ -81,6 +81,9 @@ class PencairanDashboardTest extends TestCase
         $this->pengajuan('completed', '100.00', 1);
         $this->pengajuan('verified', '50.00', 4);
         $response = $this->get(route('pencairan.dashboard', ['tahun' => 2026, 'tw' => 'tahunan']))->assertOk();
+        $response->assertSee('table table-striped table-bordered align-middle mb-0')
+            ->assertSee('bg-secondary text-center')
+            ->assertSee('<th class="text-white" scope="col">Saldo Awal</th>', false);
         $data = $response->viewData('data');
         $this->assertCount(1, $data['rows']);
         $this->assertSame('4000.00', (string) $data['totals']['pagu']->toScale(2));
