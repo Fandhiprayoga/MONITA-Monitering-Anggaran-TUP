@@ -67,7 +67,7 @@
             ? match($pengajuan->status) {
                 'submitted' => ['verify' => 'Verifikasi', 'return' => 'Kembalikan', 'cancel' => 'Batalkan'],
                 'returned' => ['cancel' => 'Batalkan'],
-                'verified' => ['return' => 'Kembalikan', 'complete' => 'Tandai Selesai'],
+                'verified' => ['return' => 'Kembalikan', 'cancel' => 'Batalkan', 'complete' => 'Tandai Selesai'],
                 default => [],
             }
             : (in_array($pengajuan->status, ['draft', 'returned']) ? ['cancel' => 'Batalkan'] : []);

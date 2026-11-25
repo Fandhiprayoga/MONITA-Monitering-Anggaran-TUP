@@ -347,7 +347,7 @@ class PencairanService
             'update' => $actor['role'] === 'admin' ? ['draft', 'returned', 'submitted', 'verified', 'completed'] : ['draft', 'returned'],
             'submit' => ['draft', 'returned'], 'return' => ['submitted', 'verified'],
             'verify' => ['submitted'], 'complete', 'simkug' => ['verified'],
-            'cancel' => $actor['role'] === 'admin' ? ['draft', 'submitted', 'returned'] : ['draft', 'returned'],
+            'cancel' => $actor['role'] === 'admin' ? ['draft', 'submitted', 'returned', 'verified'] : ['draft', 'returned'],
         };
         abort_unless(in_array($p->status, $allowed, true), 409, 'Status telah berubah atau transisi tidak diizinkan. Muat ulang pengajuan.');
     }

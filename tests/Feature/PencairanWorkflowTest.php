@@ -707,7 +707,7 @@ class PencairanWorkflowTest extends TestCase
             $this->get(route('pencairan.show',$p))->assertOk()->assertSee('Batalkan')->assertSee('Verifikasi');
             $this->postJson(route('pencairan.verify',$p), ['lock_version'=>$p->fresh()->lock_version,'confirmed'=>true])->assertOk();
             $this->get(route('pencairan.transaksi',$kind))->assertOk()->assertSee($p->fresh()->nomor_pengajuan);
-            $this->get(route('pencairan.show',$p))->assertOk()->assertSee('Tanggal Penyelesaian')
+            $this->get(route('pencairan.show',$p))->assertOk()->assertSee('Tanggal Penyelesaian')->assertSee('Batalkan')
                 ->assertDontSee('Lampiran opsional')->assertDontSee('name="attachments[]"', false);
             $this->post(route('pencairan.complete',$p), ['lock_version'=>$p->fresh()->lock_version,'confirmed'=>true,'idempotency_key'=>'complete-ui-'.$kind,'completion_date'=>now()->toDateString()])->assertRedirect();
             $this->get(route('pencairan.show',$p))->assertOk()->assertSee($p->fresh()->statusLabel());
@@ -1145,7 +1145,8 @@ class PencairanWorkflowTest extends TestCase
         $draft = $this->draft(); $this->action($draft, 'cancel', ['confirmed' => false])->assertUnprocessable();
         $this->action($draft, 'cancel')->assertOk();
         $verified = $this->verified('imprestfund');
-        $this->action($verified, 'cancel', ['remark' => 'No'])->assertConflict();
+        $this->action($verified, 'cancel', ['remark' => 'Transaksi tidak dilanjutkan'])->assertOk();
+        $this->assertSame('cancelled', $verified->fresh()->status);
     }
 
     public function test_user_cannot_edit_locked_states_or_change_kind_and_versions_conflict(): void
