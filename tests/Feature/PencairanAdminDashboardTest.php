@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\PencairanActor;
 use App\Models\PencairanPengajuan;
+use App\Models\PencairanSlaPolicy;
 use App\Services\GoogleSheetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -117,6 +118,43 @@ class PencairanAdminDashboardTest extends TestCase
         $this->assertSame(0.0, $stages['transaksi_imprestfund']['percent']);
         $this->assertSame(3.0, $stages['transaksi_imprestfund']['average']);
         $this->assertNull($stages['transaksi_honor']['percent']);
+        $this->assertSame(2, $stages['verifikasi']['target']);
+        $this->assertSame(0.5, $stages['verifikasi']['needle_fraction']);
+        $this->assertNull($stages['transaksi_honor']['needle_fraction']);
+    }
+
+    public function test_sla_gauge_uses_current_target_and_warns_when_historical_target_differs(): void
+    {
+        PencairanSlaPolicy::create([
+            'effective_from' => '2026-11-20', 'verifikasi' => 4, 'transaksi_imprestfund' => 2,
+            'transaksi_beban' => 5, 'transaksi_honor' => 5, 'created_by' => $this->admin->id,
+        ]);
+        $p = $this->pengajuan('verified');
+        $this->event($p, 'submit', '2026-11-12 08:00:00');
+        $this->event($p, 'verify', '2026-11-17 08:00:00');
+        $response = $this->get(route('pencairan.dashboard-admin'))->assertOk()
+            ->assertSee('Maks 4 hari kerja')->assertSee('Rata-rata: 3,0 hari kerja')
+            ->assertSee('Target historis sampel: 2 hari kerja; berbeda dari target saat ini.')
+            ->assertSee('x2="73.212" y2="25.328"', false);
+        $stage = $response->viewData('statistics')['stages']['verifikasi'];
+        $this->assertSame(4, $stage['target']);
+        $this->assertSame([2], $stage['historical_targets']);
+        $this->assertTrue($stage['different_targets']);
+        $this->assertSame(1, $stage['terlambat']);
+        $this->assertSame(0.375, $stage['needle_fraction']);
+    }
+
+    public function test_sla_gauge_clamps_needle_but_keeps_actual_value_when_average_exceeds_scale(): void
+    {
+        $p = $this->pengajuan('verified');
+        $this->event($p, 'submit', '2026-11-02 08:00:00');
+        $this->event($p, 'verify', '2026-11-16 08:00:00');
+        $response = $this->get(route('pencairan.dashboard-admin'))->assertOk()
+            ->assertSee('Rata-rata: 10,0 hari kerja')->assertSee('Rata-rata melebihi batas skala.')
+            ->assertSee('x2="170.000" y2="90.000"', false);
+        $stage = $response->viewData('statistics')['stages']['verifikasi'];
+        $this->assertSame(1, $stage['needle_fraction']);
+        $this->assertFalse($stage['different_targets']);
     }
 
     public function test_annual_budget_sums_quarters_and_filters_are_validated(): void

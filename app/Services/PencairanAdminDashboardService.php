@@ -10,6 +10,7 @@ class PencairanAdminDashboardService
 {
     public function __construct(
         private PencairanSlaReportService $report,
+        private PencairanSlaService $sla,
         private PencairanDashboardService $budget,
         private GoogleSheetService $sheets,
     ) {}
@@ -23,7 +24,7 @@ class PencairanAdminDashboardService
         ];
         $stages = [];
         foreach (PencairanSlaReportService::STAGES as $stage => $label) {
-            $stages[$stage] = ['tepat_waktu' => 0, 'terlambat' => 0, 'data_missing' => 0, 'duration' => 0];
+            $stages[$stage] = ['tepat_waktu' => 0, 'terlambat' => 0, 'data_missing' => 0, 'duration' => 0, 'historical_targets' => []];
         }
         $query = PencairanPengajuan::withoutDummy()
             ->where('tahun_anggaran', $year)->whereIn('triwulan', $quarters)
@@ -56,13 +57,21 @@ class PencairanAdminDashboardService
                 $stages[$stage][$measurement['result']]++;
                 if ($measurement['duration_days'] !== null) {
                     $stages[$stage]['duration'] += $measurement['duration_days'];
+                    $stages[$stage]['historical_targets'][$measurement['target_days']] = true;
                 }
             }
         }
-        foreach ($stages as &$stage) {
+        $targets = $this->sla->targetsOn($today);
+        foreach ($stages as $key => &$stage) {
             $valid = $stage['tepat_waktu'] + $stage['terlambat'];
             $stage['percent'] = $valid ? round($stage['tepat_waktu'] * 100 / $valid, 1) : null;
-            $stage['average'] = $valid ? round($stage['duration'] / $valid, 1) : null;
+            $stage['average_raw'] = $valid ? $stage['duration'] / $valid : null;
+            $stage['average'] = $valid ? round($stage['average_raw'], 1) : null;
+            $stage['target'] = $targets[$key];
+            $stage['historical_targets'] = array_keys($stage['historical_targets']);
+            sort($stage['historical_targets']);
+            $stage['different_targets'] = count(array_diff($stage['historical_targets'], [$stage['target']])) > 0;
+            $stage['needle_fraction'] = $valid ? min($stage['average_raw'] / (2 * $stage['target']), 1) : null;
         }
         unset($stage);
 

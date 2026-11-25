@@ -80,26 +80,43 @@
     </div></div>
 
     <h5>Monitoring SLA Layanan Keuangan</h5>
-    <p class="text-muted small">Tahap yang sudah selesai diukur menggunakan target SLA yang berlaku saat tahap dimulai. Rata-rata dalam hari kerja; data yang tidak lengkap tidak masuk persentase maupun rata-rata.</p>
+    <p class="text-muted small">Jarum menunjukkan rata-rata hari kerja tahap selesai terhadap target SLA saat ini. Status tepat waktu atau terlambat tetap memakai target yang berlaku saat tahap dimulai; data tidak lengkap tidak masuk rata-rata.</p>
     <div class="row gy-4">
         @foreach (\App\Services\PencairanSlaReportService::STAGES as $key => $label)
             @php $stage = $statistics['stages'][$key]; @endphp
             <div class="col-sm-6 col-xl-3">
                 <div class="card h-100 mb-0" style="min-height: 330px"><div class="card-body text-center">
                     <h6>SLA {{ $label }}</h6>
-                    @if ($stage['percent'] !== null)
-                        <div class="mx-auto my-3 d-flex align-items-center justify-content-center rounded-circle"
-                            style="width: 150px; height: 150px; background: conic-gradient(#198754 {{ $stage['percent'] }}%, #dc3545 0)"
-                            role="img" aria-label="Tepat waktu {{ $stage['percent'] }} persen, terlambat {{ 100 - $stage['percent'] }} persen">
-                            <div class="d-flex align-items-center justify-content-center rounded-circle bg-white fw-semibold"
-                                style="width: 110px; height: 110px">{{ number_format($stage['percent'], 1, ',', '.') }}%</div>
-                        </div>
-                    @else
-                        <div class="my-3 d-flex align-items-center justify-content-center text-muted" style="min-height: 150px">Belum ada data</div>
-                    @endif
+                    @php
+                        $averageText = $stage['average'] === null ? 'Belum ada data' : number_format($stage['average'], 1, ',', '.').' hari kerja';
+                        $angle = $stage['needle_fraction'] === null ? null : pi() * $stage['needle_fraction'];
+                        $needleX = $angle === null ? null : number_format(100 - 70 * cos($angle), 3, '.', '');
+                        $needleY = $angle === null ? null : number_format(90 - 70 * sin($angle), 3, '.', '');
+                    @endphp
+                    <div class="mx-auto my-3" style="max-width: 220px">
+                        <svg viewBox="0 0 200 110" width="100%" role="img"
+                            aria-label="SLA {{ $label }}: rata-rata {{ $averageText }}, target saat ini {{ $stage['target'] }} hari kerja, skala 0 sampai {{ 2 * $stage['target'] }} hari kerja">
+                            <path d="M 20 90 A 80 80 0 0 1 100 10" fill="none" stroke="#198754" stroke-width="16" />
+                            <path d="M 100 10 A 80 80 0 0 1 180 90" fill="none" stroke="#dc3545" stroke-width="16" />
+                            @if ($angle !== null)
+                                <line x1="100" y1="90" x2="{{ $needleX }}" y2="{{ $needleY }}" stroke="#343a40" stroke-width="3" stroke-linecap="round" />
+                                <circle cx="100" cy="90" r="5" fill="#343a40" />
+                            @endif
+                            <text x="20" y="108" text-anchor="middle" font-size="10">0</text>
+                            <text x="180" y="108" text-anchor="middle" font-size="10">{{ 2 * $stage['target'] }}</text>
+                        </svg>
+                        <div class="small fw-semibold">Maks {{ $stage['target'] }} hari kerja</div>
+                        <div class="fw-semibold">Rata-rata: {{ $averageText }}</div>
+                        <div class="small"><span class="text-success">Hijau: ≤ target</span> · <span class="text-danger">Merah: &gt; target</span></div>
+                        @if ($stage['average_raw'] !== null && $stage['average_raw'] > 2 * $stage['target'])
+                            <div class="small text-muted">Rata-rata melebihi batas skala.</div>
+                        @endif
+                    </div>
                     <div class="small"><span class="text-success">Tepat waktu: {{ $stage['tepat_waktu'] }}</span> · <span class="text-danger">Terlambat: {{ $stage['terlambat'] }}</span></div>
                     <div class="small">Data tidak lengkap: {{ $stage['data_missing'] }}</div>
-                    <div class="small">Rata-rata: {{ $stage['average'] === null ? '—' : number_format($stage['average'], 1, ',', '.').' hari kerja' }}</div>
+                    @if ($stage['different_targets'])
+                        <div class="small text-warning mt-2">Target historis sampel: {{ implode(', ', $stage['historical_targets']) }} hari kerja; berbeda dari target saat ini.</div>
+                    @endif
                 </div></div>
             </div>
         @endforeach
