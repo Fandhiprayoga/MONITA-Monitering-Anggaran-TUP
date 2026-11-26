@@ -3,6 +3,7 @@
 @section('title', 'Dashboard Pencairan Admin | MONITA')
 
 @section('content')
+    @include('main.pencairan.period-nav-styles')
     @php
         $rupiah = fn ($value) => \App\Services\PencairanDashboardService::rupiah($value);
         $counts = $statistics['counts'];
@@ -39,7 +40,7 @@
         </div>
     </div>
 
-    <nav class="mb-4" aria-label="Periode dashboard admin">
+    <nav class="dashboard-period-nav mb-4" aria-label="Periode dashboard admin">
         <div class="nav nav-pills flex-wrap gap-2">
             @foreach (['1' => 'TW1', '2' => 'TW2', '3' => 'TW3', '4' => 'TW4', 'tahunan' => 'Tahunan'] as $value => $label)
                 <a class="nav-link {{ $period === (string) $value ? 'active' : '' }}"
