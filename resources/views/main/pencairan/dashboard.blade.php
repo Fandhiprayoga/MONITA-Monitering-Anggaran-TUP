@@ -120,7 +120,7 @@
                     <div class="card">
                         <div class="card-body">
                             <i class="ti {{ $icon }} fs-3 text-primary" aria-hidden="true"></i>
-                            <div class="fs-3 fw-semibold mt-2">{{ $data['counts'][$key] }}</div>
+                            <div class="display-6 fw-bold mt-2">{{ $data['counts'][$key] }}</div>
                             <span class="text-muted">{{ $label }}</span>
                         </div>
                     </div>
