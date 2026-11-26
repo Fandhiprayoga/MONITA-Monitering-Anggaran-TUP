@@ -87,6 +87,13 @@
                         <div class="card-body">
                             <div class="small opacity-75">{{ $label }}</div>
                             <div class="amount-text mt-2">{{ $rupiah($data['totals'][$key]) }}</div>
+                            <div class="small mt-2">
+                                @if ($data['percentages'] !== null)
+                                    {{ $data['percentages'][$key] }}% dari Pagu Anggaran
+                                @else
+                                    Persentase tidak tersedia (pagu nol atau negatif)
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -74,6 +74,11 @@ class PencairanDashboardTest extends TestCase
         $this->assertSame('10.0000', $data['chart']['realisasi']);
         $this->assertSame('25.0000', $data['chart']['proses']);
         $this->assertSame('65.0000', $data['chart']['saldo']);
+        $this->assertSame(['pagu' => '100,00', 'realisasi' => '10,00', 'proses' => '25,00', 'saldo' => '65,00'], $data['percentages']);
+        $response->assertSee('100,00% dari Pagu Anggaran')
+            ->assertSee('10,00% dari Pagu Anggaran')
+            ->assertSee('25,00% dari Pagu Anggaran')
+            ->assertSee('65,00% dari Pagu Anggaran');
     }
 
     public function test_annual_sums_four_quarters_and_merges_same_drk(): void
@@ -89,6 +94,9 @@ class PencairanDashboardTest extends TestCase
         $this->assertSame('4000.00', (string) $data['totals']['pagu']->toScale(2));
         $this->assertSame('3850.00', (string) $data['rows'][0]['saldo']->toScale(2));
         $this->assertSame(2, $data['counts']['total']);
+        $response->assertSee('2,50% dari Pagu Anggaran')
+            ->assertSee('1,25% dari Pagu Anggaran')
+            ->assertSee('96,25% dari Pagu Anggaran');
     }
 
     public function test_user_cannot_choose_another_unit_or_unavailable_year(): void
@@ -121,8 +129,26 @@ class PencairanDashboardTest extends TestCase
     {
         $this->pengajuan('completed', '1200.00');
         $response = $this->get(route('pencairan.dashboard'))->assertOk()
-            ->assertSee('-Rp 200,00')->assertSee('Grafik tidak dapat ditampilkan');
+            ->assertSee('-Rp 200,00')->assertSee('Grafik tidak dapat ditampilkan')
+            ->assertSee('120,00% dari Pagu Anggaran')->assertSee('-20,00% dari Pagu Anggaran');
         $this->assertNull($response->viewData('data')['chart']);
+    }
+
+    public function test_percentages_are_rounded_and_unavailable_for_nonpositive_budget(): void
+    {
+        $this->options['saldo_awal'] = '300,00';
+        $this->pengajuan('completed', '100.00');
+        $this->get(route('pencairan.dashboard'))->assertOk()
+            ->assertSee('33,33% dari Pagu Anggaran')
+            ->assertSee('66,67% dari Pagu Anggaran');
+
+        foreach (['0,00', '-100,00'] as $opening) {
+            $this->options['saldo_awal'] = $opening;
+            $response = $this->get(route('pencairan.dashboard'))->assertOk()
+                ->assertSee('Persentase tidak tersedia (pagu nol atau negatif)')
+                ->assertDontSee('% dari Pagu Anggaran');
+            $this->assertNull($response->viewData('data')['percentages']);
+        }
     }
 
     public function test_duplicate_source_drk_and_source_failure_do_not_show_partial_totals(): void

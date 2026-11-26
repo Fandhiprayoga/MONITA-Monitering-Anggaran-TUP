@@ -84,6 +84,15 @@ class PencairanDashboardService
         unset($row);
         $totals['saldo'] = $totals['pagu']->minus($totals['realisasi'])->minus($totals['proses']);
 
+        $percentages = null;
+        if ($totals['pagu']->isPositive()) {
+            $percentages = [];
+            foreach ($totals as $key => $total) {
+                $percentages[$key] = PencairanDecimal::format((string) $total->multipliedBy(100)
+                    ->dividedBy($totals['pagu'], 2, RoundingMode::HALF_UP));
+            }
+        }
+
         $chart = null;
         if ($totals['pagu']->isPositive() && !$totals['saldo']->isNegative()
             && !$totals['realisasi']->isNegative() && !$totals['proses']->isNegative()) {
@@ -94,7 +103,7 @@ class PencairanDashboardService
             }
         }
 
-        return ['rows' => array_values($rows), 'totals' => $totals, 'counts' => $counts, 'chart' => $chart];
+        return ['rows' => array_values($rows), 'totals' => $totals, 'counts' => $counts, 'chart' => $chart, 'percentages' => $percentages];
     }
 
     public static function rupiah(BigDecimal $value): string
