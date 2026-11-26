@@ -3,6 +3,33 @@
 @section('title', 'Dashboard Pencairan | MONITA')
 
 @section('content')
+    <style>
+        .dashboard-period-nav {
+            position: sticky;
+            top: 80px;
+            z-index: 1020;
+            padding: 0.5rem 0;
+            background: var(--bs-body-bg);
+        }
+
+        .dashboard-budget-scroll {
+            max-height: 60vh;
+            overflow: auto;
+        }
+
+        .dashboard-budget-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background-color: var(--bs-secondary);
+        }
+
+        @media (max-width: 575.98px) {
+            .dashboard-period-nav {
+                top: 60px;
+            }
+        }
+    </style>
     @php
         $rupiah = fn ($value) => \App\Services\PencairanDashboardService::rupiah($value);
         $parameters = ['tahun' => $year, 'unit' => $unit];
@@ -46,7 +73,7 @@
         </div>
     </div>
 
-    <nav class="mb-4" aria-label="Periode dashboard pencairan">
+    <nav class="dashboard-period-nav mb-4" aria-label="Periode dashboard pencairan">
         <div class="nav nav-pills flex-wrap gap-2">
             @foreach (['1' => 'TW1', '2' => 'TW2', '3' => 'TW3', '4' => 'TW4', 'tahunan' => 'Tahunan'] as $value => $label)
                 <a class="nav-link {{ $period === (string) $value ? 'active' : '' }}"
@@ -126,8 +153,8 @@
                 <p class="text-muted mb-0">DRK jenis BANG dan OPERASIONAL{{ $period === 'tahunan' ? ', digabung per DRK, akun dan jenis.' : '.' }}</p>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered align-middle mb-0">
+                <div class="table-responsive dashboard-budget-scroll" role="region" aria-label="Detail Anggaran Unit" tabindex="0">
+                    <table class="table table-striped table-bordered align-middle mb-0 dashboard-budget-table">
                         <thead class="bg-secondary text-center">
                             <tr>
                                 <th class="text-white" scope="col">DRK</th>
