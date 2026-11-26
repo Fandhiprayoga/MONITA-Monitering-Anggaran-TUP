@@ -79,6 +79,7 @@ class PencairanDashboardTest extends TestCase
             ->assertSee('10,00% dari Pagu Anggaran')
             ->assertSee('25,00% dari Pagu Anggaran')
             ->assertSee('65,00% dari Pagu Anggaran');
+        $this->assertMatchesRegularExpression('/<tfoot\b[^>]*>\s*<tr>\s*<th scope="row" colspan="4" class="text-center">Total<\/th>\s*<td[^>]*>Rp 1\.000,00<\/td>\s*<td[^>]*>Rp 100,00<\/td>\s*<td[^>]*>Rp 250,00<\/td>\s*<td[^>]*>Rp 650,00<\/td>\s*<\/tr>\s*<\/tfoot>/', $response->getContent());
     }
 
     public function test_annual_sums_four_quarters_and_merges_same_drk(): void
@@ -97,6 +98,7 @@ class PencairanDashboardTest extends TestCase
         $response->assertSee('2,50% dari Pagu Anggaran')
             ->assertSee('1,25% dari Pagu Anggaran')
             ->assertSee('96,25% dari Pagu Anggaran');
+        $this->assertMatchesRegularExpression('/<tfoot\b[^>]*>.*?Rp 4\.000,00.*?Rp 100,00.*?Rp 50,00.*?Rp 3\.850,00.*?<\/tfoot>/s', $response->getContent());
     }
 
     public function test_user_cannot_choose_another_unit_or_unavailable_year(): void
@@ -131,6 +133,7 @@ class PencairanDashboardTest extends TestCase
         $response = $this->get(route('pencairan.dashboard'))->assertOk()
             ->assertSee('-Rp 200,00')->assertSee('Grafik tidak dapat ditampilkan')
             ->assertSee('120,00% dari Pagu Anggaran')->assertSee('-20,00% dari Pagu Anggaran');
+        $this->assertMatchesRegularExpression('/<tfoot\b[^>]*>.*?-Rp 200,00.*?<\/tfoot>/s', $response->getContent());
         $this->assertNull($response->viewData('data')['chart']);
     }
 

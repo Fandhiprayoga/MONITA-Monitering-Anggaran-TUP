@@ -262,6 +262,14 @@
                             <tr><td colspan="9" class="text-center text-muted py-4">Tidak ada DRK BANG atau OPERASIONAL untuk periode ini.</td></tr>
                         @endforelse
                     </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <th scope="row" colspan="5" class="text-center">Total</th>
+                            @foreach (['pagu', 'realisasi', 'proses', 'saldo'] as $key)
+                                <td class="text-end text-nowrap">{{ $rupiah($budget['totals'][$key]) }}</td>
+                            @endforeach
+                        </tr>
+                    </tfoot>
                 </table>
             </div></div></div>
         @endif

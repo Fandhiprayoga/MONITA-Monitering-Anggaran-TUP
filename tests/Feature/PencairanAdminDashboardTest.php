@@ -130,6 +130,21 @@ class PencairanAdminDashboardTest extends TestCase
         $this->assertCount(1, $filtered->viewData('budget')['rows']);
     }
 
+    public function test_budget_footer_reflects_unit_and_period_filters(): void
+    {
+        $this->pengajuan('completed', 'beban', 'PP01', 4);
+        $this->pengajuan('submitted', 'beban', 'PP02', 4);
+
+        $all = $this->get(route('pencairan.dashboard-admin', ['tahun' => 2026, 'tw' => 4]))->assertOk();
+        $this->assertMatchesRegularExpression('/<tfoot\b[^>]*>\s*<tr>\s*<th scope="row" colspan="5" class="text-center">Total<\/th>\s*<td[^>]*>Rp 2\.000,00<\/td>\s*<td[^>]*>Rp 100,00<\/td>\s*<td[^>]*>Rp 100,00<\/td>\s*<td[^>]*>Rp 1\.800,00<\/td>\s*<\/tr>\s*<\/tfoot>/', $all->getContent());
+
+        $filtered = $this->get(route('pencairan.dashboard-admin', ['tahun' => 2026, 'tw' => 4, 'unit' => 'PP02']))->assertOk();
+        $this->assertMatchesRegularExpression('/<tfoot\b[^>]*>.*?Rp 1\.000,00.*?Rp 0,00.*?Rp 100,00.*?Rp 900,00.*?<\/tfoot>/s', $filtered->getContent());
+
+        $annual = $this->get(route('pencairan.dashboard-admin', ['tahun' => 2026, 'tw' => 'tahunan', 'unit' => 'PP02']))->assertOk();
+        $this->assertMatchesRegularExpression('/<tfoot\b[^>]*>.*?Rp 4\.000,00.*?Rp 0,00.*?Rp 100,00.*?Rp 3\.900,00.*?<\/tfoot>/s', $annual->getContent());
+    }
+
     public function test_sla_uses_latest_completed_stage_and_excludes_missing_samples(): void
     {
         $p = $this->pengajuan('completed', 'imprestfund');
