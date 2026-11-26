@@ -92,7 +92,7 @@
                 <h5>Komposisi Anggaran</h5>
                 <p class="text-muted small">Selesai dan dalam proses menggunakan total bruto pengajuan MONITA.</p>
                 @if ($data['chart'])
-                    <div class="d-flex overflow-hidden rounded border" style="height: 32px" role="img"
+                    <div class="d-flex overflow-hidden rounded-pill border" style="height: 32px" role="img"
                         aria-label="Selesai {{ $rupiah($data['totals']['realisasi']) }}, dalam proses {{ $rupiah($data['totals']['proses']) }}, saldo tersedia {{ $rupiah($data['totals']['saldo']) }}">
                         <div class="bg-success" style="width: {{ $data['chart']['realisasi'] }}%"></div>
                         <div class="bg-warning" style="width: {{ $data['chart']['proses'] }}%"></div>
