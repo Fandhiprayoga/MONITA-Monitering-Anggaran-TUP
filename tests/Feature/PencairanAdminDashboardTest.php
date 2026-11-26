@@ -149,7 +149,7 @@ class PencairanAdminDashboardTest extends TestCase
         $this->assertSame(3.0, $stages['transaksi_imprestfund']['average']);
         $this->assertNull($stages['transaksi_honor']['percent']);
         $this->assertSame(2, $stages['verifikasi']['target']);
-        $this->assertSame(0.5, $stages['verifikasi']['needle_fraction']);
+        $this->assertSame(0.8, $stages['verifikasi']['needle_fraction']);
         $this->assertNull($stages['transaksi_honor']['needle_fraction']);
     }
 
@@ -173,12 +173,12 @@ class PencairanAdminDashboardTest extends TestCase
         $stages = $response->viewData('statistics')['stages'];
 
         $this->assertSame(2.0, $stages['verifikasi']['average']);
-        $this->assertSame(0.5, $stages['verifikasi']['needle_fraction']);
+        $this->assertSame(0.8, $stages['verifikasi']['needle_fraction']);
         $this->assertSame(1, $stages['verifikasi']['tepat_waktu']);
         $this->assertSame(1, $stages['verifikasi']['terlambat']);
         $this->assertSame(1, $stages['verifikasi']['data_missing']);
         $this->assertSame(1.0, $stages['transaksi_imprestfund']['average']);
-        $this->assertSame(0.25, $stages['transaksi_imprestfund']['needle_fraction']);
+        $this->assertSame(0.4, $stages['transaksi_imprestfund']['needle_fraction']);
         $this->assertSame(1, $stages['transaksi_imprestfund']['tepat_waktu']);
     }
 
@@ -194,15 +194,16 @@ class PencairanAdminDashboardTest extends TestCase
         $response = $this->get(route('pencairan.dashboard-admin'))->assertOk()
             ->assertSee('Maks 4 hari kerja')->assertSee('Rata-rata: 3,0 hari kerja')
             ->assertSee('Target historis sampel: 2 hari kerja; berbeda dari target saat ini.')
-            ->assertSee('stroke="#20a67a" stroke-width="10"', false)
-            ->assertSee('stroke="#e77878" stroke-width="10"', false)
-            ->assertSee('x2="73.212" y2="25.328"', false);
+            ->assertSee('M 20 90 A 80 80 0 0 1 164.721 42.977', false)
+            ->assertSee('M 164.721 42.977 A 80 80 0 0 1 180 90', false)
+            ->assertSee('x2="121.631" y2="23.426"', false)
+            ->assertSee('skala 0 sampai 5 hari kerja', false);
         $stage = $response->viewData('statistics')['stages']['verifikasi'];
         $this->assertSame(4, $stage['target']);
         $this->assertSame([2], $stage['historical_targets']);
         $this->assertTrue($stage['different_targets']);
         $this->assertSame(1, $stage['terlambat']);
-        $this->assertSame(0.375, $stage['needle_fraction']);
+        $this->assertSame(0.6, $stage['needle_fraction']);
     }
 
     public function test_sla_gauge_clamps_needle_but_keeps_actual_value_when_average_exceeds_scale(): void

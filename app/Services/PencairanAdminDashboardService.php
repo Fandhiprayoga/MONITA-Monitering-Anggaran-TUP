@@ -8,6 +8,8 @@ use Carbon\CarbonImmutable;
 
 class PencairanAdminDashboardService
 {
+    public const SLA_GAUGE_GREEN_FRACTION = 0.8;
+
     public function __construct(
         private PencairanSlaReportService $report,
         private PencairanSlaService $sla,
@@ -71,7 +73,8 @@ class PencairanAdminDashboardService
             $stage['historical_targets'] = array_keys($stage['historical_targets']);
             sort($stage['historical_targets']);
             $stage['different_targets'] = count(array_diff($stage['historical_targets'], [$stage['target']])) > 0;
-            $stage['needle_fraction'] = $valid ? min($stage['average_raw'] / (2 * $stage['target']), 1) : null;
+            $scaleMaximum = $stage['target'] / self::SLA_GAUGE_GREEN_FRACTION;
+            $stage['needle_fraction'] = $valid ? min($stage['average_raw'] / $scaleMaximum, 1) : null;
         }
         unset($stage);
 

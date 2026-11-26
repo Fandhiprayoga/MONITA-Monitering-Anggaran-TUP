@@ -201,15 +201,17 @@
                     <h6 class="sla-gauge-title">SLA {{ $label }}</h6>
                     @php
                         $averageText = $stage['average'] === null ? 'Belum ada data' : number_format($stage['average'], 1, ',', '.').' hari kerja';
+                        $scaleMaximum = $stage['target'] / \App\Services\PencairanAdminDashboardService::SLA_GAUGE_GREEN_FRACTION;
+                        $scaleMaximumText = rtrim(rtrim(number_format($scaleMaximum, 2, ',', '.'), '0'), ',');
                         $angle = $stage['needle_fraction'] === null ? null : pi() * $stage['needle_fraction'];
                         $needleX = $angle === null ? null : number_format(100 - 70 * cos($angle), 3, '.', '');
                         $needleY = $angle === null ? null : number_format(90 - 70 * sin($angle), 3, '.', '');
                     @endphp
                     <div class="sla-gauge mx-auto my-3">
                         <svg viewBox="0 0 200 110" width="100%" role="img"
-                            aria-label="SLA {{ $label }}: rata-rata {{ $averageText }}, target saat ini {{ $stage['target'] }} hari kerja, skala 0 sampai {{ 2 * $stage['target'] }} hari kerja">
-                            <path d="M 20 90 A 80 80 0 0 1 100 10" fill="none" stroke="#20a67a" stroke-width="10" />
-                            <path d="M 100 10 A 80 80 0 0 1 180 90" fill="none" stroke="#e77878" stroke-width="10" />
+                            aria-label="SLA {{ $label }}: rata-rata {{ $averageText }}, target saat ini {{ $stage['target'] }} hari kerja, skala 0 sampai {{ $scaleMaximumText }} hari kerja">
+                            <path d="M 20 90 A 80 80 0 0 1 164.721 42.977" fill="none" stroke="#20a67a" stroke-width="10" />
+                            <path d="M 164.721 42.977 A 80 80 0 0 1 180 90" fill="none" stroke="#e77878" stroke-width="10" />
                             <circle cx="20" cy="90" r="5" fill="#20a67a" />
                             <circle cx="180" cy="90" r="5" fill="#e77878" />
                             @if ($angle !== null)
@@ -218,11 +220,11 @@
                                 <circle cx="100" cy="90" r="2" fill="#ffffff" />
                             @endif
                             <text x="20" y="108" text-anchor="middle" font-size="10" fill="#64748b">0</text>
-                            <text x="180" y="108" text-anchor="middle" font-size="10" fill="#64748b">{{ 2 * $stage['target'] }}</text>
+                            <text x="180" y="108" text-anchor="middle" font-size="10" fill="#64748b">{{ $scaleMaximumText }}</text>
                         </svg>
                         <div class="sla-gauge-target">Maks {{ $stage['target'] }} hari kerja</div>
                         <div class="sla-gauge-average">Rata-rata: {{ $averageText }}</div>
-                        @if ($stage['average_raw'] !== null && $stage['average_raw'] > 2 * $stage['target'])
+                        @if ($stage['average_raw'] !== null && $stage['average_raw'] > $scaleMaximum)
                             <div class="small text-muted">Rata-rata melebihi batas skala.</div>
                         @endif
                     </div>
