@@ -41,7 +41,7 @@
                         <a href="{{ route('pencairan.dashboard-admin') }}"
                             class="pc-link {{ request()->routeIs('pencairan.dashboard-admin') ? 'active' : '' }}">
                             <span class="pc-micon"><i class="ti ti-chart-bar"></i></span>
-                            <span class="pc-mtext">Dashboard Pencairan Admin</span>
+                            <span class="pc-mtext">Monitoring Pencairan</span>
                         </a>
                     </li>
                 @endif
