@@ -56,7 +56,7 @@ class PencairanAdminDashboardService
                 }
                 $stages[$stage][$measurement['result']]++;
                 if ($measurement['duration_days'] !== null) {
-                    $stages[$stage]['duration'] += $measurement['duration_days'];
+                    $stages[$stage]['duration'] += PencairanSlaReportPresentation::duration($measurement);
                     $stages[$stage]['historical_targets'][$measurement['target_days']] = true;
                 }
             }

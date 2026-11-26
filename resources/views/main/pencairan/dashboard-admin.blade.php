@@ -192,7 +192,7 @@
     <p class="text-muted small mt-3 mb-4">Total mencakup pengajuan dibatalkan; rincian jenis tidak mencakup pengajuan dibatalkan. Draft dan data dummy tidak dihitung.</p>
 
     <h5>Monitoring SLA Layanan Keuangan</h5>
-    <p class="text-muted small">Jarum menunjukkan rata-rata hari kerja tahap selesai terhadap target SLA saat ini. Status tepat waktu atau terlambat tetap memakai target yang berlaku saat tahap dimulai; data tidak lengkap tidak masuk rata-rata.</p>
+    <p class="text-muted small">Jarum menunjukkan rata-rata hari kerja tahap selesai terhadap target SLA saat ini. Durasi 0 hari kerja yang tepat waktu dihitung sebagai 1 hari kerja untuk rata-rata, mengikuti tampilan Report SLA. Status tepat waktu atau terlambat tetap memakai target yang berlaku saat tahap dimulai; data tidak lengkap tidak masuk rata-rata.</p>
     <div class="row gy-4">
         @foreach (\App\Services\PencairanSlaReportService::STAGES as $key => $label)
             @php $stage = $statistics['stages'][$key]; @endphp

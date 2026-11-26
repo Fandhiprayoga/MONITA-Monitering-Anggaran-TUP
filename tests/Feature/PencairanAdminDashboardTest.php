@@ -153,6 +153,35 @@ class PencairanAdminDashboardTest extends TestCase
         $this->assertNull($stages['transaksi_honor']['needle_fraction']);
     }
 
+    public function test_sla_gauge_averages_report_durations_without_changing_sla_results(): void
+    {
+        $sameDay = $this->pengajuan('completed', 'imprestfund');
+        $this->event($sameDay, 'submit', '2026-11-16 08:00:00');
+        $this->event($sameDay, 'verify', '2026-11-16 10:00:00');
+        $this->event($sameDay, 'complete', '2026-11-16 14:00:00');
+
+        $later = $this->pengajuan('verified', 'beban');
+        $this->event($later, 'submit', '2026-11-16 08:00:00');
+        $this->event($later, 'verify', '2026-11-19 08:00:00');
+        $this->pengajuan('completed', 'imprestfund');
+
+        $response = $this->get(route('pencairan.dashboard-admin', ['tw' => 4]))
+            ->assertOk()
+            ->assertSee('Rata-rata: 2,0 hari kerja')
+            ->assertSee('Rata-rata: 1,0 hari kerja')
+            ->assertSee('Durasi 0 hari kerja yang tepat waktu dihitung sebagai 1 hari kerja');
+        $stages = $response->viewData('statistics')['stages'];
+
+        $this->assertSame(2.0, $stages['verifikasi']['average']);
+        $this->assertSame(0.5, $stages['verifikasi']['needle_fraction']);
+        $this->assertSame(1, $stages['verifikasi']['tepat_waktu']);
+        $this->assertSame(1, $stages['verifikasi']['terlambat']);
+        $this->assertSame(1, $stages['verifikasi']['data_missing']);
+        $this->assertSame(1.0, $stages['transaksi_imprestfund']['average']);
+        $this->assertSame(0.25, $stages['transaksi_imprestfund']['needle_fraction']);
+        $this->assertSame(1, $stages['transaksi_imprestfund']['tepat_waktu']);
+    }
+
     public function test_sla_gauge_uses_current_target_and_warns_when_historical_target_differs(): void
     {
         PencairanSlaPolicy::create([
