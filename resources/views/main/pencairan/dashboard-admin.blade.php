@@ -5,6 +5,63 @@
 @section('content')
     @include('main.pencairan.period-nav-styles')
     @include('main.pencairan.budget-table-styles')
+    <style>
+        .submission-stat-card {
+            background: linear-gradient(120deg, #ffffff 60%, var(--stat-background));
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+        }
+
+        .submission-stat-card .card-body {
+            color: #1e293b;
+        }
+
+        .submission-stat-card .stat-label {
+            color: #475569;
+        }
+
+        .submission-stat-card .stat-icon {
+            color: var(--stat-accent);
+            background-color: var(--stat-background);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+        }
+
+        .submission-stat-card--masuk {
+            --stat-background: #eff6ff;
+            --stat-accent: #1d4ed8;
+        }
+
+        .submission-stat-card--returned {
+            --stat-background: #fff7ed;
+            --stat-accent: #c2410c;
+        }
+
+        .submission-stat-card--submitted {
+            --stat-background: #fffbeb;
+            --stat-accent: #92400e;
+        }
+
+        .submission-stat-card--imprestfund_queue {
+            --stat-background: #f0fdfa;
+            --stat-accent: #0f766e;
+        }
+
+        .submission-stat-card--beban_queue {
+            --stat-background: #eef2ff;
+            --stat-accent: #4338ca;
+        }
+
+        .submission-stat-card--honor_queue {
+            --stat-background: #faf5ff;
+            --stat-accent: #7e22ce;
+        }
+    </style>
     @php
         $rupiah = fn ($value) => \App\Services\PencairanDashboardService::rupiah($value);
         $counts = $statistics['counts'];
@@ -63,12 +120,12 @@
             ['Antrean Honor', 'honor_queue', 'ti-users'],
         ] as [$label, $key, $icon])
             <div class="col-sm-6 col-xl-4">
-                <div class="card"><div class="card-body d-flex align-items-center justify-content-between gap-3">
+                <div class="card submission-stat-card submission-stat-card--{{ $key }}"><div class="card-body d-flex align-items-center justify-content-between gap-3">
                     <div>
-                        <div class="text-muted">{{ $label }}</div>
+                        <div class="stat-label">{{ $label }}</div>
                         <div class="fs-3 fw-semibold mt-2">{{ $counts[$key] }}</div>
                     </div>
-                    <i class="ti {{ $icon }} fs-3 text-primary flex-shrink-0" aria-hidden="true"></i>
+                    <i class="ti {{ $icon }} fs-3 stat-icon flex-shrink-0" aria-hidden="true"></i>
                 </div></div>
             </div>
         @endforeach
