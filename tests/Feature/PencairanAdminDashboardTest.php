@@ -94,6 +94,8 @@ class PencairanAdminDashboardTest extends TestCase
             $response->assertSee('card submission-stat-card submission-stat-card--'.$key, false);
         }
         $this->assertSame(4, substr_count($response->getContent(), 'service-stat-card'));
+        $this->assertSame(4, substr_count($response->getContent(), 'class="sla-gauge mx-auto my-3"'));
+        $this->assertSame(0, substr_count($response->getContent(), '<line x1="100" y1="90"'));
         $response->assertSeeInOrder([
             'Total Layanan</div>',
             '>4</div>',
@@ -163,6 +165,8 @@ class PencairanAdminDashboardTest extends TestCase
         $response = $this->get(route('pencairan.dashboard-admin'))->assertOk()
             ->assertSee('Maks 4 hari kerja')->assertSee('Rata-rata: 3,0 hari kerja')
             ->assertSee('Target historis sampel: 2 hari kerja; berbeda dari target saat ini.')
+            ->assertSee('stroke="#20a67a" stroke-width="10"', false)
+            ->assertSee('stroke="#e77878" stroke-width="10"', false)
             ->assertSee('x2="73.212" y2="25.328"', false);
         $stage = $response->viewData('statistics')['stages']['verifikasi'];
         $this->assertSame(4, $stage['target']);

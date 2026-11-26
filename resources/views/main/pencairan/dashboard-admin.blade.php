@@ -61,6 +61,38 @@
             --stat-background: #faf5ff;
             --stat-accent: #7e22ce;
         }
+
+        .sla-gauge-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+            min-height: 280px;
+        }
+
+        .sla-gauge-title {
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .sla-gauge {
+            max-width: 220px;
+        }
+
+        .sla-gauge svg {
+            display: block;
+            overflow: visible;
+        }
+
+        .sla-gauge-target {
+            color: #64748b;
+            font-size: 0.8125rem;
+        }
+
+        .sla-gauge-average {
+            color: #1e293b;
+            font-weight: 600;
+            margin-top: 0.35rem;
+        }
     </style>
     @php
         $rupiah = fn ($value) => \App\Services\PencairanDashboardService::rupiah($value);
@@ -165,28 +197,31 @@
         @foreach (\App\Services\PencairanSlaReportService::STAGES as $key => $label)
             @php $stage = $statistics['stages'][$key]; @endphp
             <div class="col-sm-6 col-xl-3">
-                <div class="card h-100 mb-0" style="min-height: 280px"><div class="card-body text-center">
-                    <h6>SLA {{ $label }}</h6>
+                <div class="card h-100 mb-0 sla-gauge-card"><div class="card-body text-center">
+                    <h6 class="sla-gauge-title">SLA {{ $label }}</h6>
                     @php
                         $averageText = $stage['average'] === null ? 'Belum ada data' : number_format($stage['average'], 1, ',', '.').' hari kerja';
                         $angle = $stage['needle_fraction'] === null ? null : pi() * $stage['needle_fraction'];
                         $needleX = $angle === null ? null : number_format(100 - 70 * cos($angle), 3, '.', '');
                         $needleY = $angle === null ? null : number_format(90 - 70 * sin($angle), 3, '.', '');
                     @endphp
-                    <div class="mx-auto my-3" style="max-width: 220px">
+                    <div class="sla-gauge mx-auto my-3">
                         <svg viewBox="0 0 200 110" width="100%" role="img"
                             aria-label="SLA {{ $label }}: rata-rata {{ $averageText }}, target saat ini {{ $stage['target'] }} hari kerja, skala 0 sampai {{ 2 * $stage['target'] }} hari kerja">
-                            <path d="M 20 90 A 80 80 0 0 1 100 10" fill="none" stroke="#198754" stroke-width="16" />
-                            <path d="M 100 10 A 80 80 0 0 1 180 90" fill="none" stroke="#dc3545" stroke-width="16" />
+                            <path d="M 20 90 A 80 80 0 0 1 100 10" fill="none" stroke="#20a67a" stroke-width="10" />
+                            <path d="M 100 10 A 80 80 0 0 1 180 90" fill="none" stroke="#e77878" stroke-width="10" />
+                            <circle cx="20" cy="90" r="5" fill="#20a67a" />
+                            <circle cx="180" cy="90" r="5" fill="#e77878" />
                             @if ($angle !== null)
-                                <line x1="100" y1="90" x2="{{ $needleX }}" y2="{{ $needleY }}" stroke="#343a40" stroke-width="3" stroke-linecap="round" />
-                                <circle cx="100" cy="90" r="5" fill="#343a40" />
+                                <line x1="100" y1="90" x2="{{ $needleX }}" y2="{{ $needleY }}" stroke="#334155" stroke-width="3" stroke-linecap="round" />
+                                <circle cx="100" cy="90" r="5" fill="#334155" />
+                                <circle cx="100" cy="90" r="2" fill="#ffffff" />
                             @endif
-                            <text x="20" y="108" text-anchor="middle" font-size="10">0</text>
-                            <text x="180" y="108" text-anchor="middle" font-size="10">{{ 2 * $stage['target'] }}</text>
+                            <text x="20" y="108" text-anchor="middle" font-size="10" fill="#64748b">0</text>
+                            <text x="180" y="108" text-anchor="middle" font-size="10" fill="#64748b">{{ 2 * $stage['target'] }}</text>
                         </svg>
-                        <div class="small fw-semibold">Maks {{ $stage['target'] }} hari kerja</div>
-                        <div class="fw-semibold">Rata-rata: {{ $averageText }}</div>
+                        <div class="sla-gauge-target">Maks {{ $stage['target'] }} hari kerja</div>
+                        <div class="sla-gauge-average">Rata-rata: {{ $averageText }}</div>
                         @if ($stage['average_raw'] !== null && $stage['average_raw'] > 2 * $stage['target'])
                             <div class="small text-muted">Rata-rata melebihi batas skala.</div>
                         @endif
