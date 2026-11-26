@@ -75,17 +75,32 @@
     </div>
 
     <h5>Statistik Total Layanan</h5>
-    <div class="card"><div class="card-body">
-        <div class="text-muted">Total Layanan</div>
-        <div class="fs-3 fw-semibold">{{ $counts['total'] }}</div>
-        <div class="d-flex flex-wrap gap-4 mt-3">
-            <span>Dibatalkan: <strong>{{ $counts['cancelled'] }}</strong></span>
-            <span>Imprestfund: <strong>{{ $counts['imprestfund'] }}</strong></span>
-            <span>Beban: <strong>{{ $counts['beban'] }}</strong></span>
-            <span>Honor: <strong>{{ $counts['honor'] }}</strong></span>
-        </div>
-        <p class="text-muted small mb-0 mt-2">Total mencakup pengajuan dibatalkan; rincian jenis tidak mencakup pengajuan dibatalkan. Draft dan data dummy tidak dihitung.</p>
-    </div></div>
+    <div class="row gy-4">
+        @foreach ([
+            ['Total Layanan', 'total', 'ti-list'],
+            ['Imprestfund', 'imprestfund', 'ti-wallet'],
+            ['Beban', 'beban', 'ti-receipt'],
+            ['Honor', 'honor', 'ti-users'],
+        ] as [$label, $key, $icon])
+            <div class="col-sm-6 col-lg-3">
+                <div class="card h-100 mb-0 service-stat-card"><div class="card-body d-flex align-items-center justify-content-between gap-3">
+                    <div>
+                        <div class="text-muted">{{ $label }}</div>
+                        <div class="fs-3 fw-semibold mt-2">{{ $counts[$key] }}</div>
+                        @if ($key === 'total')
+                            <div class="small mt-2 text-danger">Dibatalkan: <strong>{{ $counts['cancelled'] }}</strong></div>
+                        @elseif ($key === 'imprestfund')
+                            <div class="small mt-2">Pencairan</div>
+                        @elseif ($key === 'beban' || $key === 'honor')
+                            <div class="small mt-2">Transaksi</div>
+                        @endif
+                    </div>
+                    <i class="ti {{ $icon }} fs-3 text-primary flex-shrink-0" aria-hidden="true"></i>
+                </div></div>
+            </div>
+        @endforeach
+    </div>
+    <p class="text-muted small mt-3 mb-4">Total mencakup pengajuan dibatalkan; rincian jenis tidak mencakup pengajuan dibatalkan. Draft dan data dummy tidak dihitung.</p>
 
     <h5>Monitoring SLA Layanan Keuangan</h5>
     <p class="text-muted small">Jarum menunjukkan rata-rata hari kerja tahap selesai terhadap target SLA saat ini. Status tepat waktu atau terlambat tetap memakai target yang berlaku saat tahap dimulai; data tidak lengkap tidak masuk rata-rata.</p>

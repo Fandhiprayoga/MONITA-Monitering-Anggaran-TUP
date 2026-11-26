@@ -90,6 +90,25 @@ class PencairanAdminDashboardTest extends TestCase
         foreach (['ti-inbox', 'ti-arrow-back', 'ti-clipboard-check', 'ti-wallet', 'ti-receipt', 'ti-users'] as $icon) {
             $response->assertSee($icon);
         }
+        $this->assertSame(4, substr_count($response->getContent(), 'service-stat-card'));
+        $response->assertSeeInOrder([
+            'Total Layanan</div>',
+            '>4</div>',
+            'Dibatalkan: <strong>1</strong>',
+            'ti ti-list',
+            'Imprestfund</div>',
+            '>1</div>',
+            '>Pencairan</div>',
+            'ti ti-wallet',
+            'Beban</div>',
+            '>1</div>',
+            '>Transaksi</div>',
+            'ti ti-receipt',
+            'Honor</div>',
+            '>1</div>',
+            '>Transaksi</div>',
+            'ti ti-users',
+        ], false);
         $this->assertSame([
             'masuk' => 4, 'returned' => 1, 'submitted' => 1,
             'imprestfund_queue' => 1, 'beban_queue' => 0, 'honor_queue' => 0,
