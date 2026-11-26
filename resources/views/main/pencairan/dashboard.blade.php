@@ -4,20 +4,7 @@
 
 @section('content')
     @include('main.pencairan.period-nav-styles')
-    <style>
-        .dashboard-budget-scroll {
-            max-height: 60vh;
-            overflow: auto;
-        }
-
-        .dashboard-budget-table thead th {
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            background-color: var(--bs-secondary);
-        }
-
-    </style>
+    @include('main.pencairan.budget-table-styles')
     @php
         $rupiah = fn ($value) => \App\Services\PencairanDashboardService::rupiah($value);
         $parameters = ['tahun' => $year, 'unit' => $unit];

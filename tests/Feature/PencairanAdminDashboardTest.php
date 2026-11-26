@@ -83,7 +83,13 @@ class PencairanAdminDashboardTest extends TestCase
 
         $response = $this->get(route('pencairan.dashboard-admin', ['tahun' => 2026, 'tw' => 4]))->assertOk()
             ->assertSee('Dashboard Pencairan Admin')->assertSee('Unit Dua')->assertSee('Belum ada data')
+            ->assertSee('table-responsive dashboard-budget-scroll', false)
+            ->assertSee('dashboard-budget-table', false)
+            ->assertSee('position: sticky', false)
             ->assertSee(route('pencairan.dashboard-admin'));
+        foreach (['ti-inbox', 'ti-arrow-back', 'ti-clipboard-check', 'ti-wallet', 'ti-receipt', 'ti-users'] as $icon) {
+            $response->assertSee($icon);
+        }
         $this->assertSame([
             'masuk' => 4, 'returned' => 1, 'submitted' => 1,
             'imprestfund_queue' => 1, 'beban_queue' => 0, 'honor_queue' => 0,

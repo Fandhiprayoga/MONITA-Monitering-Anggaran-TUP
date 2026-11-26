@@ -4,6 +4,7 @@
 
 @section('content')
     @include('main.pencairan.period-nav-styles')
+    @include('main.pencairan.budget-table-styles')
     @php
         $rupiah = fn ($value) => \App\Services\PencairanDashboardService::rupiah($value);
         $counts = $statistics['counts'];
@@ -54,14 +55,20 @@
     <p class="text-muted small">Pengajuan masuk dihitung sekali per pengajuan. Kartu lainnya menunjukkan status saat ini dan dapat tumpang tindih dengan pengajuan masuk.</p>
     <div class="row">
         @foreach ([
-            ['Pengajuan Masuk', 'masuk'], ['Dikembalikan untuk Revisi', 'returned'],
-            ['Menunggu Verifikasi', 'submitted'], ['Antrean Imprestfund', 'imprestfund_queue'],
-            ['Antrean Beban', 'beban_queue'], ['Antrean Honor', 'honor_queue'],
-        ] as [$label, $key])
+            ['Pengajuan Masuk', 'masuk', 'ti-inbox'],
+            ['Dikembalikan untuk Revisi', 'returned', 'ti-arrow-back'],
+            ['Menunggu Verifikasi', 'submitted', 'ti-clipboard-check'],
+            ['Antrean Imprestfund', 'imprestfund_queue', 'ti-wallet'],
+            ['Antrean Beban', 'beban_queue', 'ti-receipt'],
+            ['Antrean Honor', 'honor_queue', 'ti-users'],
+        ] as [$label, $key, $icon])
             <div class="col-sm-6 col-xl-4">
-                <div class="card"><div class="card-body">
-                    <div class="text-muted">{{ $label }}</div>
-                    <div class="fs-3 fw-semibold mt-2">{{ $counts[$key] }}</div>
+                <div class="card"><div class="card-body d-flex align-items-center justify-content-between gap-3">
+                    <div>
+                        <div class="text-muted">{{ $label }}</div>
+                        <div class="fs-3 fw-semibold mt-2">{{ $counts[$key] }}</div>
+                    </div>
+                    <i class="ti {{ $icon }} fs-3 text-primary flex-shrink-0" aria-hidden="true"></i>
                 </div></div>
             </div>
         @endforeach
@@ -86,7 +93,7 @@
         @foreach (\App\Services\PencairanSlaReportService::STAGES as $key => $label)
             @php $stage = $statistics['stages'][$key]; @endphp
             <div class="col-sm-6 col-xl-3">
-                <div class="card h-100 mb-0" style="min-height: 330px"><div class="card-body text-center">
+                <div class="card h-100 mb-0" style="min-height: 280px"><div class="card-body text-center">
                     <h6>SLA {{ $label }}</h6>
                     @php
                         $averageText = $stage['average'] === null ? 'Belum ada data' : number_format($stage['average'], 1, ',', '.').' hari kerja';
@@ -108,13 +115,10 @@
                         </svg>
                         <div class="small fw-semibold">Maks {{ $stage['target'] }} hari kerja</div>
                         <div class="fw-semibold">Rata-rata: {{ $averageText }}</div>
-                        <div class="small"><span class="text-success">Hijau: ≤ target</span> · <span class="text-danger">Merah: &gt; target</span></div>
                         @if ($stage['average_raw'] !== null && $stage['average_raw'] > 2 * $stage['target'])
                             <div class="small text-muted">Rata-rata melebihi batas skala.</div>
                         @endif
                     </div>
-                    <div class="small"><span class="text-success">Tepat waktu: {{ $stage['tepat_waktu'] }}</span> · <span class="text-danger">Terlambat: {{ $stage['terlambat'] }}</span></div>
-                    <div class="small">Data tidak lengkap: {{ $stage['data_missing'] }}</div>
                     @if ($stage['different_targets'])
                         <div class="small text-warning mt-2">Target historis sampel: {{ implode(', ', $stage['historical_targets']) }} hari kerja; berbeda dari target saat ini.</div>
                     @endif
@@ -129,18 +133,8 @@
         @if ($error)
             <div class="alert alert-danger" role="alert">{{ $error }} Total dan rincian anggaran tidak ditampilkan.</div>
         @else
-            <div class="row">
-                @foreach (['pagu' => 'Saldo Awal', 'realisasi' => 'Realisasi', 'proses' => 'Dalam Proses', 'saldo' => 'Saldo Terkini'] as $key => $label)
-                    <div class="col-sm-6 col-xl-3">
-                        <div class="card"><div class="card-body">
-                            <div class="text-muted">{{ $label }}</div>
-                            <div class="fw-semibold mt-2">{{ $rupiah($budget['totals'][$key]) }}</div>
-                        </div></div>
-                    </div>
-                @endforeach
-            </div>
-            <div class="card"><div class="card-body"><div class="table-responsive">
-                <table class="table table-striped table-bordered align-middle mb-0">
+            <div class="card"><div class="card-body"><div class="table-responsive dashboard-budget-scroll" role="region" aria-label="Detail Anggaran Unit" tabindex="0">
+                <table class="table table-striped table-bordered align-middle mb-0 dashboard-budget-table">
                     <thead class="bg-secondary text-center"><tr>
                         @foreach (['Unit', 'DRK', 'Akun', 'Jenis', 'Uraian DRK', 'Saldo Awal', 'Realisasi', 'Dalam Proses', 'Saldo Terkini'] as $heading)
                             <th class="text-white" scope="col">{{ $heading }}</th>
